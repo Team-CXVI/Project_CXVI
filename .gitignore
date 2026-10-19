@@ -1,6 +1,7 @@
-# Visual Studio 2015 user specific files
+# Visual Studio user specific files
 .vs/
 .vscode/
+.vsconfig
 
 # Compiled Object files
 *.slo
@@ -42,6 +43,7 @@
 *.VC.db
 *.VC.opendb
 *.code-workspace
+*.slnx
 
 # Precompiled Assets
 SourceArt/**/*.png
@@ -77,3 +79,9 @@ Plugins/*/Intermediate/*
 
 # Cache files for the editor to use
 DerivedDataCache/*
+
+#Perforce
+.p4ignore
+
+# LiveCoding Temp Folder
+enc_temp_folder/*
