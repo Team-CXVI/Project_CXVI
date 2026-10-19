@@ -18,7 +18,8 @@ public class CXVI : ModuleRules
 			"GameplayTags",
 			"GameplayTasks",
 			"CommonUI",
-			"CommonInput"
+			"CommonInput",
+			"DeveloperSettings"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
