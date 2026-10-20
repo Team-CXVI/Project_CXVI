@@ -44,8 +44,8 @@ public class CXVI : ModuleRules
 			"AnimationWarpingEditor",
 			"BlendStackEditor",
 			"PoseSearchEditor",
-			"CurveExpressionEditor"
-		});
+			"CurveExpressionEditor" });
+		}
 
 		PrivateDependencyModuleNames.AddRange(new string[] { });
 
