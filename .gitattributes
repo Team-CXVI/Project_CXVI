@@ -1,0 +1,56 @@
+# =========================================================
+#  CXVI .gitattributes
+# =========================================================
+
+# ---- 기본: 텍스트 자동 판별 + 줄바꿈 정규화 ----
+* text=auto
+
+# ---- 코드 ----
+*.h         text diff=cpp
+*.hpp       text diff=cpp
+*.cpp       text diff=cpp
+*.inl       text diff=cpp
+*.cs        text diff=csharp
+
+# ---- 설정 / 프로젝트 파일 ----
+*.ini       text
+*.uproject  text
+*.uplugin   text
+*.json      text
+*.md        text
+*.bat       text eol=crlf
+*.sh        text eol=lf
+
+# ---- 언리얼 에셋: LFS + 잠금 대상 ----
+# __ExternalActors__/ , __ExternalObjects__/ (OFPA) 파일도 .uasset이라 여기에 포함됨
+*.uasset    filter=lfs diff=lfs merge=lfs -text lockable
+*.umap      filter=lfs diff=lfs merge=lfs -text lockable
+
+# ---- 원본 3D ----
+*.fbx       filter=lfs diff=lfs merge=lfs -text
+*.obj       filter=lfs diff=lfs merge=lfs -text
+*.blend     filter=lfs diff=lfs merge=lfs -text
+*.ma        filter=lfs diff=lfs merge=lfs -text
+*.mb        filter=lfs diff=lfs merge=lfs -text
+
+# ---- 원본 이미지 ----
+*.png       filter=lfs diff=lfs merge=lfs -text
+*.jpg       filter=lfs diff=lfs merge=lfs -text
+*.jpeg      filter=lfs diff=lfs merge=lfs -text
+*.tga       filter=lfs diff=lfs merge=lfs -text
+*.tif       filter=lfs diff=lfs merge=lfs -text
+*.tiff      filter=lfs diff=lfs merge=lfs -text
+*.psd       filter=lfs diff=lfs merge=lfs -text
+*.exr       filter=lfs diff=lfs merge=lfs -text
+*.hdr       filter=lfs diff=lfs merge=lfs -text
+
+# ---- 원본 오디오 / 영상 ----
+*.wav       filter=lfs diff=lfs merge=lfs -text
+*.mp3       filter=lfs diff=lfs merge=lfs -text
+*.ogg       filter=lfs diff=lfs merge=lfs -text
+*.mp4       filter=lfs diff=lfs merge=lfs -text
+*.mov       filter=lfs diff=lfs merge=lfs -text
+
+# ---- 폰트 ----
+*.ttf       filter=lfs diff=lfs merge=lfs -text
+*.otf       filter=lfs diff=lfs merge=lfs -text
