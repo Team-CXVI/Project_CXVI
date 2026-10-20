@@ -7,7 +7,7 @@
 #include "CXGameplayDataSettings.generated.h"
 
 class UDataTable;
-class UCurveTabel;
+class UCurveTable;
 
 /**
  * 게임플레이 데이터 테이블 경로 설정
