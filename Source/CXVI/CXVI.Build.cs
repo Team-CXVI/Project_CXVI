@@ -21,6 +21,7 @@ public class CXVI : ModuleRules
 			"CommonUI",
 			"CommonInput",
 			"DeveloperSettings",
+			"UMG",
 
 			// Field 기능을 위한 모듈
 			"Chooser",
@@ -31,6 +32,7 @@ public class CXVI : ModuleRules
 			"PoseSearch",
 			"DrawDebugLibrary",
 			"CurveExpression",
+			"CableComponent",
 		});
 
 		// Field 기능 에디터 전용 모듈 (패키징 시 제외)
