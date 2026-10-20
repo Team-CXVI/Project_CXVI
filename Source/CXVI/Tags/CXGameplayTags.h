@@ -23,4 +23,7 @@ namespace CXVIGameplayTags
 
 	// Data
 	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_Damage);
+
+	// Ability
+	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Basic_Attack);
 }
