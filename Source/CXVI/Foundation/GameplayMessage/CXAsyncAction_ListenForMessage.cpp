@@ -72,8 +72,6 @@ void UCXAsyncAction_ListenForGameplayMessage::Activate()
 						StrongThis->HandleMessageReceived(InChannel, InStructType, InPayload);
 					}
 				}, MessageStructType.Get());
-
-			return;
 		}
 	}
 

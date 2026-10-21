@@ -83,13 +83,13 @@ public:
 	template <typename FMessageStructType, typename TOwner = UObject>
 	FCXGameplayMessageListenerHandle RegisterListener(const FGameplayTag InChannel, TFunction<void(const FGameplayTag&, const FMessageStructType&)>&& InCallback)
 	{
-		auto ThunkCallback = [InnerCallback = MoveTemp( InCallback )](const FGameplayTag& ActualTag, const UScriptStruct* SenderStructType, const void* SenderPayload)
+		auto ThunkCallbak = [InnerCallback = MoveTemp( InCallback )](const FGameplayTag& ActualTag, const UScriptStruct* SenderStructType, const void* SenderPayload)
 			{
 				InnerCallback(ActualTag, *reinterpret_cast<const FMessageStructType*>(SenderPayload));
 			};
 		
 		const UScriptStruct* StructType = TBaseStructure<FMessageStructType>::Get();
-		return RegisterListenerInternal(InChannel, ThunkCallback, StructType);
+		return RegisterListenerInternal(InChannel, ThunkCallbak, StructType);
 	}
 
 	template<typename FMessageStructType, typename TOwner = UObject>

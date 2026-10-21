@@ -57,7 +57,7 @@ float UCXGameplayDataSubsystem::EvaluateCurve(const UCurveTable* InTable, FName 
 		return InDefaultValue;
 	}
 
-	if (const FRealCurve* Curve = InTable->FindCurve(InRowName, TEXT("CXGameplayDataSubsystem"), /*bWarnIfNotFound*/false))
+	if (const FRealCurve* Curve = InTable->FindCurve(InRowName, TEXT("CXGameplayDataSybsystem"), /*bWarnIfNotFound*/false))
 	{
 		return Curve->Eval(InX);
 	}
