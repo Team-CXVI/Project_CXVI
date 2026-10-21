@@ -26,4 +26,5 @@ namespace CXVIGameplayTags
 
 	// Ability
 	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Basic_Attack);
+	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Fire);
 }
