@@ -40,11 +40,11 @@ public:
 
 	// Scene 레벨에서 T 타입 액터를 검색
 	template<typename T>
-	void FindActorsIsSceneLevels(TArray<T*>& OutActors) const
+	void FindActorsInSceneLevels(TArray<T*>& OutActors) const
 	{
 		for (const ULevel* Level : GetSceneLevels())
 		{
-			for (const AActor* Actor : Level->Actors)
+			for (AActor* Actor : Level->Actors)
 			{
 				if (T* CastActor = Cast<T>(Actor))
 				{

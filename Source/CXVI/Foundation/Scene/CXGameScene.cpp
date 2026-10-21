@@ -51,8 +51,13 @@ TArray<ULevel*> UCXGameScene::GetSceneLevels() const
 
 	for (const TSoftObjectPtr<UWorld>& LevelRef : Definition->Sublevels)
 	{
-		// TODO (Scene)
-		// Subsystem 완성 후 작성
+		if (const ULevelStreaming* Streaming = Subsystem->FindStreamingLevel(LevelRef))
+		{
+			if (ULevel* Level = Streaming->GetLoadedLevel())
+			{
+				Levels.Add(Level);
+			}
+		}
 	}
 
 	return Levels;
@@ -71,9 +76,8 @@ ULevel* UCXGameScene::GetPrimaryLevel() const
 		return nullptr;
 	}
 
-	// TODO (Scene)
-	// Subsystem 완성 후 작성
-	return nullptr;
+	const ULevelStreaming* Streaming = Subsystem->FindStreamingLevel(Definition->Sublevels[0]);
+	return Streaming ? Streaming->GetLoadedLevel() : nullptr;
 }
 
 void UCXGameScene::OnEnter(const FCXSceneContext& InContext)
