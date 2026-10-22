@@ -5,6 +5,8 @@
 #include "../../../../Character/Field/CXFieldPlayerCharacter.h"
 #include "Components/SkeletalMeshComponent.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(CXAnimNotify_HideCable)
+
 void UCXAnimNotify_HideCable::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference)
 {
 	Super::Notify(MeshComp, Animation, EventReference);

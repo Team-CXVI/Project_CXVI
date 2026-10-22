@@ -11,6 +11,8 @@
 #include "../../../Attributes/CXPlayerAttributeSet.h"
 #include "UObject/ConstructorHelpers.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(CXPlayerSprintAbility)
+
 UCXPlayerSprintAbility::UCXPlayerSprintAbility()
 {
 	// 캐릭터별로 속도와 이펙트 핸들을 보관할 인스턴스 생성.

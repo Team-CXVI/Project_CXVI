@@ -4,6 +4,8 @@
 #include "CXBaseAttributeSet.h"
 #include "GameplayEffectExtension.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(CXBaseAttributeSet)
+
 void UCXBaseAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue)
 {
 	Super::PreAttributeChange(Attribute, NewValue);

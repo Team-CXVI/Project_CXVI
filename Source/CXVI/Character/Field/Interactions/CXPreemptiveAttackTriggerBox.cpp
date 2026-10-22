@@ -10,6 +10,8 @@
 #include "../../../Tags/CXFieldTags.h"
 #include "Components/ShapeComponent.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(CXPreemptiveAttackTriggerBox)
+
 ACXPreemptiveAttackTriggerBox::ACXPreemptiveAttackTriggerBox(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer)
 {

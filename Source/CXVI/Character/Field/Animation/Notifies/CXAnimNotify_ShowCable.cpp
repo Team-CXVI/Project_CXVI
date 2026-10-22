@@ -7,6 +7,8 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "../../../../Tags/CXFieldTags.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(CXAnimNotify_ShowCable)
+
 void UCXAnimNotify_ShowCable::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference)
 {
 	Super::Notify(MeshComp, Animation, EventReference);

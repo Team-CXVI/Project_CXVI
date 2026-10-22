@@ -8,6 +8,7 @@
 #include "../../AbilitySystem/Attributes/CXBaseAttributeSet.h"
 #include "../../Tags/CXFieldTags.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(CXFieldCharacterBase)
 
 // Sets default values
 ACXFieldCharacterBase::ACXFieldCharacterBase(const FObjectInitializer& ObjectInitializer)

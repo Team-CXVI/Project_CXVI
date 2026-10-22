@@ -18,6 +18,7 @@
 #include "Abilities/Tasks/AbilityTask_ApplyRootMotionMoveToForce.h"
 #include "GameFramework/RootMotionSource.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(CXPlayerGrapplingHookAbility)
 
 UCXPlayerGrapplingHookAbility::UCXPlayerGrapplingHookAbility()
 {

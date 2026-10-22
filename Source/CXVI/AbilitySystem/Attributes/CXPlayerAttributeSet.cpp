@@ -4,6 +4,7 @@
 #include "CXPlayerAttributeSet.h"
 #include "GameplayEffectExtension.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(CXPlayerAttributeSet)
 
 void UCXPlayerAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue)
 {
