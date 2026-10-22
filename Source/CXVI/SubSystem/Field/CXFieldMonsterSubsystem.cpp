@@ -58,3 +58,31 @@ bool UCXFieldMonsterSubsystem::MarkMonsterDefeated(FName SpawnId)
 
 	return true;
 }
+
+TArray<FName> UCXFieldMonsterSubsystem::ResetDefeatedMonsters(FName RestGroupId)
+{
+	TArray<FName> ResetSpawnIds;
+
+	for (auto& Pair : SpawnStates)
+	{
+		FCXFieldMonsterSpawnState& State = Pair.Value;
+
+		// 처치되지 않았거나 휴식 재생성이 금지된 몬스터는 제외.
+		if (!State.bDefeated || !State.bRespawnOnRest)
+		{
+			continue;
+		}
+
+		// 특정 그룹을 지정했다면 같은 그룹만 처리.
+		if (!RestGroupId.IsNone() && State.RestGroupId != RestGroupId)
+		{
+			continue;
+		}
+
+		State.bDefeated = false;
+
+		ResetSpawnIds.Add(Pair.Key);
+	}
+	return ResetSpawnIds;
+}
+

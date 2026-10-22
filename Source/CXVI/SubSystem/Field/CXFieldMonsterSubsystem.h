@@ -50,6 +50,15 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Field|Monster")
 	bool MarkMonsterDefeated(FName SpawnId);
 
+	
+	// 휴식 섹션.
+public:
+	// 휴식으로 복원할 몬스터의 처치 기록을 초기화한다.
+	// 반환값: 이번에 초기화된 SpawnId 목록.
+	// RestGroupId가 None 이면 모든 그룹을 대상으로 본다.
+	UFUNCTION(BlueprintCallable, Category = "Field|Monster")
+	TArray<FName> ResetDefeatedMonsters(FName RestGroupId = NAME_None);
+
 private:
 	// 스폰 지점의 고유 ID -> 해당 지점의 몬스터 상태.
 	UPROPERTY(Transient)
