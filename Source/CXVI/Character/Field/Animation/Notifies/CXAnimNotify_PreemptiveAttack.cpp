@@ -4,7 +4,7 @@
 #include "CXAnimNotify_PreemptiveAttack.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "AbilitySystemBlueprintLibrary.h"
-#include "../../../../Tags/CXFieldTags.h"
+#include "CXVI/Tags/CXFieldTags.h"
 
 void UCXAnimNotify_PreemptiveAttack::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference)
 {
@@ -22,5 +22,5 @@ void UCXAnimNotify_PreemptiveAttack::Notify(USkeletalMeshComponent* MeshComp, UA
 		return;
 	}
 
-	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(Owner, CXSlowMotionTag, FGameplayEventData{});
+	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(Owner, CXVIFieldTag::Event_Field_EnterSlowMotion, FGameplayEventData{});
 }

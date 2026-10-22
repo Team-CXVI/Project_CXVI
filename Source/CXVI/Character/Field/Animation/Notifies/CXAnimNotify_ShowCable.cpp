@@ -5,7 +5,7 @@
 
 #include "AbilitySystemBlueprintLibrary.h"
 #include "Components/SkeletalMeshComponent.h"
-#include "../../../../Tags/CXFieldTags.h"
+#include "CXVI/Tags/CXFieldTags.h"
 
 void UCXAnimNotify_ShowCable::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference)
 {
@@ -22,5 +22,5 @@ void UCXAnimNotify_ShowCable::Notify(USkeletalMeshComponent* MeshComp, UAnimSequ
 		return;
 	}
 
-	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(Owner, CXGrapplingShowCableTag, FGameplayEventData());
+	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(Owner, CXVIFieldTag::Event_Field_ShowCable, FGameplayEventData());
 }

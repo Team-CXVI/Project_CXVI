@@ -1,14 +1,16 @@
 #include "CXFieldTags.h"
 
-UE_DEFINE_GAMEPLAY_TAG(CXMovingBlockTag, "State.MovementBlocked");
-UE_DEFINE_GAMEPLAY_TAG(CXNowAttackingTag, "State.Attacking");
-UE_DEFINE_GAMEPLAY_TAG(CXNextAttackTag, "Character.Event.NextAttack");
-UE_DEFINE_GAMEPLAY_TAG(CXHitTraceTag, "Character.Event.HitTrace");
-UE_DEFINE_GAMEPLAY_TAG(CXStaminaRegenBlockedTag, "State.StaminaRegenBlocked");
-UE_DEFINE_GAMEPLAY_TAG(CXSprintingTag, "InputTag.Sprinting");
-UE_DEFINE_GAMEPLAY_TAG(CXCanGrapplingHookTag, "State.CanGrapple");
-UE_DEFINE_GAMEPLAY_TAG(CXAssassinationTag, "State.CanPreemptiveAttack");
-UE_DEFINE_GAMEPLAY_TAG(CXSlowMotionTag, "Event.Field.StartSlowMotion");
-UE_DEFINE_GAMEPLAY_TAG(CXGrapplingShowCableTag, "Event.Grapple.ShowCable");
-UE_DEFINE_GAMEPLAY_TAG(CXGrapplingStartMoveTag, "Event.Grapple.StartMove");
-UE_DEFINE_GAMEPLAY_TAG(CXCanSaveTag, "State.CanUseExpeditionFlag");
+namespace CXVIFieldTag
+{
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_MovingBlock, "State.MovingBlock", "플레이어 이동 제한 상태");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_CanGrapplingHook, "State.CanGrapplingHook","플레이어 그래플링 가능 상태");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_CanAssassination, "State.CanAssassination","플레이어 몬스터 기습 공격 가능 상태");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_CanUseExpeditionFlag, "State.CanUseExpeditionFlag","플레이어 원정대 깃발 사용 가능 상태");
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Input_Field_Sprint, "Input.Field.Sprint","플레이어 스프린트 입력");
+
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Event_Field_EnterSlowMotion, "Event.Field.EnterSlowMotion","플레이어 및 몬스터의 공격 성공 시 슬로우모션 진입 이벤트");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Event_Field_ShowCable, "Event.Field.ShowCable","그래플링 성공 시 케이블이 보이는 이벤트");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Event_Field_StartGrapplingHook, "Event.Field.StartMove","그래플링 성공 시 플레이어 비행 시작을 알리는 이벤트");
+}

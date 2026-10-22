@@ -2,8 +2,8 @@
 
 
 #include "CXSaveFlagTriggerBox.h"
-#include "../CXFieldPlayerCharacter.h"
-#include "../../../Tags/CXFieldTags.h"
+#include "CXVI/Character/Field/CXFieldPlayerCharacter.h"
+#include "CXVI/Tags/CXFieldTags.h"
 
 #include "Components/ShapeComponent.h"
 #include "AbilitySystemComponent.h"
@@ -34,7 +34,7 @@ void ACXSaveFlagTriggerBox::HandleActorEndOverlap(AActor* OverlappedActor, AActo
 	{
 		// 그래플링 훅 처럼해당 타겟에 UI.
 
-		ASC->RemoveLooseGameplayTag(CXCanSaveTag);
+		ASC->RemoveLooseGameplayTag(CXVIFieldTag::State_CanUseExpeditionFlag);
 	}
 
 }
@@ -52,7 +52,7 @@ void ACXSaveFlagTriggerBox::HandleActorBeginOverlap(AActor* OverlappedActor, AAc
 	{
 		// 그래플링 훅 처럼해당 타겟에 UI.
 
-		ASC->AddLooseGameplayTag(CXCanSaveTag);
+		ASC->AddLooseGameplayTag(CXVIFieldTag::State_CanUseExpeditionFlag);
 	}
 
 	

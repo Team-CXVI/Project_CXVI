@@ -7,8 +7,7 @@
 #include "Components/ChildActorComponent.h"
 #include "Interactions/CXPreemptiveAttackTriggerBox.h"
 
-ACXFieldEnemy::ACXFieldEnemy(/*const FObjectInitializer& ObjectInitializer*/ )
-	//:Super(ObjectInitializer.SetDefaultSubobjectClass<UEnemyAttributesSet>(TEXT("BaseAttributeSet")))
+ACXFieldEnemy::ACXFieldEnemy( )
 {
 	PreemptiveAttackTrigger = CreateDefaultSubobject<UChildActorComponent>(TEXT("PreemptiveAttackTrigger"));
 	

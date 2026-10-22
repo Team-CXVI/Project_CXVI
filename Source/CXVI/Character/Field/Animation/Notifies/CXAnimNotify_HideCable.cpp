@@ -2,7 +2,7 @@
 
 
 #include "CXAnimNotify_HideCable.h"
-#include "../../../../Character/Field/CXFieldPlayerCharacter.h"
+#include "CXVI/Character/Field/CXFieldPlayerCharacter.h"
 #include "Components/SkeletalMeshComponent.h"
 
 void UCXAnimNotify_HideCable::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference)

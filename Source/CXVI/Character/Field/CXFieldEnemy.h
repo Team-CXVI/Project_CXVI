@@ -15,7 +15,7 @@ class CXVI_API ACXFieldEnemy : public ACXFieldCharacterBase
 	GENERATED_BODY()
 
 public:
-	ACXFieldEnemy(/*const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get()*/);
+	ACXFieldEnemy();
 
 protected:
 	virtual void BeginPlay() override;

@@ -4,10 +4,12 @@
 
 
 #include "CXGrapplingHookTriggerBox.h"
-#include "../CXFieldPlayerCharacter.h"
+#include "CXVI/Character/Field/CXFieldPlayerCharacter.h"
+#include "CXVI/Tags/CXFieldTags.h"
+
 #include "AbilitySystemComponent.h"
 #include "Components/ShapeComponent.h"
-#include "../../../Tags/CXFieldTags.h"
+
 
 ACXGrapplingHookTriggerBox::ACXGrapplingHookTriggerBox(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer)
@@ -37,7 +39,7 @@ void ACXGrapplingHookTriggerBox::HandleActorEndOverlap(AActor* OverlappedActor, 
 	if (UAbilitySystemComponent* ASC = PlayerCharacter->GetAbilitySystemComponent())
 	{
 		
-		ASC->RemoveLooseGameplayTag(CXCanGrapplingHookTag);
+		ASC->RemoveLooseGameplayTag(CXVIFieldTag::State_CanGrapplingHook);
 	
 		if (PlayerCharacter->GetGrapplingTargetActor() == GrapplingTarget.Get())
 		{
@@ -62,6 +64,6 @@ void ACXGrapplingHookTriggerBox::HandleActorBeginOverlap(AActor* OverlappedActor
 		// 태그 변경 보다 먼저 대상 지정.
 		PlayerCharacter->SetGrapplingTarget(GrapplingTarget.Get(), LandingSurface.Get());
 
-		ASC->AddLooseGameplayTag(CXCanGrapplingHookTag);
+		ASC->AddLooseGameplayTag(CXVIFieldTag::State_CanGrapplingHook);
 	}
 }

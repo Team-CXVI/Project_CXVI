@@ -3,11 +3,11 @@
 
 #include "CXPreemptiveAttackTriggerBox.h"
 
-#include "../CXFieldPlayerCharacter.h"
-#include "../CXFieldEnemy.h"
+#include "CXVI/Character/Field/CXFieldPlayerCharacter.h"
+#include "CXVI/Character/Field/CXFieldEnemy.h"
 
 #include "AbilitySystemComponent.h"
-#include "../../../Tags/CXFieldTags.h"
+#include "CXVI/Tags/CXFieldTags.h"
 #include "Components/ShapeComponent.h"
 
 ACXPreemptiveAttackTriggerBox::ACXPreemptiveAttackTriggerBox(const FObjectInitializer& ObjectInitializer)
@@ -36,7 +36,7 @@ void ACXPreemptiveAttackTriggerBox::HandleActorEndOverlap(AActor* OverlappedActo
 	if (UAbilitySystemComponent* ASC = Player->GetAbilitySystemComponent())
 	{
 
-		ASC->RemoveLooseGameplayTag(CXAssassinationTag);
+		ASC->RemoveLooseGameplayTag(CXVIFieldTag::State_CanAssassination);
 	}
 
 }
@@ -73,7 +73,7 @@ void ACXPreemptiveAttackTriggerBox::HandleActorBeginOverlap(AActor* OverlappedAc
 		// 적 뒤쪽 약 120도.
 		if (DirectionDot < -0.5f)
 		{
-			ASC->AddLooseGameplayTag(CXAssassinationTag);
+			ASC->AddLooseGameplayTag(CXVIFieldTag::State_CanAssassination);
 		}
 		//else
 		//{
