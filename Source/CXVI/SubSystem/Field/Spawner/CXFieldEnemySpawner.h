@@ -1,0 +1,45 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "GameFramework/Actor.h"
+#include "CXFieldEnemySpawner.generated.h"
+
+class UArrowComponent;
+class ACXFieldEnemy;
+
+UCLASS()
+class CXVI_API ACXFieldEnemySpawner : public AActor
+{
+	GENERATED_BODY()
+	
+public:	
+	// Sets default values for this actor's properties
+	ACXFieldEnemySpawner();
+
+protected:
+	// Called when the game starts or when spawned
+	virtual void BeginPlay() override;
+
+protected:
+	// 생성 위치와 방향을 에디터에서 표시.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Spawner")
+	TObjectPtr<UArrowComponent> SpawnPoint;
+
+	// 배치된 스포너마다 다르게 지정할 고유 ID.
+	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = "Spawner")
+	FName SpawnId = NAME_None;
+
+	// 생성할 몬스터 클래스.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawner")
+	TSubclassOf<ACXFieldEnemy> EnemyClass;
+
+	// 이 스포너가 속한 휴식 그룹.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawner")
+	FName RestGroupId = NAME_None;
+
+	// 휴식으로 재생성할 수 있는지 확인.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawner")
+	bool bRespawnOnRest = true;
+};
