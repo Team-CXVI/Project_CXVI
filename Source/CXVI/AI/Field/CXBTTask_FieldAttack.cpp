@@ -17,7 +17,7 @@ EBTNodeResult::Type UCXBTTask_FieldAttack::ExecuteTask(UBehaviorTreeComponent& O
 {
 	EBTNodeResult::Type Result = Super::ExecuteTask(OwnerComp, NodeMemory);
 
-	// 감지된 폰에 공격을 받았다는 메시지 전달.
+	// 감지된 폰에게 공격을 받았다는 메시지 전달.
 	APawn* ControllingPawn = OwnerComp.GetAIOwner()->GetPawn();
 	if (!IsValid(ControllingPawn))
 	{
