@@ -1,16 +1,17 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "BTService_FieldDetect.h"
+#include "CXBTService_FieldDetect.h"
 #include "Interface/CXFieldEnemyAIInterface.h"
 #include "CXFieldAI.h"
+
 #include "AIController.h"
 #include "Engine/OverlapResult.h"
 #include "BehaviorTree/BlackboardComponent.h"
 
-#include UE_INLINE_GENERATED_CPP_BY_NAME(BTService_FieldDetect)
+#include UE_INLINE_GENERATED_CPP_BY_NAME(CXBTService_FieldDetect)
 
-UBTService_FieldDetect::UBTService_FieldDetect()
+UCXBTService_FieldDetect::UCXBTService_FieldDetect()
 {
 	// 에디터에 보이는 노드 이름 값.
 	NodeName = TEXT("Detect");
@@ -19,7 +20,7 @@ UBTService_FieldDetect::UBTService_FieldDetect()
 	Interval = 1.0f;
 }
 
-void UBTService_FieldDetect::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds)
+void UCXBTService_FieldDetect::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds)
 {
 	Super::TickNode(OwnerComp, NodeMemory, DeltaSeconds);
 

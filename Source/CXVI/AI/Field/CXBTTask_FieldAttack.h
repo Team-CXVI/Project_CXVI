@@ -4,20 +4,19 @@
 
 #include "CoreMinimal.h"
 #include "BehaviorTree/BTTaskNode.h"
-#include "BTTask_FieldFindPatrolPos.generated.h"
+#include "CXBTTask_FieldAttack.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class CXVI_API UBTTask_FieldFindPatrolPos : public UBTTaskNode
+class CXVI_API UCXBTTask_FieldAttack : public UBTTaskNode
 {
 	GENERATED_BODY()
 	
 public:
-	UBTTask_FieldFindPatrolPos();
+	UCXBTTask_FieldAttack();
 
 protected:
-	// 태스크 실행을 시작할 때 호출되는 함수.
 	virtual EBTNodeResult::Type ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) override;
 };

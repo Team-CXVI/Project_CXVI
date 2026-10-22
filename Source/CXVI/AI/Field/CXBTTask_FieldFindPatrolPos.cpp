@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "BTTask_FieldFindPatrolPos.h"
+#include "CXBTTask_FieldFindPatrolPos.h"
 #include "CXFieldAI.h"
 #include "Interface/CXFieldEnemyAIInterface.h"
 
@@ -9,15 +9,15 @@
 #include "NavigationSystem.h"
 #include "AIController.h"
 
-#include UE_INLINE_GENERATED_CPP_BY_NAME(BTTask_FieldFindPatrolPos)
+#include UE_INLINE_GENERATED_CPP_BY_NAME(CXBTTask_FieldFindPatrolPos)
 
-UBTTask_FieldFindPatrolPos::UBTTask_FieldFindPatrolPos()
+UCXBTTask_FieldFindPatrolPos::UCXBTTask_FieldFindPatrolPos()
 {
     // 노드 이름 설정.
     NodeName = TEXT("FindPatrolPos");
 }
 
-EBTNodeResult::Type UBTTask_FieldFindPatrolPos::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
+EBTNodeResult::Type UCXBTTask_FieldFindPatrolPos::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
 {
     EBTNodeResult::Type Result = Super::ExecuteTask(OwnerComp, NodeMemory);
 
