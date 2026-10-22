@@ -26,7 +26,7 @@ ACXCombatCharacterPlayer::ACXCombatCharacterPlayer()
 	Camera->SetupAttachment(SpringArm);
 
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> CharacterMeshRef(
-		TEXT("/Game/Characters/Mannequins/Meshes/SKM_Quinn_Simple.SKM_Quinn_Simple")
+		TEXT("/Game/Combat/Characters/Mannequins/Meshes/SKM_Quinn_Simple.SKM_Quinn_Simple")
 	);
 
 	if (CharacterMeshRef.Succeeded())
@@ -34,14 +34,13 @@ ACXCombatCharacterPlayer::ACXCombatCharacterPlayer()
 		GetMesh()->SetSkeletalMesh(CharacterMeshRef.Object);
 	}
 
-	static ConstructorHelpers::FClassFinder<UAnimInstance> CharacterAnimRef(
-		TEXT("/Game/Game/Animation/ABP_BattlePlayer.ABP_BattlePlayer_C")
-	);
-
-	if (CharacterAnimRef.Succeeded())
-	{
-		GetMesh()->SetAnimInstanceClass(CharacterAnimRef.Class);
-	}
+	//static ConstructorHelpers::FClassFinder<UAnimInstance> CharacterAnimRef(
+	//	TEXT("/Game/CXVI/Characters/Combat/Animation/ABP_Combat_Character.ABP_Combat_Character_C")
+	//);
+	//if (CharacterAnimRef.Succeeded())
+	//{
+	//	GetMesh()->SetAnimInstanceClass(CharacterAnimRef.Class);
+	//}
 }
 
 

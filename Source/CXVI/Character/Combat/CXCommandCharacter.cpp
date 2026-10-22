@@ -41,33 +41,6 @@ void ACXCommandCharacter::AddCommandCharacter(ACXCombatCharacterPlayer* NewPlaye
 	CommandCharacters.Add(NewPlayer);
 }
 
-void ACXCommandCharacter::SetCombatInput(bool bBattle)
-{
-	APlayerController* PC = Cast<APlayerController>(GetController());
-
-	if (!PC)
-	{
-		return;
-	}
-
-	UEnhancedInputLocalPlayerSubsystem* InputSystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer());
-
-	if (!InputSystem)
-	{
-		return;
-	}
-
-	if (bBattle)
-	{
-		InputSystem->RemoveMappingContext(FieldMappingContext);
-		InputSystem->AddMappingContext(BattleMappingContext, 1);
-	}
-	else
-	{
-		InputSystem->RemoveMappingContext(BattleMappingContext);
-		InputSystem->AddMappingContext(FieldMappingContext, 1);
-	}
-}
 
 void ACXCommandCharacter::UpdateCommandCharacter()
 {
@@ -90,9 +63,38 @@ void ACXCommandCharacter::UpdateCommandCharacter()
 void ACXCommandCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	
-	// 처음에는 필드 입력 사용
-	SetCombatInput(false);
+}
+
+void ACXCommandCharacter::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+
+	APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	if (IsValid(PlayerController))
+	{
+		UEnhancedInputLocalPlayerSubsystem* InputSystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer());
+
+		if (InputSystem)
+		{
+			InputSystem->AddMappingContext(DefaultMappingContext, 0);
+		}
+	}
+}
+
+void ACXCommandCharacter::UnPossessed()
+{
+	Super::UnPossessed();
+
+	APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	if (IsValid(PlayerController))
+	{
+		UEnhancedInputLocalPlayerSubsystem* InputSystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer());
+
+		if (InputSystem)
+		{
+			InputSystem->RemoveMappingContext(DefaultMappingContext);
+		}
+	}
 }
 
 // Called to bind functionality to input

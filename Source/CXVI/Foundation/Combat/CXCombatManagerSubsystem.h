@@ -6,7 +6,7 @@
 #include "Subsystems/WorldSubsystem.h"
 #include "CXCombatManagerSubsystem.generated.h"
 
-//class ABattleArena;
+class ATestCombatArena;
 
 /**
  * 
@@ -25,7 +25,7 @@ public:
 	void RequestEndBattle();
 
 
-	//FORCEINLINE ABattleArena* GetBattleArena() const { return BattleArena; }
+	FORCEINLINE ATestCombatArena* GetCombatArena() const { return TestCombatArena; }
 
 protected:
 	virtual void PostInitialize() override;
@@ -35,6 +35,9 @@ private:
 private:
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<APawn> GASCharacterPlayer;
+
+	UPROPERTY(VisibleAnywhere, Category = "BattleArena")
+	TObjectPtr<ATestCombatArena> TestCombatArena;
 
 	UPROPERTY(VisibleAnywhere, Category = "Manager")
 	TObjectPtr<class UCXTurnManager> TurnManager;

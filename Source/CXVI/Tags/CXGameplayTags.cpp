@@ -13,6 +13,7 @@ namespace CXVIGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Status_Dead, "Status.Dead", "사망 상태");
 
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Event_Combat_ParrySucceeded, "Event.Combat.ParrySucceeded", "패링 성공 시 GAS 이벤트");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Event_Combat_AttackHit, "Event.Combat.AttackHit", "공격 타격시 GAS 이벤트");
 
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Message_Combat_End, "Message.Combat.End", "전투 종료 알림 채널");
 

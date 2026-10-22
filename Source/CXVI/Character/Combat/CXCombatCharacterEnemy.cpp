@@ -14,7 +14,7 @@ ACXCombatCharacterEnemy::ACXCombatCharacterEnemy()
 	GetMesh()->SetRelativeLocationAndRotation(FVector(0.f, 0.f, -88.f), FRotator(0.f, -90.f, 0.f));
 
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> CharacterMeshRef(
-		TEXT("/Game/Characters/Mannequins/Meshes/SKM_Manny_Simple.SKM_Manny_Simple")
+		TEXT("/Game/Combat/Characters/Mannequins/Meshes/SKM_Manny_Simple.SKM_Manny_Simple")
 	);
 
 	if (CharacterMeshRef.Succeeded())
@@ -22,14 +22,14 @@ ACXCombatCharacterEnemy::ACXCombatCharacterEnemy()
 		GetMesh()->SetSkeletalMesh(CharacterMeshRef.Object);
 	}
 
-	static ConstructorHelpers::FClassFinder<UAnimInstance> CharacterAnimRef(
-		TEXT("/Game/Game/Animation/ABP_BattlePlayer.ABP_BattlePlayer_C")
+	/*static ConstructorHelpers::FClassFinder<UAnimInstance> CharacterAnimRef(
+		TEXT("/Game/CXVI/Characters/Combat/Animation/ABP_Combat_Character.ABP_Combat_Character_C")
 	);
 
 	if (CharacterAnimRef.Succeeded())
 	{
 		GetMesh()->SetAnimInstanceClass(CharacterAnimRef.Class);
-	}
+	}*/
 }
 
 void ACXCombatCharacterEnemy::PostInitializeComponents()

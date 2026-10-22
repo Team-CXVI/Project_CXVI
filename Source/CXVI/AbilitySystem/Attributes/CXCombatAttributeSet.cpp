@@ -8,7 +8,7 @@
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXCombatAttributeSet)
 
 UCXCombatAttributeSet::UCXCombatAttributeSet()
-	: MaxHealth(100.f), CombatSpeed(100.f)
+	: MaxHealth(100.f), CombatSpeed(100.f), AttackRange(100.f), AttackRadius(50.f)
 {
 	InitHealth(GetMaxHealth());
 }

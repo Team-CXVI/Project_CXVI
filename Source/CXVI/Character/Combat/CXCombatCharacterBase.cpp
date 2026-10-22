@@ -145,7 +145,7 @@ void ACXCombatCharacterBase::OnOutOfHealthCpp(AActor* InInstigator)
 
 float ACXCombatCharacterBase::GetCombatSpeed() const
 {
-	return 0.0f;
+	return CharacterAttributeSet ? CharacterAttributeSet->GetCombatSpeed() : 0.f;
 }
 
 void ACXCombatCharacterBase::CombatMessageRequest(const FCXCombatMessageData& MessageRequest)

@@ -29,7 +29,6 @@ public:
 	void AddCommandCharacter(class ACXCombatCharacterPlayer* NewPlayer);
 
 	// Setter
-	void SetCombatInput(bool bBattle);
 	FORCEINLINE void SetCombatInputMode(ECombatInputMode NewMode) { UpdateCommandCharacter(); CombatInputMode = NewMode; }
 
 private:
@@ -37,6 +36,11 @@ private:
 
 protected:
 	virtual void BeginPlay() override;
+
+	virtual void PossessedBy(AController* NewController) override;
+
+	virtual void UnPossessed() override;
+
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 
 
@@ -66,10 +70,7 @@ private:
 
 private:
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
-	TObjectPtr<class UInputMappingContext> FieldMappingContext;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Input")
-	TObjectPtr<class UInputMappingContext> BattleMappingContext;
+	TObjectPtr<class UInputMappingContext> DefaultMappingContext;
 
 private:
 	// 현재 입력상태

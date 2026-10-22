@@ -22,7 +22,8 @@ public:
 	ACXCombatCharacterPlayer();
 
 	// Getter
-	FORCEINLINE const bool GetIsAimMode() const { return bIsAimMode; }
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE bool GetIsAimMode() const { return bIsAimMode; }
 
 	void Look(const FInputActionValue& Value);
 
