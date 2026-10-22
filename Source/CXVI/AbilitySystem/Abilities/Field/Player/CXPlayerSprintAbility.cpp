@@ -2,13 +2,12 @@
 
 
 #include "CXPlayerSprintAbility.h"
+#include "CXVI/Tags/CXFieldTags.h"
 
 #include "AbilitySystemComponent.h"
 #include "Abilities/Tasks/AbilityTask_WaitAttributeChange.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "../../../../Tags/CXFieldTags.h"
-#include "../../../Attributes/CXPlayerAttributeSet.h"
 #include "UObject/ConstructorHelpers.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXPlayerSprintAbility)
@@ -19,12 +18,11 @@ UCXPlayerSprintAbility::UCXPlayerSprintAbility()
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 
 	// Ability 실행 중 ASC에 붙고, 종료동료되면 제거되는 태그.
-	ActivationOwnedTags.AddTag(CXSprintingTag);
+	ActivationOwnedTags.AddTag(CXVIFieldTag::Input_Field_Sprint);
 	
 
-	// 공격 중이거나 이동이 차단된 상태에서는 시작 금지.
-	ActivationBlockedTags.AddTag(CXNowAttackingTag);
-	ActivationBlockedTags.AddTag(CXMovingBlockTag);
+	// 이동이 차단된 상태에서는 시작 금지.
+	ActivationBlockedTags.AddTag(CXVIFieldTag::State_MovingBlock);
 
 	// 기존에 만든 스테미나 소모 이펙트를 기본값으로 연결.
 	//static ConstructorHelpers::FClassFinder<UGameplayEffect> DrainEffectClass(
@@ -55,10 +53,9 @@ bool UCXPlayerSprintAbility::CanActivateAbility(const FGameplayAbilitySpecHandle
 	const UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get();
 	const ACharacter* Character = Cast<ACharacter>(ActorInfo->AvatarActor.Get());
 
-	const UCXPlayerAttributeSet* Attributes = IsValid(ASC) ? ASC->GetSet<UCXPlayerAttributeSet>() : nullptr;
 
 	// 스테미나가 있어야 시작 가능/캐릭터의 이동이 있어야만 발동.
-	return Character && Character->GetCharacterMovement() && Attributes
+	return Character && Character->GetCharacterMovement() 
 		&& !Character->GetLastMovementInputVector().IsNearlyZero() && Character->GetVelocity().Size2D() > 10.0f;
 }
 

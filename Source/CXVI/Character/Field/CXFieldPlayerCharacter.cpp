@@ -2,8 +2,7 @@
 
 #include "CXFieldPlayerCharacter.h"
 #include "InputActionValue.h"
-#include "../../Tags/CXFieldTags.h"
-#include "../../AbilitySystem/Attributes/CXPlayerAttributeSet.h"
+#include "CXVI/Tags/CXFieldTags.h"
 
 #include "Components/SkeletalMeshComponent.h"
 #include "EnhancedInputSubsystems.h"
@@ -25,8 +24,7 @@
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXFieldPlayerCharacter)
 
-ACXFieldPlayerCharacter::ACXFieldPlayerCharacter(const FObjectInitializer& ObjectInitializer)
-	:Super(ObjectInitializer.SetDefaultSubobjectClass<UCXPlayerAttributeSet>(TEXT("BaseAttributeSet")))
+ACXFieldPlayerCharacter::ACXFieldPlayerCharacter()
 {
 	// 그래플링 UI 설정.
 	GrapplingPrompt = CreateDefaultSubobject<UWidgetComponent>(TEXT("GrapplingPrompt"));
@@ -85,7 +83,7 @@ void ACXFieldPlayerCharacter::BeginPlay()
 
 	// 그래플링 태그 여부에 따른 델리게이트 함수 호출/ 후에 콜백을 없애주기위해 변수로 설정.
 	GrapplingTagDelegateHandle =
-		ASC->RegisterGameplayTagEvent(CXCanGrapplingHookTag, EGameplayTagEventType::NewOrRemoved).AddUObject(this, &ThisClass::OnCanGrapplingHookChanged);
+		ASC->RegisterGameplayTagEvent(CXVIFieldTag::State_CanGrapplingHook, EGameplayTagEventType::NewOrRemoved).AddUObject(this, &ThisClass::OnCanGrapplingHookChanged);
 
 	RefreshGrapplingPrompt();
 
@@ -174,7 +172,7 @@ void ACXFieldPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerI
 
 void ACXFieldPlayerCharacter::Move(const FInputActionValue& InValue)
 {
-	if (!Controller || (ASC && ASC->HasMatchingGameplayTag(CXMovingBlockTag)))
+	if (!Controller || (ASC && ASC->HasMatchingGameplayTag(CXVIFieldTag::State_MovingBlock)))
 	{
 		return;
 	}
@@ -263,7 +261,7 @@ void ACXFieldPlayerCharacter::StartJumpOrParkour()
 	// 진행 중의 재입력을 버린다. 파쿠르 실패로 간주해 일반 점프를 호출하지 않는다.
 	if (!IsValid(Movement) || !Movement->IsMovingOnGround()
 		|| HasAnyRootMotion() || bParkourMontageActive
-		|| (ASC && ASC->HasMatchingGameplayTag(CXMovingBlockTag)))
+		|| (ASC && ASC->HasMatchingGameplayTag(CXVIFieldTag::State_MovingBlock)))
 	{
 		return;
 	}
@@ -351,7 +349,7 @@ void ACXFieldPlayerCharacter::AlignParkourMontageEntry(UAnimInstance* AnimInstan
 
 void ACXFieldPlayerCharacter::Assassination()
 {
-	if (ASC && PreemptiveAttackHandle.IsValid() && ASC->HasMatchingGameplayTag(CXAssassinationTag))
+	if (ASC && PreemptiveAttackHandle.IsValid() && ASC->HasMatchingGameplayTag(CXVIFieldTag::State_CanAssassination))
 	{
 		ASC->TryActivateAbility(PreemptiveAttackHandle);
 
@@ -360,7 +358,7 @@ void ACXFieldPlayerCharacter::Assassination()
 
 void ACXFieldPlayerCharacter::StartSave()
 {
-	if (!IsValid(ASC) || !IsValid(SaveMontage) || bSaveMovementBlocked || !ASC->HasMatchingGameplayTag(CXCanSaveTag))
+	if (!IsValid(ASC) || !IsValid(SaveMontage) || bSaveMovementBlocked || !ASC->HasMatchingGameplayTag(CXVIFieldTag::State_CanUseExpeditionFlag))
 	{
 		return;
 	}
@@ -390,7 +388,7 @@ void ACXFieldPlayerCharacter::StartSave()
 	AnimInstance->Montage_SetSectionChangedDelegate(SectionDelegate, SaveMontage);
 
 	bSaveMovementBlocked = true;
-	ASC->AddLooseGameplayTag(CXMovingBlockTag);
+	ASC->AddLooseGameplayTag(CXVIFieldTag::State_MovingBlock);
 	
 }
 
@@ -405,7 +403,7 @@ void ACXFieldPlayerCharacter::OnSaveMontageChanged(UAnimMontage* Montage, FName 
 
 	if (IsValid(ASC))
 	{
-		ASC->RemoveLooseGameplayTag(CXMovingBlockTag);
+		ASC->RemoveLooseGameplayTag(CXVIFieldTag::State_MovingBlock);
 	}
 
 }
@@ -433,7 +431,7 @@ void ACXFieldPlayerCharacter::GrapplingHook()
 		return;
 	}
 
-	if (ASC->HasMatchingGameplayTag(CXCanGrapplingHookTag)
+	if (ASC->HasMatchingGameplayTag(CXVIFieldTag::State_CanGrapplingHook)
 		&& CurrentGrapplingTarget.IsValid() && CurrentLandingSurface.IsValid())
 	{
 		ASC->TryActivateAbility(GrapplingHookHandle);
@@ -456,7 +454,7 @@ void ACXFieldPlayerCharacter::RefreshGrapplingPrompt()
 
 	const bool bShow =
 		ASC &&
-		ASC->HasMatchingGameplayTag(CXCanGrapplingHookTag) &&
+		ASC->HasMatchingGameplayTag(CXVIFieldTag::State_CanGrapplingHook) &&
 		Target &&
 		IsValid(TargetComponent) &&
 		PC &&

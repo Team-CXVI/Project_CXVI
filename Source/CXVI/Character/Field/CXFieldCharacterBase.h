@@ -22,7 +22,7 @@ class CXVI_API ACXFieldCharacterBase : public ACharacter
 	GENERATED_BODY()
 
 public:
-	ACXFieldCharacterBase(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
+	ACXFieldCharacterBase();
 
 	virtual void PossessedBy(AController* NewController) override;
 
@@ -39,11 +39,4 @@ protected:
 protected:
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UAbilitySystemComponent> ASC;
-
-	UPROPERTY()
-	TObjectPtr<UCXBaseAttributeSet> BaseAttributeSet;
-	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "GameplayEffect")
-	TSubclassOf<UGameplayEffect> BaseAttributeInitEffect;
-
 };

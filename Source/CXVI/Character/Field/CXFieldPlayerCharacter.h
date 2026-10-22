@@ -22,7 +22,7 @@ class CXVI_API ACXFieldPlayerCharacter : public ACXFieldCharacterBase
 	GENERATED_BODY()
 
 public:
-	ACXFieldPlayerCharacter(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
+	ACXFieldPlayerCharacter();
 	
 	virtual void BeginPlay() override;
 	

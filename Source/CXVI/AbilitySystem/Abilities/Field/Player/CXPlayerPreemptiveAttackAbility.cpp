@@ -2,9 +2,8 @@
 
 
 #include "CXPlayerPreemptiveAttackAbility.h"
-#include "../../../../Character/Field/CXFieldPlayerCharacter.h"
-#include "../../../Attributes/CXPlayerAttributeSet.h"
-#include "../../../../Tags/CXFieldTags.h"
+#include "CXVI/Character/Field/CXFieldPlayerCharacter.h"
+#include "CXVI/Tags/CXFieldTags.h"
 
 #include "GameplayEffect.h"
 #include "AbilitySystemComponent.h"
@@ -56,7 +55,7 @@ void UCXPlayerPreemptiveAttackAbility::ActivateAbility(const FGameplayAbilitySpe
 	UAbilityTask_WaitGameplayEvent* SlowMotionTask =
 		UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
 			this,
-			CXSlowMotionTag,
+			CXVIFieldTag::Event_Field_EnterSlowMotion,
 			nullptr, // 이 어빌리티의 ASC에서 기다림.
 			true,	 // 한 번만 받음.
 			true);	 // 정확히 같은 태그만 받음.

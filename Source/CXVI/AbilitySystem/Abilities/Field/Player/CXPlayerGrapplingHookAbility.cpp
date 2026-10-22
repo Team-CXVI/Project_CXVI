@@ -2,9 +2,8 @@
 
 
 #include "CXPlayerGrapplingHookAbility.h"
-#include "../../../../Tags/CXFieldTags.h"
-#include "../../../Attributes/CXPlayerAttributeSet.h"
-#include "../../../../Character/Field/CXFieldPlayerCharacter.h"
+#include "CXVI/Tags/CXFieldTags.h"
+#include "CXVI/Character/Field/CXFieldPlayerCharacter.h"
 
 
 #include "Animation/AnimMontage.h"
@@ -24,12 +23,10 @@ UCXPlayerGrapplingHookAbility::UCXPlayerGrapplingHookAbility()
 {
     InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 
-    ActivationRequiredTags.AddTag(CXCanGrapplingHookTag);
-    ActivationOwnedTags.AddTag(CXNowAttackingTag);
-    ActivationOwnedTags.AddTag(CXMovingBlockTag);
+    ActivationRequiredTags.AddTag(CXVIFieldTag::State_CanGrapplingHook);
+    ActivationOwnedTags.AddTag(CXVIFieldTag::State_MovingBlock);
 
-    ActivationBlockedTags.AddTag(CXNowAttackingTag);
-    ActivationBlockedTags.AddTag(CXMovingBlockTag);
+    ActivationBlockedTags.AddTag(CXVIFieldTag::State_MovingBlock);
 
 }
 
@@ -43,10 +40,10 @@ bool UCXPlayerGrapplingHookAbility::CanActivateAbility(const FGameplayAbilitySpe
     // 캐릭터의 정보를 가져옴.
     const UAbilitySystemComponent* ASC = ActorInfo ? ActorInfo->AbilitySystemComponent.Get() : nullptr;
     const ACXFieldPlayerCharacter* Character = ActorInfo ? Cast<ACXFieldPlayerCharacter>(ActorInfo->AvatarActor.Get()) : nullptr;
-    const UCXPlayerAttributeSet* Attributes = IsValid(ASC) ? ASC->GetSet<UCXPlayerAttributeSet>() : nullptr;
+  
 
     // 캐릭터의 존재여부, 어트리뷰트.스태미나의 여분, 그래플링 타겟 액터와 착지지점이 있는지 확인 하나라도 존재하지 않으면 실패.
-    return IsValid(Character) && IsValid(Attributes)
+    return IsValid(Character)
         && IsValid(Character->GetGrapplingTargetActor())
         && IsValid(Character->GetLandingSurfaceActor());
 }
@@ -114,13 +111,13 @@ void UCXPlayerGrapplingHookAbility::ActivateAbility(const FGameplayAbilitySpecHa
     Character->LandedDelegate.AddUniqueDynamic(this, &ThisClass::HandleGrapplingLanded);
 
     // 케이블 표시 이벤트 대기
-    auto* ShowCableWait = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(this, CXGrapplingShowCableTag, nullptr, true, true);
+    auto* ShowCableWait = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(this, CXVIFieldTag::Event_Field_ShowCable, nullptr, true, true);
     ShowCableWait->EventReceived.AddDynamic(this, &ThisClass::OnShowCableEvent);
 
     ShowCableWait->ReadyForActivation();
 
     // 비행 시작 이벤트 대기.
-    auto* StartMoveWait = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(this, CXGrapplingStartMoveTag, nullptr, true, true);
+    auto* StartMoveWait = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(this, CXVIFieldTag::Event_Field_StartGrapplingHook, nullptr, true, true);
     StartMoveWait->EventReceived.AddDynamic(this, &ThisClass::OnStartMoveEvent);
     StartMoveWait->ReadyForActivation();
 

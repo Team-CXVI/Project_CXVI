@@ -2,7 +2,7 @@
 
 
 #include "CXAnimNotify_HideCable.h"
-#include "../../../../Character/Field/CXFieldPlayerCharacter.h"
+#include "CXVI/Character/Field/CXFieldPlayerCharacter.h"
 #include "Components/SkeletalMeshComponent.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXAnimNotify_HideCable)
