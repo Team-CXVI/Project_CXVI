@@ -17,6 +17,7 @@ namespace CXVIGameplayTags
 
 	// Event
 	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combat_ParrySucceeded);
+	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combat_AttackHit);
 
 	// Message
 	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Message_Combat_End);
@@ -26,4 +27,5 @@ namespace CXVIGameplayTags
 
 	// Ability
 	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Basic_Attack);
+	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Fire);
 }
