@@ -56,7 +56,6 @@ ACXCombatCharacterBase::ACXCombatCharacterBase()
 
 	// 캐릭터 기본변수 초기화
 	bIsCharacterAlive = true;
-	bIsAimMode = false;
 	bIsTurn = false;
 }
 
@@ -155,14 +154,6 @@ void ACXCombatCharacterBase::CombatMessageRequest(const FCXCombatMessageData& Me
 	ProcessMessage(SavedMessage.Phase);
 }
 
-bool ACXCombatCharacterBase::ToggleAimMode()
-{
-	bIsAimMode = !bIsAimMode;
-
-	ReturnToOriginLocation();
-
-	return bIsAimMode;
-}
 
 void ACXCombatCharacterBase::BasicAttackAbility()
 {

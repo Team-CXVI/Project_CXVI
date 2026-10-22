@@ -119,6 +119,15 @@ bool ACXCombatCharacterPlayer::PerformAimTrace(FHitResult& OutHit)
 	return bHit;
 }
 
+bool ACXCombatCharacterPlayer::ToggleAimMode()
+{
+	bIsAimMode = !bIsAimMode;
+
+	ReturnToOriginLocation();
+
+	return bIsAimMode;
+}
+
 void ACXCombatCharacterPlayer::FireAbility()
 {
 	if (!ASC)

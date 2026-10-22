@@ -30,6 +30,7 @@ public:
 	ATTRIBUTE_ACCESSORS_BASIC(ThisClass, CombatSpeed);
 	ATTRIBUTE_ACCESSORS_BASIC(ThisClass, AttackRange);
 	ATTRIBUTE_ACCESSORS_BASIC(ThisClass, AttackRadius);
+	ATTRIBUTE_ACCESSORS_BASIC(ThisClass, AttackRate);
 
 protected:
 	virtual void PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue) override;
@@ -71,5 +72,8 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attirbutes")
 	FGameplayAttributeData AttackRadius;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attirbutes")
+	FGameplayAttributeData AttackRate;
 
 };

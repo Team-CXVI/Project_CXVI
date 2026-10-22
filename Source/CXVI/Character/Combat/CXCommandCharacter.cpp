@@ -4,8 +4,11 @@
 #include "CXVI/Character/Combat/CXCommandCharacter.h"
 
 #include "CXVI/Character/Combat/CXCombatCharacterPlayer.h"
+#include "CXVI/Foundation/Combat/CXCombatManagerSubsystem.h"
+#include "CXVI/Actor/CXTestCombatArena.h"
 
 #include "Engine/LocalPlayer.h"
+#include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
 #include "EnhancedInputSubsystems.h"
 		 
@@ -44,17 +47,20 @@ void ACXCommandCharacter::AddCommandCharacter(ACXCombatCharacterPlayer* NewPlaye
 
 void ACXCommandCharacter::UpdateCommandCharacter()
 {
+	CommandCharacter.Reset();
+
 	for (const auto& WeakPlayer : CommandCharacters)
 	{
 		ACXCombatCharacterPlayer* CommandPlayer = WeakPlayer.Get();
 		if (!CommandPlayer)
 		{
-			return;
+			continue;
 		}
 
 		if (CommandPlayer->GetIsTurn())
 		{
 			CommandCharacter = CommandPlayer;
+			return;
 		}
 	}
 }
@@ -83,11 +89,15 @@ void ACXCommandCharacter::PossessedBy(AController* NewController)
 
 void ACXCommandCharacter::UnPossessed()
 {
-	Super::UnPossessed();
+	
 
 	APlayerController* PlayerController = Cast<APlayerController>(GetController());
 	if (IsValid(PlayerController))
 	{
+		CombatInputMode = ECombatInputMode::Disabled;
+		CommandCharacter.Reset();
+		CommandCharacters.Reset();
+
 		UEnhancedInputLocalPlayerSubsystem* InputSystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer());
 
 		if (InputSystem)
@@ -95,6 +105,7 @@ void ACXCommandCharacter::UnPossessed()
 			InputSystem->RemoveMappingContext(DefaultMappingContext);
 		}
 	}
+	Super::UnPossessed();
 }
 
 // Called to bind functionality to input
@@ -138,19 +149,32 @@ void ACXCommandCharacter::OnAimModeInput()
 		return;
 	}
 
-	ACXCombatCharacterPlayer* CommnadPlayer = CommandCharacter.Get();
-	if (!CommnadPlayer)
+	ACXCombatCharacterPlayer* CommandPlayer = CommandCharacter.Get();
+	APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	UWorld* World = GetWorld();
+
+	if (!IsValid(CommandPlayer) || !IsValid(PlayerController) || !World)
 	{
 		return;
 	}
 
-	if (CommnadPlayer->ToggleAimMode())
+	UCXCombatManagerSubsystem* CombatManager = World->GetSubsystem<UCXCombatManagerSubsystem>();
+
+	ACXTestCombatArena* Arena = CombatManager ? CombatManager->GetCombatArena() : nullptr;
+
+	if (!IsValid(Arena))
+	{
+		return;
+	}
+
+	if (CommandPlayer->ToggleAimMode())
 	{
 		//SwitchInputMappintContext(BattleLookMappingContext);
-		//SetViewTargetWithBlend(CommnadPlayer, 0.25f);
+		PlayerController->SetViewTargetWithBlend(CommandPlayer, 0.25f);
 	}
 	else
 	{
+		PlayerController->SetViewTargetWithBlend(Arena, 0.25f);
 		//AGASGameMode* GameMode = Cast<AGASGameMode>(GetWorld()->GetAuthGameMode());
 		//if (GameMode)
 		//{
@@ -168,7 +192,7 @@ void ACXCommandCharacter::OnMouseLookInput(const FInputActionValue& Value)
 	}
 
 	ACXCombatCharacterPlayer* CommandPlayer = CommandCharacter.Get();
-	if (!CommandPlayer)
+	if (!CommandPlayer || !CommandPlayer->GetIsAimMode())
 	{
 		return;
 	}

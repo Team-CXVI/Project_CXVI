@@ -29,6 +29,7 @@ public:
 
 	bool PerformAimTrace(FHitResult& OutHit);
 
+	bool ToggleAimMode();
 	void FireAbility();
 
 protected:

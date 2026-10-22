@@ -6,6 +6,8 @@
 #include "CXVI/Character/Combat/CXCommandCharacter.h"
 #include "CXVI/Character/Combat/CXTempFieldCharacterPlayer.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(CXCombatPlayerController)
+
 ACXCombatPlayerController::ACXCombatPlayerController()
 {
 }

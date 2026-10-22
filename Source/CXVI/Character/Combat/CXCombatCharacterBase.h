@@ -23,7 +23,6 @@ public:
 	// 가스 초기화 함수
 	void InitializeGAS();
 
-	bool ToggleAimMode();
 	void BasicAttackAbility();
 
 	// 어빌리티 끝났다고 알리는 함수
@@ -34,7 +33,6 @@ public:
 	// Getter / Setter
 	FORCEINLINE const bool GetIsCharacterAlive() const { return bIsCharacterAlive; }
 	FORCEINLINE const bool GetIsTurn() const { return bIsTurn; }
-	FORCEINLINE const bool GetIsAimMode() const { return bIsAimMode; }
 	FORCEINLINE void SetOriginTransform(const FTransform& NewTransform) { OriginTransform = NewTransform; }
 	float GetCombatSpeed() const;
 
@@ -103,7 +101,6 @@ private:
 
 	bool bIsTurn = false;
 
-	bool bIsAimMode = false;
 
 protected:
 	/*UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Attribute")

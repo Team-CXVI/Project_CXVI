@@ -6,9 +6,16 @@
 #include "CXVI/Character/Combat/CXCombatCharacterPlayer.h"
 #include "CXVI/Character/Combat/CXCombatCharacterEnemy.h"
 #include "CXVI/Character/Combat/CXCombatCharacterBase.h"
-#include "CXVI/Actor/TestCombatArena.h"
+#include "CXVI/Character/Combat/CXCommandCharacter.h"
+#include "CXVI/Actor/CXTestCombatArena.h"
 
 #include "CXVI/Foundation/Combat/CXTurnManager.h"
+#include "CXVI/Foundation/Combat/CXArenaManager.h"
+
+#include "Kismet/GameplayStatics.h"
+#include "Engine/Level.h"
+#include "Engine/LatentActionManager.h"
+#include "Engine/LevelStreaming.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXCombatManagerSubsystem)
 
@@ -19,92 +26,103 @@ UCXCombatManagerSubsystem::UCXCombatManagerSubsystem()
 
 void UCXCombatManagerSubsystem::RequestStartBattle(TArray<TSubclassOf<class ACXCombatCharacterBase>> Players, TArray<TSubclassOf<class ACXCombatCharacterBase>> Enemies, APlayerController* PlayerController)
 {
-	//UTurnManager* Manager = GetWorld()->GetSubsystem<UTurnManager>();
-
-	if (!TurnManager || !IsValid(TestCombatArena) || !IsValid(PlayerController))
+	// 로드 중 또는 전투 중 재진입 방지.
+	if (bBattleRequested ||
+		!IsValid(TurnManager) ||
+		!IsValid(ArenaManager) ||
+		!IsValid(PlayerController))
 	{
 		return;
 	}
 
-	// 기존 필드 캐릭터 저장
-	APawn* FieldPawn = PlayerController->GetPawn();
+	if (Players.IsEmpty() || Enemies.IsEmpty())
+	{
+		return;
+	}
 
-	StoredFieldPawn = FieldPawn;
+	ULevelStreaming* Streaming =
+		UGameplayStatics::GetStreamingLevel(this, CombatLevelName);
+
+	if (!Streaming)
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("전투 서브레벨이 등록되어 있지 않습니다."));
+		return;
+	}
+
+	StoredFieldPawn = PlayerController->GetPawn();
 	StoredPlayerController = PlayerController;
 
-	TArray<TObjectPtr<ACXCombatCharacterBase>> PlayerArray;
-	TArray<TObjectPtr<ACXCombatCharacterBase>> EnemyArray;
+	PendingSetupData.PlayerClasses = MoveTemp(Players);
+	PendingSetupData.EnemyClasses = MoveTemp(Enemies);
 
-	// 객체 생성
-	for (int32 Index = 0; Index < Players.Num(); ++Index)
-	{
-		FTransform OriginTransform = TestCombatArena->GetPlayerSlotFromIndex(Index);
+	TestCombatArena.Reset();
 
-		// @TODO: 재원 현재 플레이어의 크기의 반만큼 올려서 조정중 나중에 플레이어 크기가 아니고 다른 큰 몬스터들이라면 개인의 크기값을 알고있어야할듯
-		FVector OriginLocation = OriginTransform.GetLocation();
-		OriginTransform.SetLocation(FVector(OriginLocation.X, OriginLocation.Y, OriginLocation.Z + 100.f));
-		ACXCombatCharacterPlayer* NewPlayer = GetWorld()->SpawnActor<ACXCombatCharacterPlayer>(Players[Index], OriginTransform);
-		NewPlayer->SetOriginTransform(OriginTransform);
-		PlayerArray.Add(NewPlayer);
-	}
-	for (int32 Index = 0; Index < Enemies.Num(); ++Index)
-	{
-		FTransform OriginTransform = TestCombatArena->GetEnemySlotFromIndex(Index);
-		FVector OriginLocation = OriginTransform.GetLocation();
-		OriginTransform.SetLocation(FVector(OriginLocation.X, OriginLocation.Y, OriginLocation.Z + 100.f));
-		ACXCombatCharacterEnemy* NewEnemy = GetWorld()->SpawnActor<ACXCombatCharacterEnemy>(Enemies[Index], OriginTransform);
-		NewEnemy->SetOriginTransform(OriginTransform);
-		EnemyArray.Add(NewEnemy);
-	}
+	bBattleRequested = true;
+	bLoadingCombat = true;
 
-	if (PlayerArray.IsEmpty() || EnemyArray.IsEmpty())
-	{
-		return;
-	}
+	FLatentActionInfo LatentInfo;
+	LatentInfo.CallbackTarget = this;
+	LatentInfo.ExecutionFunction =
+		GET_FUNCTION_NAME_CHECKED(
+			UCXCombatManagerSubsystem,
+			HandleArenaLevelReady
+		);
+	LatentInfo.Linkage = 0;
+	LatentInfo.UUID = 1;
 
-	if (!IsValid(PlayerArray[0]))
-	{
-		return;
-	}
+	UGameplayStatics::LoadStreamLevel(
+		this,
+		CombatLevelName,
+		true,
+		false,
+		LatentInfo
+	);
 
-	//AGASPlayerController* GASController = Cast<AGASPlayerController>(PlayerController);
 
-	//if (!IsValid(GASController))
-	//{
-	//	return;
-	//}
 
-	//for (int32 Index = 0; Index < PlayerArray.Num(); ++Index)
-	//{
-
-	//	GASController->AddCommandCharacter(Cast<ABattleCharacterPlayer>(PlayerArray[Index]));
-	//}
-
-	////GASController->Possess(PlayerArray[0]);
-	//GASController->SetBattleInput(true);
-	//GASController->SetViewTargetWithBlend(TestCombatArena, 0.f);
-
-	//Manager->StartBattle(PlayerArray, EnemyArray);
 }
 
 void UCXCombatManagerSubsystem::RequestEndBattle()
 {
-	if (!IsValid(StoredFieldPawn) || !IsValid(StoredPlayerController))
+	// 이 예시는 로드 중 취소는 처리하지 않음.
+	if (!bBattleRequested || bLoadingCombat)
 	{
 		return;
 	}
 
-	StoredPlayerController->Possess(StoredFieldPawn);
-
-	/*if (AGASPlayerController* GASController = Cast<AGASPlayerController>(StoredPlayerController))
+	// 캐릭터를 파괴하기 전에 턴 진행과 바인딩 정리.
+	if (IsValid(TurnManager))
 	{
-		GASController->SetBattleInput(false);
+		TurnManager->StopBattle();
 	}
 
-	StoredPlayerController->SetViewTargetWithBlend(StoredFieldPawn, 0.3f);
+	if (IsValid(StoredPlayerController) &&
+		IsValid(StoredFieldPawn))
+	{
+		StoredPlayerController->Possess(StoredFieldPawn);
+		StoredPlayerController->SetViewTargetWithBlend(
+			StoredFieldPawn.Get(), 0.3f);
+	}
 
+	if (IsValid(ArenaManager))
+	{
+		ArenaManager->CleanupArena();
+	}
+
+	if (ULevelStreaming* Streaming =
+		UGameplayStatics::GetStreamingLevel(this, CombatLevelName))
+	{
+		Streaming->SetShouldBeVisible(false);
+	}
+
+	TestCombatArena.Reset();
+	PendingSetupData = FCXArenaSetupData();
+
+	StoredFieldPawn = nullptr;
 	StoredPlayerController = nullptr;
-	StoredFieldPawn = nullptr;*/
+
+	bBattleRequested = false;
 }
 
 void UCXCombatManagerSubsystem::PostInitialize()
@@ -112,16 +130,119 @@ void UCXCombatManagerSubsystem::PostInitialize()
 	Super::PostInitialize();
 
 	TurnManager = NewObject<UCXTurnManager>(this);
+	ArenaManager = NewObject<UCXArenaManager>(this);
+
+	ArenaManager->OnArenaReady.AddUObject(this, &UCXCombatManagerSubsystem::HandleArenaReady);
+	TurnManager->OnBattleEnded.AddUObject(this, &UCXCombatManagerSubsystem::RequestEndBattle);
+	TurnManager->OnPlayerInputEnabledChanged.AddUObject(this, &UCXCombatManagerSubsystem::HandlePlayerInputModeChanged);
 }
 
 void UCXCombatManagerSubsystem::HandlePlayerInputModeChanged(bool bAllowed)
 {
-	/*AGASPlayerController* Controller = Cast<AGASPlayerController>(StoredPlayerController);
+	ACXCommandCharacter* CommandCharacter = WeakCommandCharacter.Get();
 
-	if (!IsValid(Controller))
+	if (!IsValid(CommandCharacter))
 	{
 		return;
 	}
 
-	Controller->SetBattleInputMode(bAllowed ? EBattleInputMode::Command : EBattleInputMode::Disabled);*/
+	CommandCharacter->SetCombatInputMode(bAllowed ? ECombatInputMode::Command : ECombatInputMode::Disabled);
+}
+
+void UCXCombatManagerSubsystem::HandleArenaReady(const TArray<TObjectPtr<class ACXCombatCharacterBase>>& Players, const TArray<TObjectPtr<class ACXCombatCharacterBase>>& Enemies)
+{
+	if (!IsValid(TurnManager))
+	{
+		return;
+	}
+
+	for (const auto& Character : Players)
+	{
+		if (ACXCombatCharacterPlayer* Player = Cast<ACXCombatCharacterPlayer>(Character.Get()))
+		{
+			WeakCommandCharacter->AddCommandCharacter(Player);
+		}
+	}
+	
+	StoredPlayerController->Possess(WeakCommandCharacter.Get());
+
+	StoredPlayerController->SetViewTargetWithBlend(TestCombatArena.Get(), 0.f);
+
+	TurnManager->StartBattle(Players, Enemies);
+	
+}
+
+void UCXCombatManagerSubsystem::HandleArenaLevelReady()
+{
+	if (!bBattleRequested || !bLoadingCombat)
+	{
+		return;
+	}
+
+	bLoadingCombat = false;
+
+	ULevelStreaming* Streaming = UGameplayStatics::GetStreamingLevel(this, CombatLevelName);
+
+	ULevel* LoadedLevel = Streaming ? Streaming->GetLoadedLevel() : nullptr;
+
+	if (!Streaming ||!Streaming->IsLevelVisible() || !LoadedLevel 
+		|| !IsValid(ArenaManager) || !IsValid(StoredPlayerController))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("전투 레벨 준비 실패"));
+		RequestEndBattle();
+		return;
+	}
+
+	// 로드한 전투 레벨 안에서만 아레나를 검색.
+	ACXTestCombatArena* FoundArena = nullptr;
+	ACXCommandCharacter* FoundCommandPawn = nullptr;
+
+	for (AActor* Actor : LoadedLevel->Actors)
+	{
+		if (!IsValid(Actor))
+		{
+			continue;
+		}
+
+		if (ACXTestCombatArena* Candidate = Cast<ACXTestCombatArena>(Actor))
+		{
+			if (FoundArena)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("아레나가 두 개 이상입니다."));
+				RequestEndBattle();
+				return;
+			}
+
+			FoundArena = Candidate;
+		}
+
+		if (ACXCommandCharacter* Candidate = Cast<ACXCommandCharacter>(Actor))
+		{
+			if (FoundCommandPawn)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("커맨드 Pawn이 두 개 이상입니다."));
+				RequestEndBattle();
+				return;
+			}
+
+			FoundCommandPawn = Candidate;
+		}
+	}
+
+	if (!IsValid(FoundArena) || !IsValid(FoundCommandPawn))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("아레나 또는 커맨드 Pawn이 없습니다."));
+		RequestEndBattle();
+		return;
+	}
+
+	TestCombatArena = FoundArena;
+	WeakCommandCharacter = FoundCommandPawn;
+
+	// 레벨 표시와 아레나 검색이 끝난 뒤 생성 요청.
+	if (!ArenaManager->PrepareArena(PendingSetupData, TestCombatArena.Get()))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("전투원 생성 실패"));
+		RequestEndBattle();
+	}
 }

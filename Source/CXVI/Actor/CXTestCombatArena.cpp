@@ -1,14 +1,16 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "CXVI/Actor/TestCombatArena.h"
+#include "Actor/CXTestCombatArena.h"
 
 #include "Components/ArrowComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Camera/CameraComponent.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(CXTestCombatArena)
+
 // Sets default values
-ATestCombatArena::ATestCombatArena()
+ACXTestCombatArena::ACXTestCombatArena()
 {
 	BattleArena = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Field"));
 	BattleArena->SetupAttachment(RootComponent);
@@ -50,7 +52,7 @@ ATestCombatArena::ATestCombatArena()
 	}
 }
 
-const FTransform ATestCombatArena::GetPlayerSlotFromIndex(int32 InIndex) const
+const FTransform ACXTestCombatArena::GetPlayerSlotFromIndex(int32 InIndex) const
 {
 	if (PlayerSlots.IsValidIndex(InIndex))
 	{
@@ -60,7 +62,7 @@ const FTransform ATestCombatArena::GetPlayerSlotFromIndex(int32 InIndex) const
 	return FTransform();
 }
 
-const FTransform ATestCombatArena::GetEnemySlotFromIndex(int32 InIndex) const
+const FTransform ACXTestCombatArena::GetEnemySlotFromIndex(int32 InIndex) const
 {
 	if (EnemySlots.IsValidIndex(InIndex))
 	{
@@ -68,5 +70,4 @@ const FTransform ATestCombatArena::GetEnemySlotFromIndex(int32 InIndex) const
 	}
 	return FTransform();
 }
-
 

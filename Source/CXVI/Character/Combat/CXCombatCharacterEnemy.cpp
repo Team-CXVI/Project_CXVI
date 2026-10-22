@@ -38,8 +38,8 @@ void ACXCombatCharacterEnemy::PostInitializeComponents()
 
 	InitializeGAS();
 
-	ASC->SetNumericAttributeBase(CharacterAttributeSet->GetMaxHealthAttribute(), 100.f);
-	ASC->SetNumericAttributeBase(CharacterAttributeSet->GetHealthAttribute(), 100.f);
+	ASC->SetNumericAttributeBase(CharacterAttributeSet->GetMaxHealthAttribute(), 300.f);
+	ASC->SetNumericAttributeBase(CharacterAttributeSet->GetHealthAttribute(), 300.f);
 	ASC->SetNumericAttributeBase(CharacterAttributeSet->GetCombatSpeedAttribute(), 100.f);
 }
 

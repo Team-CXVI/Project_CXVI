@@ -55,6 +55,8 @@ void UCXTurnManager::StartBattle(TArray<TObjectPtr<ACXCombatCharacterBase>> Play
 	SortTurnOrder();
 
 	FindNextPlayer();
+
+	StartTurn();
 }
 
 void UCXTurnManager::ResetBattle()
@@ -412,6 +414,7 @@ void UCXTurnManager::EndBattle()
 {
 	ResetBattle();
 
+	OnBattleEnded.Broadcast();
 	// 다시 필드로 돌아가야함
 	// 배틀 매니저에게 요청
 	/*if (AGASGameMode* GameMode = GetWorld()->GetAuthGameMode<AGASGameMode>())

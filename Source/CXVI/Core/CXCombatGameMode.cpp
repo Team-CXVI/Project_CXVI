@@ -5,6 +5,8 @@
 
 #include "CXVI/Character/Combat/CXCombatCharacterPlayer.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(CXCombatGameMode)
+
 ACXCombatGameMode::ACXCombatGameMode()
 {
 	if (CombatCharacterPlayer)

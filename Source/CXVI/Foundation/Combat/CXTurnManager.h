@@ -10,6 +10,7 @@
 #include "CXTurnManager.generated.h"
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerInputEnabledChanged, bool);
+DECLARE_MULTICAST_DELEGATE(FCXOnBattleEnded);
 
 class ACXCombatCharacterBase;
 
@@ -45,6 +46,10 @@ public:
 
 	// 인풋모드 변경알림 델리게이트
 	FOnPlayerInputEnabledChanged OnPlayerInputEnabledChanged;
+
+	FCXOnBattleEnded OnBattleEnded;
+
+	void StopBattle() { ResetBattle(); }
 
 private:
 

@@ -4,16 +4,19 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "TestCombatArena.generated.h"
+#include "CXTestCombatArena.generated.h"
 
 UCLASS()
-class CXVI_API ATestCombatArena : public AActor
+class CXVI_API ACXTestCombatArena : public AActor
 {
 	GENERATED_BODY()
 	
 public:	
 	// Sets default values for this actor's properties
-	ATestCombatArena();
+	ACXTestCombatArena();
+
+	FORCEINLINE const int32 GetPlayerSlotCount() const { return PlayerSlots.Num(); }
+	FORCEINLINE const int32 GetEnemySlotCount() const { return EnemySlots.Num(); }
 
 	const FTransform GetPlayerSlotFromIndex(int32 InIndex) const;
 	const FTransform GetEnemySlotFromIndex(int32 InIndex) const;
@@ -34,5 +37,6 @@ protected:
 
 private:
 	int32 MaxSlot = 3;
+
 
 };

@@ -12,6 +12,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "EnhancedInputComponent.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(CXTempFieldCharacterPlayer)
 
 ACXTempFieldCharacterPlayer::ACXTempFieldCharacterPlayer()
 {
@@ -65,7 +66,6 @@ void ACXTempFieldCharacterPlayer::PossessedBy(AController* NewController)
 
 void ACXTempFieldCharacterPlayer::UnPossessed()
 {
-	Super::UnPossessed();
 
 	APlayerController* PlayerController = Cast<APlayerController>(GetController());
 	if (IsValid(PlayerController))
@@ -77,6 +77,7 @@ void ACXTempFieldCharacterPlayer::UnPossessed()
 			InputSystem->RemoveMappingContext(DefaultMappingContext);
 		}
 	}
+	Super::UnPossessed();
 }
 
 void ACXTempFieldCharacterPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
