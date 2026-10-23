@@ -24,6 +24,8 @@ public class CXVI : ModuleRules
 			"CommonInput",
 			"DeveloperSettings",
 			"UMG",
+			"AIModule",
+            "NavigationSystem",
 
 			// Field 기능을 위한 모듈
 			"Chooser",

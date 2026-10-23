@@ -2,30 +2,59 @@
 
 #pragma once
 
+
+
 #include "CoreMinimal.h"
-#include "CXFieldCharacterBase.h"
+#include "CXVI/AI/Field/Interface/CXFieldEnemyAIInterface.h"
+
+#include "GameFramework/Character.h"
 #include "CXFieldEnemy.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class CXVI_API ACXFieldEnemy : public ACXFieldCharacterBase
+class CXVI_API ACXFieldEnemy : public ACharacter, public ICXFieldEnemyAIInterface
 {
 	GENERATED_BODY()
 
 public:
 	ACXFieldEnemy();
 
+public:
+	// Getter.
+	FORCEINLINE float GetAttackRadius() const { return AttackRadius; }
+
 protected:
 	virtual void BeginPlay() override;
 
-	// Field symbol identity only; encounter transition logic is not implemented here.
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Encounter")
-	FName EncounterID;
+
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
+	TSubclassOf<class AAIController> EnemyAIController;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attack")
+	TObjectPtr<UAnimMontage> AttackMontage;
 
 	UPROPERTY(VisibleAnywhere,BlueprintReadOnly,Category="PreemptiveAttack")
 	TObjectPtr<class UChildActorComponent> PreemptiveAttackTrigger;
 
+	// 공격 반경.
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Attack")
+	float AttackRadius;
+
+	void AttackEnded(UAnimMontage* Montage, bool bInterrupted);
+
+	// 공격이 끝나느 시점에 호출할 함수.
+	virtual void NotifyComboActionEnd();
+
+	// AI 섹션.
+protected:
+	float GetAIPatrolRadius() override;
+	float GetAIDetectRange() override;
+	float GetAIAttackRange() override;
+	float GetAITurnSpeed() override;
+	virtual void AttackByAI() override;
+	virtual void SetAIAttackDelegate(const FAICharacterAttackFinished& InOnAttackFinished) override;
 
 };
