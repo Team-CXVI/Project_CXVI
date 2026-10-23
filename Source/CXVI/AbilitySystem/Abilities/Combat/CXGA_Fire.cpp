@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "CXVI/AbilitySystem/Abilities/CXGA_Fire.h"
+#include "CXVI/AbilitySystem/Abilities/Combat/CXGA_Fire.h"
 
 #include "CXVI/Tags/CXGameplayTags.h"
 

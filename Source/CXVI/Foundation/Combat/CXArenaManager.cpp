@@ -3,7 +3,7 @@
 
 #include "CXVI/Foundation/Combat/CXArenaManager.h"
 
-#include "CXVI/Actor/CXTestCombatArena.h"
+#include "CXVI/Actor/Combat/CXTestCombatArena.h"
 #include "CXVI/Character/Combat/CXCombatCharacterBase.h"
 
 #include "Engine/World.h"

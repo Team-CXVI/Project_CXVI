@@ -7,7 +7,7 @@
 #include "CXVI/Character/Combat/CXCombatCharacterEnemy.h"
 #include "CXVI/Character/Combat/CXCombatCharacterBase.h"
 #include "CXVI/Character/Combat/CXCommandCharacter.h"
-#include "CXVI/Actor/CXTestCombatArena.h"
+#include "CXVI/Actor/Combat/CXTestCombatArena.h"
 
 #include "CXVI/Foundation/Combat/CXTurnManager.h"
 #include "CXVI/Foundation/Combat/CXArenaManager.h"

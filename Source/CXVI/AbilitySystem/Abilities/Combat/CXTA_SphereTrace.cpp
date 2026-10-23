@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "CXVI/AbilitySystem/Abilities/CXTA_SphereTrace.h"
+#include "CXVI/AbilitySystem/Abilities/Combat/CXTA_SphereTrace.h"
 
 #include "Abilities/GameplayAbility.h"
 

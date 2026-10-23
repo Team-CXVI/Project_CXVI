@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "Actor/CXTestCombatArena.h"
+#include "Actor/Combat/CXTestCombatArena.h"
 
 #include "Components/ArrowComponent.h"
 #include "Components/StaticMeshComponent.h"

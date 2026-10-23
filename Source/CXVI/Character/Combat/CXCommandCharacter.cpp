@@ -5,7 +5,7 @@
 
 #include "CXVI/Character/Combat/CXCombatCharacterPlayer.h"
 #include "CXVI/Foundation/Combat/CXCombatManagerSubsystem.h"
-#include "CXVI/Actor/CXTestCombatArena.h"
+#include "CXVI/Actor/Combat/CXTestCombatArena.h"
 
 #include "Engine/LocalPlayer.h"
 #include "Engine/World.h"

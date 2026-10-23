@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "CXVI/AbilitySystem/Attributes/CXCombatAttributeSet.h"
+#include "CXVI/AbilitySystem/Attributes/Combat/CXCombatAttributeSet.h"
 
 #include "GameplayEffectExtension.h"
 

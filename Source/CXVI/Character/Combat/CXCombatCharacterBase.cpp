@@ -5,7 +5,7 @@
 
 #include "CXVI/Tags/CXGameplayTags.h"
 
-#include "CXVI/AbilitySystem/Attributes/CXCombatAttributeSet.h"
+#include "CXVI/AbilitySystem/Attributes/Combat/CXCombatAttributeSet.h"
 
 #include "Components/CapsuleComponent.h"
 #include "Components/WidgetComponent.h"

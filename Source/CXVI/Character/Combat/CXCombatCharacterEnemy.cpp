@@ -3,7 +3,7 @@
 
 #include "CXVI/Character/Combat/CXCombatCharacterEnemy.h"
 
-#include "CXVI/AbilitySystem/Attributes/CXCombatAttributeSet.h"
+#include "CXVI/AbilitySystem/Attributes/Combat/CXCombatAttributeSet.h"
 
 #include "AbilitySystemComponent.h"
 

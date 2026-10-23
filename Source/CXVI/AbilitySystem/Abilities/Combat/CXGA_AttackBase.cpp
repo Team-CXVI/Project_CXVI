@@ -1,11 +1,11 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "CXVI/AbilitySystem/Abilities/CXGA_AttackBase.h"
+#include "CXVI/AbilitySystem/Abilities/Combat/CXGA_AttackBase.h"
 
 #include "CXVI/Tags/CXGameplayTags.h"
 
-#include "CXVI/AbilitySystem/Abilities/CXCharacterAbilityData.h"
+#include "CXVI/AbilitySystem/Abilities/Combat/CXCharacterAbilityData.h"
 
 #include "CXVI/Character/Combat/CXCombatCharacterBase.h"
 
