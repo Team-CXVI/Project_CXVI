@@ -43,7 +43,7 @@ ACXFieldEnemy* ACXFieldEnemySpawner::SpawnEnemy()
 	}
 
 	// 같은 스포너에서 중복 생성하지 않음.
-	if (nullptr != SpawnedEnemy)
+	if (IsValid(SpawnedEnemy))
 	{
 		return SpawnedEnemy.Get();
 	}
@@ -66,18 +66,27 @@ ACXFieldEnemy* ACXFieldEnemySpawner::SpawnEnemy()
 	// 지점 위치에 충돌이 있으면 생성하지 않음.
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::DontSpawnIfColliding;
 
+
+	// 생성 완료를 미루고 먼저 설정을 전달하기 위함.
+	SpawnParams.bDeferConstruction = true;
+
+	const FTransform SpawnTransform = SpawnPoint->GetComponentTransform();
+
 	SpawnedEnemy = World->SpawnActor<ACXFieldEnemy>(EnemyClass, SpawnPoint->GetComponentTransform(), SpawnParams);
 
-	if (nullptr == SpawnedEnemy)
+	if (!IsValid(SpawnedEnemy))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("%s: 몬스터 생성에 실패했습니다. 생성 위치의 충돌을 확인하세요."), *GetName());
 
+		return nullptr;
 	}
 
 	// 생성 완료 전에 설정 전달.
 	SpawnedEnemy->InitializePatrolRadius(PatrolRadius);
 
-	if (nullptr == SpawnedEnemy)
+	SpawnedEnemy->FinishSpawning(SpawnTransform);
+
+	if (!IsValid(SpawnedEnemy))
 	{
 		return nullptr;
 	}
