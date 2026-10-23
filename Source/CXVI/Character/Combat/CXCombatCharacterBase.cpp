@@ -101,6 +101,7 @@ void ACXCombatCharacterBase::InitializeGAS()
 		{
 			ASC->GiveAbility(FGameplayAbilitySpec(Ability));
 		}
+		
 	}
 }
 
