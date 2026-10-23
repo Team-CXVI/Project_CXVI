@@ -13,8 +13,8 @@ UCLASS()
 class CXVI_API ACXFieldEnemySpawner : public AActor
 {
 	GENERATED_BODY()
-	
-public:	
+
+public:
 	// Sets default values for this actor's properties
 	ACXFieldEnemySpawner();
 

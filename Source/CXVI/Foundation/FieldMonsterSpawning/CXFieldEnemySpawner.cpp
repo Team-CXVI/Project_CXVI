@@ -1,14 +1,15 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "SubSystem/Field/Spawner/CXFieldEnemySpawner.h"
-#include "SubSystem/Field/CXFieldMonsterSubsystem.h"
+#include "CXVI/Actor/Field/CXFieldEnemySpawner.h"
+#include "CXFieldMonsterSubsystem.h"
 #include "CXVI/Character/Field/CXFieldEnemy.h"
 
 
 #include "Components/ArrowComponent.h"
 #include "Engine/World.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(CXFieldEnemySpawner)
 
 // Sets default values
 ACXFieldEnemySpawner::ACXFieldEnemySpawner()
@@ -92,7 +93,7 @@ void ACXFieldEnemySpawner::BeginPlay()
 
 	if (!bRegistered)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("%s: 스폰 지점 등록에 실패했습니다."),*GetName());
+		UE_LOG(LogTemp, Warning, TEXT("%s: 스폰 지점 등록에 실패했습니다."), *GetName());
 
 		return;
 	}
@@ -101,4 +102,3 @@ void ACXFieldEnemySpawner::BeginPlay()
 	SpawnEnemy();
 
 }
-
