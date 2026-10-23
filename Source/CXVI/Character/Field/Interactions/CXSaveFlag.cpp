@@ -8,6 +8,9 @@
 #include "Components/StaticMeshComponent.h"
 #include "Components/ChildActorComponent.h"
 
+
+#include UE_INLINE_GENERATED_CPP_BY_NAME(CXSaveFlag)
+
 // Sets default values
 ACXSaveFlag::ACXSaveFlag()
 {
