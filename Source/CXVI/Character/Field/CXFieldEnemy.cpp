@@ -32,6 +32,11 @@ ACXFieldEnemy::ACXFieldEnemy( )
 
 }
 
+void ACXFieldEnemy::InitializePatrolRadius(float InPatrolRadius)
+{
+	PatrolRadius = FMath::Max(0.0f, InPatrolRadius);
+}
+
 void ACXFieldEnemy::BeginPlay()
 {
 	Super::BeginPlay();
@@ -43,10 +48,10 @@ void ACXFieldEnemy::AttackEnded(UAnimMontage* Montage, bool bInterrupted)
 	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
 
 	// 공격이 끝나는 시점을 알 수 있도록 가상함수 호출.
-	NotifyComboActionEnd();
+	NotifyActionEnd();
 }
 
-void ACXFieldEnemy::NotifyComboActionEnd()
+void ACXFieldEnemy::NotifyActionEnd()
 {
 	// 공격 종료를 알리는 델리게이트 호출.
 	OnAttackFinished.ExecuteIfBound();
@@ -54,7 +59,7 @@ void ACXFieldEnemy::NotifyComboActionEnd()
 
 float ACXFieldEnemy::GetAIPatrolRadius()
 {
-	return 500.0f;
+	return PatrolRadius;
 }
 
 float ACXFieldEnemy::GetAIDetectRange()

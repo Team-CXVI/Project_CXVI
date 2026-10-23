@@ -25,6 +25,9 @@ public:
 	// Getter.
 	FORCEINLINE float GetAttackRadius() const { return AttackRadius; }
 
+	// 생성 초기화 과정에서 스포너가 호출.
+	void InitializePatrolRadius(float InPatrolRadius);
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -43,10 +46,14 @@ protected:
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Attack")
 	float AttackRadius;
 
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Transient, Category = "AI|Patrol")
+	float PatrolRadius = 500.0f;
+
+protected:
 	void AttackEnded(UAnimMontage* Montage, bool bInterrupted);
 
 	// 공격이 끝나느 시점에 호출할 함수.
-	virtual void NotifyComboActionEnd();
+	virtual void NotifyActionEnd();
 
 	// AI 섹션.
 protected:
