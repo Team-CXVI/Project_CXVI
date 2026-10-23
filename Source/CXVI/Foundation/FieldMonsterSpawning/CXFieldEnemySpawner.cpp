@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "CXVI/Actor/Field/CXFieldEnemySpawner.h"
+#include "CXFieldEnemySpawner.h"
 #include "CXFieldMonsterSubsystem.h"
 #include "CXVI/Character/Field/CXFieldEnemy.h"
 
@@ -72,6 +72,14 @@ ACXFieldEnemy* ACXFieldEnemySpawner::SpawnEnemy()
 	{
 		UE_LOG(LogTemp, Warning, TEXT("%s: 몬스터 생성에 실패했습니다. 생성 위치의 충돌을 확인하세요."), *GetName());
 
+	}
+
+	// 생성 완료 전에 설정 전달.
+	SpawnedEnemy->InitializePatrolRadius(PatrolRadius);
+
+	if (nullptr == SpawnedEnemy)
+	{
+		return nullptr;
 	}
 
 	return SpawnedEnemy.Get();

@@ -50,4 +50,8 @@ protected:
 	// 현재 이 몬스터가 생성한 몬스터.
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Transient, Category = "Spawner")
 	TObjectPtr<ACXFieldEnemy> SpawnedEnemy;
+
+	// 이 지점에서 생성된 몬스터의 정찰 반경.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spanwer|Patrol")
+	float PatrolRadius = 500.0f;
 };
