@@ -20,7 +20,7 @@ public:
 
 public:
 	UFUNCTION(BlueprintCallable, Category = "Spawner")
-	ACXFieldEnemy* SpanwEnemy();
+	ACXFieldEnemy* SpawnEnemy();
 
 protected:
 	// Called when the game starts or when spawned
