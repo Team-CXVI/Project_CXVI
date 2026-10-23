@@ -115,7 +115,40 @@ void ACXFieldEnemySpawner::BeginPlay()
 		return;
 	}
 
+	if (!MonsterSubsystem->RegisterSpawner(SpawnId, this))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("%s: 스포너 참조 등록에 실패했습니다."), *GetName());
+
+		return;
+	}
+
+
 	// 등록된 상태를 확인하고 몬스터 생성.
 	SpawnEnemy();
 
+}
+
+void ACXFieldEnemySpawner::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	UWorld* World = GetWorld();
+
+	if (World)
+	{
+		UCXFieldMonsterSubsystem* MonsterSubsystem = World->GetSubsystem<UCXFieldMonsterSubsystem>();
+
+		if (IsValid(MonsterSubsystem))
+		{
+			MonsterSubsystem->UnRegisterSpawner(SpawnId, this);
+		}
+	}
+
+	// 스포너가 종료되면 담당 몬스터도 정리.
+	if (IsValid(SpawnedEnemy))
+	{
+		SpawnedEnemy->Destroy();
+	}
+
+	SpawnedEnemy = nullptr;
+
+	Super::EndPlay(EndPlayReason);
 }

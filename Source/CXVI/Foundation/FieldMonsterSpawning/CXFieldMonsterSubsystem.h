@@ -29,6 +29,9 @@ struct FCXFieldMonsterSpawnState
 /**
  * 
  */
+
+class ACXFieldEnemySpawner;
+
 UCLASS()
 class CXVI_API UCXFieldMonsterSubsystem : public UWorldSubsystem
 {
@@ -50,6 +53,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Field|Monster")
 	bool MarkMonsterDefeated(FName SpawnId);
 
+	// 스포너 섹션.
+public:
+	bool RegisterSpawner(FName SpawnId, ACXFieldEnemySpawner* Spawner);
+
+	void UnRegisterSpawner(FName SpawnId, ACXFieldEnemySpawner* Spawner);
+
+	UFUNCTION(BlueprintPure, Category = "Field|Monster")
+	ACXFieldEnemySpawner* FindSpawner(FName SpawnId) const;
 	
 	// 휴식 섹션.
 public:
@@ -63,4 +74,8 @@ private:
 	// 스폰 지점의 고유 ID -> 해당 지점의 몬스터 상태.
 	UPROPERTY(Transient)
 	TMap<FName, FCXFieldMonsterSpawnState>SpawnStates;
+
+	// 현재 등록한 스포너.
+	UPROPERTY(Transient)
+	TMap<FName, TWeakObjectPtr<ACXFieldEnemySpawner>> RegisteredSpawner;
 };

@@ -2,6 +2,7 @@
 
 
 #include "CXFieldMonsterSubsystem.h"
+#include "CXFieldEnemySpawner.h"
 
 bool UCXFieldMonsterSubsystem::RegisterSpawnPoint(FName SpawnId, FName RestGroupId, bool bRespawnOnRest)
 {
@@ -61,6 +62,62 @@ bool UCXFieldMonsterSubsystem::MarkMonsterDefeated(FName SpawnId)
 	State->bDefeated = true;
 
 	return true;
+}
+
+bool UCXFieldMonsterSubsystem::RegisterSpawner(FName SpawnId, ACXFieldEnemySpawner* Spawner)
+{
+	if (SpawnId.IsNone() || !IsValid(Spawner))
+	{
+		return false;
+	}
+
+	// 다른월드의 스포너는 등록 안함.
+	if (Spawner->GetWorld() != GetWorld())
+	{
+		return false;
+	}
+
+	// 상태 등록이 먼저 되어 있어야 함.
+	if (!SpawnStates.Contains(SpawnId))
+	{
+		return false;
+	}
+
+	const TWeakObjectPtr<ACXFieldEnemySpawner>* Existing = RegisteredSpawner.Find(SpawnId);
+
+	if (Existing && Existing->IsValid() && Existing->Get() != Spawner)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("RegisterSpawn: SpawnId가 중복되었습니다. [%s]"),*SpawnId.ToString());
+
+		return false;
+	}
+
+	RegisteredSpawner.Add(SpawnId, TWeakObjectPtr<ACXFieldEnemySpawner>(Spawner));
+
+	return true;
+}
+
+void UCXFieldMonsterSubsystem::UnRegisterSpawner(FName SpawnId, ACXFieldEnemySpawner* Spawner)
+{
+	if (!Spawner)
+	{
+		return;
+	}
+
+	const TWeakObjectPtr<ACXFieldEnemySpawner>* Existing = RegisteredSpawner.Find(SpawnId);
+
+	// 등록된 객체와 해제를 요청한 객체가 같은지 확인.
+	if (Existing && *Existing == TWeakObjectPtr<ACXFieldEnemySpawner>(Spawner))
+	{
+		RegisteredSpawner.Remove(SpawnId);
+	}
+}
+
+ACXFieldEnemySpawner* UCXFieldMonsterSubsystem::FindSpawner(FName SpawnId) const
+{
+	const TWeakObjectPtr<ACXFieldEnemySpawner>* Found = RegisteredSpawner.Find(SpawnId);
+
+	return Found ? Found->Get() : nullptr;
 }
 
 TArray<FName> UCXFieldMonsterSubsystem::ResetDefeatedMonsters(FName RestGroupId)
