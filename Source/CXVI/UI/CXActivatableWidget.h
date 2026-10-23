@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "CommonActivatableWidget.h"
+
 #include "CXActivatableWidget.generated.h"
 
 UENUM(BlueprintType)

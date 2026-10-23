@@ -31,14 +31,25 @@ TOptional<FUIInputConfig> UCXActivatableWidget::GetDesiredInputConfig() const
 
 UWidget* UCXActivatableWidget::NativeGetDesiredFocusTarget() const
 {
-	return nullptr;
+	// BP쪽의 Get Desired Focus Target 우선
+	if (UWidget* Target = Super::NativeGetDesiredFocusTarget())
+	{
+		return Target;
+	}
+
+	return DefaultFocusWidgetName.IsNone() ? nullptr : GetWidgetFromName(DefaultFocusWidgetName);
 }
 
 void UCXActivatableWidget::NativeOnActivated()
 {
 	Super::NativeOnActivated();
 
-
+#if !UE_BUILD_SHIPPING
+	if (InputMode == ECXWidgetInputMode::Menu && nullptr == GetDesiredFocusTarget())
+	{
+		UE_LOG(LogCXUI, Warning, TEXT("[%s] Menu 화면인데 포커스 대상이 없습니다. 게임패드로 조작할 수 없습니다."), *GetName());
+	}
+#endif
 }
 
 #if WITH_EDITOR
@@ -46,6 +57,27 @@ void UCXActivatableWidget::ValidateCompiledWidgetTree(const UWidgetTree& Bluepri
 {
 	Super::ValidateCompiledWidgetTree(BlueprintWidgetTree, CompileLog);
 
+	if (InputMode != ECXWidgetInputMode::Menu)
+	{
+		return;
+	}
+
+	const bool bHasBPFocusTarget = GetClass()->IsFunctionImplementedInScript(GET_FUNCTION_NAME_CHECKED(UCXActivatableWidget, BP_GetDesiredFocusTarget));
+	if (bHasBPFocusTarget)
+	{
+		return;
+	}
+
+	if (DefaultFocusWidgetName.IsNone())
+	{
+		CompileLog.Warning(FText::FromString(
+			TEXT("Input Mode가 Menu인데 포커스 대상이 없습니다. Default Focus Widget Name을 지정하거나 Get Desired Focus Target을 구현하세요.")));
+	}
+	else if (nullptr == BlueprintWidgetTree.FindWidget(DefaultFocusWidgetName))
+	{
+		CompileLog.Error(FText::FromString(FString::Printf(
+			TEXT("Default Focus Widget Name '%s'에 해당하는 위젯이 없습니다."), *DefaultFocusWidgetName.ToString())));
+	}
 
 }
 #endif // WITH_EDITOR
