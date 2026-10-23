@@ -8,6 +8,7 @@
 
 class UArrowComponent;
 class ACXFieldEnemy;
+class USphereComponent;
 
 UCLASS()
 class CXVI_API ACXFieldEnemySpawner : public AActor
@@ -27,6 +28,14 @@ protected:
 	virtual void BeginPlay() override;
 	
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+	// 테스트용 정찰 반경 표시
+protected:
+	virtual void OnConstruction(const FTransform& Transform) override;
+
+	// 에디터에서 정찰 반경을 표시하는 컴포넌트.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Spawner|Patrol")
+	TObjectPtr<USphereComponent> PatrolRangePreview;
 
 protected:
 	// 생성 위치와 방향을 에디터에서 표시.

@@ -5,9 +5,9 @@
 #include "CXFieldEnemySubsystem.h"
 #include "CXVI/Character/Field/CXFieldEnemy.h"
 
-
-#include "Components/ArrowComponent.h"
 #include "Engine/World.h"
+#include "Components/ArrowComponent.h"
+#include "Components/SphereComponent.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXFieldEnemySpawner)
 
@@ -16,6 +16,32 @@ ACXFieldEnemySpawner::ACXFieldEnemySpawner()
 {
 	SpawnPoint = CreateDefaultSubobject<UArrowComponent>(TEXT("SpawnPoint"));
 	SetRootComponent(SpawnPoint);
+
+	PatrolRangePreview =
+		CreateDefaultSubobject<USphereComponent>(
+			TEXT("PatrolRangePreview")
+		);
+
+	PatrolRangePreview->SetupAttachment(SpawnPoint);
+
+	// 반경은 월드 cm 기준이므로 부모 스케일의 영향을 받지 않음.
+	PatrolRangePreview->SetAbsolute(false, false, true);
+
+	// 표시 용도이므로 충돌·오버랩·내비게이션 영향 제거.
+	PatrolRangePreview->SetCollisionEnabled(
+		ECollisionEnabled::NoCollision
+	);
+	PatrolRangePreview->SetGenerateOverlapEvents(false);
+	PatrolRangePreview->SetCanEverAffectNavigation(false);
+
+	// 에디터에서 선택했을 때 표시하고, 게임 중에는 숨김.
+	PatrolRangePreview->bDrawOnlyIfSelected = true;
+	PatrolRangePreview->SetHiddenInGame(true);
+
+	PatrolRangePreview->ShapeColor = FColor::Green;
+	PatrolRangePreview->SetLineThickness(2.0f);
+
+	PatrolRangePreview->SetSphereRadius(PatrolRadius, false);
 }
 
 ACXFieldEnemy* ACXFieldEnemySpawner::SpawnEnemy()
@@ -153,4 +179,17 @@ void ACXFieldEnemySpawner::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	SpawnedEnemy = nullptr;
 
 	Super::EndPlay(EndPlayReason);
+}
+
+void ACXFieldEnemySpawner::OnConstruction(const FTransform& Transform)
+{
+	Super::OnConstruction(Transform);
+
+	if (IsValid(PatrolRangePreview))
+	{
+		PatrolRangePreview->SetSphereRadius(
+			FMath::Max(0.0f, PatrolRadius),
+			false
+		);
+	}
 }
