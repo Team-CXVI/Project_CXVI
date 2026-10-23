@@ -18,6 +18,10 @@ public:
 	// Sets default values for this actor's properties
 	ACXFieldEnemySpawner();
 
+public:
+	UFUNCTION(BlueprintCallable, Category = "Spawner")
+	ACXFieldEnemy* SpanwEnemy();
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -42,4 +46,8 @@ protected:
 	// 휴식으로 재생성할 수 있는지 확인.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawner")
 	bool bRespawnOnRest = true;
+
+	// 현재 이 몬스터가 생성한 몬스터.
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Transient, Category = "Spawner")
+	TObjectPtr<ACXFieldEnemy> SpawnedEnemy;
 };

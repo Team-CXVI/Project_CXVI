@@ -54,7 +54,11 @@ bool UCXFieldMonsterSubsystem::MarkMonsterDefeated(FName SpawnId)
 	if (!State)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("MarkMonsterDefeated: 등록되지 않은 Spawn입니다. [%s]"), *SpawnId.ToString());
+
+		return false;
 	}
+
+	State->bDefeated = true;
 
 	return true;
 }
