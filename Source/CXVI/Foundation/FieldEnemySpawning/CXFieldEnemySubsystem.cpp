@@ -147,3 +147,32 @@ TArray<FName> UCXFieldEnemySubsystem::ResetDefeatedEnemies(FName RestGroupId)
 	return ResetSpawnIds;
 }
 
+int32 UCXFieldEnemySubsystem::RespawnDefeatedEnemies(FName RestGroupId)
+{
+	// 먼저 대상 기록을 초기화하고 ID 목록을 확보.
+	const TArray<FName> ResetSpawnIds = ResetDefeatedEnemies(RestGroupId);
+
+	int32 NumRespawned = 0;
+	
+	for (const FName& SpawnId : ResetSpawnIds)
+	{
+		ACXFieldEnemySpawner* Spawner = FindSpawner(SpawnId);
+		// 로드가 안된 지역 등 현재 스포너가 없는 경우.
+		if (!IsValid(Spawner))
+		{
+			continue;
+		}
+		
+		if (Spawner->SpawnEnemy() != nullptr)
+		{
+			++NumRespawned;
+		}
+		else
+		{
+			// 활성 지점에서 생성에 실패하면 다음 휴식 때 다시 시도할 수 있도록 복원.
+			MarkEnemyDefeated(SpawnId);
+		}
+	}
+	return NumRespawned;
+}
+

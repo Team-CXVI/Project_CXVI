@@ -70,6 +70,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Field|Enemy")
 	TArray<FName> ResetDefeatedEnemies(FName RestGroupId = NAME_None);
 
+	// 휴식 대상의 처치 기록을 초기화하고 재생성을 요청한다.
+	// 반환값: 이번 호출에서 즉시 복원에 성공할 수.
+	UFUNCTION(BlueprintCallable, Category = "Field|Enemy")
+	int32 RespawnDefeatedEnemies(FName RestGroupId = NAME_None);
+	
+
 private:
 	// 스폰 지점의 고유 ID -> 해당 지점의 적 상태.
 	UPROPERTY(Transient)
