@@ -3,7 +3,9 @@
 #include "CXFieldPlayerCharacter.h"
 #include "InputActionValue.h"
 #include "CXVI/Tags/CXFieldTags.h"
+#include "CXVI/Foundation/FieldEnemySpawning/CXFieldEnemySubsystem.h"
 
+#include "Engine/World.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "EnhancedInputComponent.h"
@@ -399,12 +401,32 @@ void ACXFieldPlayerCharacter::OnSaveMontageChanged(UAnimMontage* Montage, FName 
 		return;
 	}
 
+	// 이번 앉기 처리 완료.
+	// SitIdle이 반복돼도 같은 휴식을 중복 처리 하지 않음.
 	bSaveMovementBlocked = false;
 
-	if (IsValid(ASC))
+	if (!IsValid(ASC))
 	{
-		ASC->RemoveLooseGameplayTag(CXVIFieldTag::State_MovingBlock);
+		return;
 	}
+
+	ASC->RemoveLooseGameplayTag(CXVIFieldTag::State_MovingBlock);
+
+
+	UWorld* World = GetWorld();
+	if (!IsValid(World))
+	{
+		return;
+	}
+
+	UCXFieldEnemySubsystem* EnemySubsystem = World->GetSubsystem<UCXFieldEnemySubsystem>();
+	if (!IsValid(EnemySubsystem))
+	{
+		return;
+	}
+	const int32 RespawnedCount = EnemySubsystem->RespawnDefeatedEnemies(NAME_None);
+	
+	UE_LOG(LogTemp, Log, TEXT("깃발 휴식: 필드 적 %d 마리 복원"), RespawnedCount);
 
 }
 
