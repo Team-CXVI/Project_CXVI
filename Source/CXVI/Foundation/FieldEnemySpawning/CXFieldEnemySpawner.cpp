@@ -2,7 +2,7 @@
 
 
 #include "CXFieldEnemySpawner.h"
-#include "CXFieldMonsterSubsystem.h"
+#include "CXFieldEnemySubsystem.h"
 #include "CXVI/Character/Field/CXFieldEnemy.h"
 
 
@@ -26,8 +26,8 @@ ACXFieldEnemy* ACXFieldEnemySpawner::SpawnEnemy()
 		return nullptr;
 	}
 
-	UCXFieldMonsterSubsystem* MonsterSubsystem = World->GetSubsystem<UCXFieldMonsterSubsystem>();
-	if (!IsValid(MonsterSubsystem))
+	UCXFieldEnemySubsystem* EnemySubsystem = World->GetSubsystem<UCXFieldEnemySubsystem>();
+	if (!IsValid(EnemySubsystem))
 	{
 		return nullptr;
 	}
@@ -35,7 +35,7 @@ ACXFieldEnemy* ACXFieldEnemySpawner::SpawnEnemy()
 	// 등록 여부와 처치 여부를 확인.
 	bool bDefeated = false;
 
-	const bool bFound = MonsterSubsystem->TryGetMonsterDefeated(SpawnId, bDefeated);
+	const bool bFound = EnemySubsystem->TryGetEnemyDefeated(SpawnId, bDefeated);
 
 	if (!bFound || bDefeated)
 	{
@@ -99,14 +99,14 @@ void ACXFieldEnemySpawner::BeginPlay()
 {
 	Super::BeginPlay();
 
-	UCXFieldMonsterSubsystem* MonsterSubsystem = GetWorld()->GetSubsystem<UCXFieldMonsterSubsystem>();
+	UCXFieldEnemySubsystem* EnemySubsystem = GetWorld()->GetSubsystem<UCXFieldEnemySubsystem>();
 
-	if (!MonsterSubsystem)
+	if (!EnemySubsystem)
 	{
 		return;
 	}
 
-	const bool bRegistered = MonsterSubsystem->RegisterSpawnPoint(SpawnId, RestGroupId, bRespawnOnRest);
+	const bool bRegistered = EnemySubsystem->RegisterSpawnPoint(SpawnId, RestGroupId, bRespawnOnRest);
 
 	if (!bRegistered)
 	{
@@ -115,7 +115,7 @@ void ACXFieldEnemySpawner::BeginPlay()
 		return;
 	}
 
-	if (!MonsterSubsystem->RegisterSpawner(SpawnId, this))
+	if (!EnemySubsystem->RegisterSpawner(SpawnId, this))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("%s: 스포너 참조 등록에 실패했습니다."), *GetName());
 
@@ -134,11 +134,11 @@ void ACXFieldEnemySpawner::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 	if (World)
 	{
-		UCXFieldMonsterSubsystem* MonsterSubsystem = World->GetSubsystem<UCXFieldMonsterSubsystem>();
+		UCXFieldEnemySubsystem* EnemySubsystem = World->GetSubsystem<UCXFieldEnemySubsystem>();
 
-		if (IsValid(MonsterSubsystem))
+		if (IsValid(EnemySubsystem))
 		{
-			MonsterSubsystem->UnRegisterSpawner(SpawnId, this);
+			EnemySubsystem->UnRegisterSpawner(SpawnId, this);
 		}
 	}
 

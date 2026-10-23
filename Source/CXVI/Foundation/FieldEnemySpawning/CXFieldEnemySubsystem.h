@@ -4,11 +4,11 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
-#include "CXFieldMonsterSubsystem.generated.h"
+#include "CXFieldEnemySubsystem.generated.h"
 
 // 몬스터는 없어져도 이 정보는 월드에 남는다.
 USTRUCT()
-struct FCXFieldMonsterSpawnState
+struct FCXFieldEnemySpawnState
 {
 	GENERATED_BODY()
 
@@ -33,25 +33,25 @@ struct FCXFieldMonsterSpawnState
 class ACXFieldEnemySpawner;
 
 UCLASS()
-class CXVI_API UCXFieldMonsterSubsystem : public UWorldSubsystem
+class CXVI_API UCXFieldEnemySubsystem : public UWorldSubsystem
 {
 	GENERATED_BODY()
 	
 public:
 	// 스폰 지점을 등록한다.
 	// 이미 등록된 ID라면 기존 상태를 유지한다.
-	UFUNCTION(BlueprintCallable, Category = "Field|Monster")
+	UFUNCTION(BlueprintCallable, Category = "Field|Enemy")
 	bool RegisterSpawnPoint(FName SpawnId, FName RestGroupId, bool bRespawnOnRest);
 
-	// 등록된 몬스터의 처치 여부를 조회한다.
+	// 등록된 적의 처치 여부를 조회한다.
 	// 반환값: 조회 성공 여부.
 	// bOutDefeated: 실제 처치 여부.
-	UFUNCTION(BlueprintPure, Category ="Field|Mosnster")
-	bool TryGetMonsterDefeated(FName SpawnId, bool& bOutDefeated) const;
+	UFUNCTION(BlueprintPure, Category ="Field|Enemy")
+	bool TryGetEnemyDefeated(FName SpawnId, bool& bOutDefeated) const;
 
-	// 등록된 몬스터를 처치 상태로 기록한다.
-	UFUNCTION(BlueprintCallable, Category = "Field|Monster")
-	bool MarkMonsterDefeated(FName SpawnId);
+	// 등록된 적을 처치 상태로 기록한다.
+	UFUNCTION(BlueprintCallable, Category = "Field|Enemy")
+	bool MarkEnemyDefeated(FName SpawnId);
 
 	// 스포너 섹션.
 public:
@@ -59,21 +59,21 @@ public:
 
 	void UnRegisterSpawner(FName SpawnId, ACXFieldEnemySpawner* Spawner);
 
-	UFUNCTION(BlueprintPure, Category = "Field|Monster")
+	UFUNCTION(BlueprintPure, Category = "Field|Enemy")
 	ACXFieldEnemySpawner* FindSpawner(FName SpawnId) const;
 	
 	// 휴식 섹션.
 public:
-	// 휴식으로 복원할 몬스터의 처치 기록을 초기화한다.
+	// 휴식으로 복원할 적의 처치 기록을 초기화한다.
 	// 반환값: 이번에 초기화된 SpawnId 목록.
 	// RestGroupId가 None 이면 모든 그룹을 대상으로 본다.
-	UFUNCTION(BlueprintCallable, Category = "Field|Monster")
-	TArray<FName> ResetDefeatedMonsters(FName RestGroupId = NAME_None);
+	UFUNCTION(BlueprintCallable, Category = "Field|Enemy")
+	TArray<FName> ResetDefeatedEnemies(FName RestGroupId = NAME_None);
 
 private:
-	// 스폰 지점의 고유 ID -> 해당 지점의 몬스터 상태.
+	// 스폰 지점의 고유 ID -> 해당 지점의 적 상태.
 	UPROPERTY(Transient)
-	TMap<FName, FCXFieldMonsterSpawnState>SpawnStates;
+	TMap<FName, FCXFieldEnemySpawnState>SpawnStates;
 
 	// 현재 등록한 스포너.
 	UPROPERTY(Transient)

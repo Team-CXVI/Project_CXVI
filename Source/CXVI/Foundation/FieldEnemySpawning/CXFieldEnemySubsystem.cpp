@@ -1,10 +1,10 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "CXFieldMonsterSubsystem.h"
+#include "CXFieldEnemySubsystem.h"
 #include "CXFieldEnemySpawner.h"
 
-bool UCXFieldMonsterSubsystem::RegisterSpawnPoint(FName SpawnId, FName RestGroupId, bool bRespawnOnRest)
+bool UCXFieldEnemySubsystem::RegisterSpawnPoint(FName SpawnId, FName RestGroupId, bool bRespawnOnRest)
 {
 	// 고유 ID가 없으면 등록할 수 없다.
 	if (SpawnId.IsNone())
@@ -21,7 +21,7 @@ bool UCXFieldMonsterSubsystem::RegisterSpawnPoint(FName SpawnId, FName RestGroup
 	}
 
 	// 처음 등록되는 지점의 초기 상태.
-	FCXFieldMonsterSpawnState NewState;
+	FCXFieldEnemySpawnState NewState;
 	NewState.RestGroupId = RestGroupId;
 	NewState.bDefeated = false;
 	NewState.bRespawnOnRest = bRespawnOnRest;
@@ -31,12 +31,12 @@ bool UCXFieldMonsterSubsystem::RegisterSpawnPoint(FName SpawnId, FName RestGroup
 	return true;
 }
 
-bool UCXFieldMonsterSubsystem::TryGetMonsterDefeated(FName SpawnId, bool& bOutDefeated) const
+bool UCXFieldEnemySubsystem::TryGetEnemyDefeated(FName SpawnId, bool& bOutDefeated) const
 {
 	// 조회 실패 시에도 출력값을 초기화한다.
 	bOutDefeated = false;
 
-	const FCXFieldMonsterSpawnState* State = SpawnStates.Find(SpawnId);
+	const FCXFieldEnemySpawnState* State = SpawnStates.Find(SpawnId);
 
 	if (!State)
 	{
@@ -48,13 +48,13 @@ bool UCXFieldMonsterSubsystem::TryGetMonsterDefeated(FName SpawnId, bool& bOutDe
 	return true;
 }
 
-bool UCXFieldMonsterSubsystem::MarkMonsterDefeated(FName SpawnId)
+bool UCXFieldEnemySubsystem::MarkEnemyDefeated(FName SpawnId)
 {
-	FCXFieldMonsterSpawnState* State = SpawnStates.Find(SpawnId);
+	FCXFieldEnemySpawnState* State = SpawnStates.Find(SpawnId);
 
 	if (!State)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("MarkMonsterDefeated: 등록되지 않은 Spawn입니다. [%s]"), *SpawnId.ToString());
+		UE_LOG(LogTemp, Warning, TEXT("MarkEnemyDefeated: 등록되지 않은 Spawn입니다. [%s]"), *SpawnId.ToString());
 
 		return false;
 	}
@@ -64,7 +64,7 @@ bool UCXFieldMonsterSubsystem::MarkMonsterDefeated(FName SpawnId)
 	return true;
 }
 
-bool UCXFieldMonsterSubsystem::RegisterSpawner(FName SpawnId, ACXFieldEnemySpawner* Spawner)
+bool UCXFieldEnemySubsystem::RegisterSpawner(FName SpawnId, ACXFieldEnemySpawner* Spawner)
 {
 	if (SpawnId.IsNone() || !IsValid(Spawner))
 	{
@@ -97,7 +97,7 @@ bool UCXFieldMonsterSubsystem::RegisterSpawner(FName SpawnId, ACXFieldEnemySpawn
 	return true;
 }
 
-void UCXFieldMonsterSubsystem::UnRegisterSpawner(FName SpawnId, ACXFieldEnemySpawner* Spawner)
+void UCXFieldEnemySubsystem::UnRegisterSpawner(FName SpawnId, ACXFieldEnemySpawner* Spawner)
 {
 	if (!Spawner)
 	{
@@ -113,20 +113,20 @@ void UCXFieldMonsterSubsystem::UnRegisterSpawner(FName SpawnId, ACXFieldEnemySpa
 	}
 }
 
-ACXFieldEnemySpawner* UCXFieldMonsterSubsystem::FindSpawner(FName SpawnId) const
+ACXFieldEnemySpawner* UCXFieldEnemySubsystem::FindSpawner(FName SpawnId) const
 {
 	const TWeakObjectPtr<ACXFieldEnemySpawner>* Found = RegisteredSpawner.Find(SpawnId);
 
 	return Found ? Found->Get() : nullptr;
 }
 
-TArray<FName> UCXFieldMonsterSubsystem::ResetDefeatedMonsters(FName RestGroupId)
+TArray<FName> UCXFieldEnemySubsystem::ResetDefeatedEnemies(FName RestGroupId)
 {
 	TArray<FName> ResetSpawnIds;
 
 	for (auto& Pair : SpawnStates)
 	{
-		FCXFieldMonsterSpawnState& State = Pair.Value;
+		FCXFieldEnemySpawnState& State = Pair.Value;
 
 		// 처치되지 않았거나 휴식 재생성이 금지된 몬스터는 제외.
 		if (!State.bDefeated || !State.bRespawnOnRest)
