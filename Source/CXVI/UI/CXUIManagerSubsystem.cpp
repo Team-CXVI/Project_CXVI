@@ -8,6 +8,8 @@
 #include <CommonActivatableWidget.h>
 #include <Engine/LocalPlayer.h>
 #include <GameFramework/PlayerController.h>
+#include <EnhancedInputSubsystems.h>
+#include <InputMappingContext.h>
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXUIManagerSubsystem)
 
@@ -73,7 +75,16 @@ void UCXUIManagerSubsystem::CreatePrimaryLayout(APlayerController* InPlayerContr
 
 void UCXUIManagerSubsystem::DestroyPrimaryLayout()
 {
+	if (nullptr == PrimaryLayout)
+	{
+		return;
+	}
 
+	// IMC 바인딩 해제
+	ApplyUIInputMapping(false);
+
+	PrimaryLayout->RemoveFromParent();
+	PrimaryLayout = nullptr;
 }
 
 UCommonActivatableWidget* UCXUIManagerSubsystem::K2_PushWidgetToLayer(FGameplayTag InLayerTag, TSubclassOf<UCommonActivatableWidget> InWidgetClass)
@@ -83,9 +94,39 @@ UCommonActivatableWidget* UCXUIManagerSubsystem::K2_PushWidgetToLayer(FGameplayT
 
 void UCXUIManagerSubsystem::RemoveWidget(UCommonActivatableWidget* InWidget)
 {
-
+	if (PrimaryLayout)
+	{
+		PrimaryLayout->FindAndRemoveWidgetFromLayer(InWidget);
+	}
 }
 
 void UCXUIManagerSubsystem::ApplyUIInputMapping(bool bInApply) const
 {
+	const ULocalPlayer* LocalPlayer = GetLocalPlayer<ULocalPlayer>();
+	UEnhancedInputLocalPlayerSubsystem* InputSubsystem = LocalPlayer ? LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>() : nullptr;
+	if (nullptr == InputSubsystem)
+	{
+		return;
+	}
+
+	const UCXUISettings* Settings = GetDefault<UCXUISettings>();
+	UInputMappingContext* MappingContext = Settings->UIMappingContext.LoadSynchronous();
+	if (nullptr == MappingContext)
+	{
+		UE_LOG(LogCXUI, Warning, TEXT("UI Mapping Context가 지정되지 않았습니다. (Project Settings > Game > CXVI UI)"));
+		return;
+	}
+
+	// 키 리바인딩(EnhancedInputUserSettings)에 IMC 등록
+	FModifyContextOptions Options;
+	Options.bNotifyUserSettings = true;
+
+	if (bInApply)
+	{
+		InputSubsystem->AddMappingContext(MappingContext, Settings->UIMappingPriority, Options);
+	}
+	else
+	{
+		InputSubsystem->RemoveMappingContext(MappingContext, Options);
+	}
 }

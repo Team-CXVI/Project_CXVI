@@ -46,17 +46,16 @@ public:
 
 public:
 	// Widget
-	// TODO : 템플릿 완성(CXPrimaryGameLayout 작성 후) 
 	template <typename ActivatableWidgetT = UCommonActivatableWidget>
 	ActivatableWidgetT* PushWidgetToLayer(const FGameplayTag& InLayerTag, TSubclassOf<ActivatableWidgetT> InWidgetClass)
 	{
-		return nullptr;
+		return PrimaryLayout ? PrimaryLayout->PushWidgetToLayerStack<ActivatableWidgetT>(InLayerTag, InWidgetClass) : nullptr;
 	}
 
 	template <typename ActivatableWidgetT = UCommonActivatableWidget>
 	ActivatableWidgetT* PushWidgetToLayer(const FGameplayTag& InLayerTag, TSubclassOf<ActivatableWidgetT> InWidgetClass, TFunctionRef<void(ActivatableWidgetT&)> InInitFunc)
 	{
-		return nullptr;
+		return PrimaryLayout ? PrimaryLayout->PushWidgetToLayerStack<ActivatableWidgetT>(InLayerTag, InWidgetClass, InInitFunc) : nullptr;
 	}
 
 	UFUNCTION(BlueprintCallable, Category = "CXVI|UI", meta = (DisplayName = "Push Widget To Layer", DeterminesOutputType = "InWidgetClass"))
