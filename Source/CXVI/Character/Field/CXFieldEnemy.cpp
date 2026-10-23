@@ -3,7 +3,9 @@
 
 #include "CXFieldEnemy.h"
 #include "Interactions/CXPreemptiveAttackTriggerBox.h"
+#include "CXVI/Foundation/FieldEnemySpawning/CXFieldEnemySubsystem.h"
 
+#include "Engine/World.h"
 #include "Animation/AnimInstance.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/ChildActorComponent.h"
@@ -35,6 +37,50 @@ ACXFieldEnemy::ACXFieldEnemy( )
 void ACXFieldEnemy::InitializePatrolRadius(float InPatrolRadius)
 {
 	PatrolRadius = FMath::Max(0.0f, InPatrolRadius);
+}
+
+void ACXFieldEnemy::InitializeSpawnId(FName InSpawnId)
+{
+	SpawnId = InSpawnId;
+}
+
+bool ACXFieldEnemy::Defeat()
+{
+	// 이미 처리했다면 다시 실행하지 않음.
+	if (bDefeatHandled)
+	{
+		return true;
+	}
+
+	if (SpawnId.IsNone())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("%s: SpawnId가 없어 처치를 기록할 수 없습니다."), *GetName());
+		return false;
+	}
+
+	UWorld* World = GetWorld();
+	if (!IsValid(World))
+	{
+		return false;
+	}
+
+	UCXFieldEnemySubsystem* EnemySubsystem = World->GetSubsystem<UCXFieldEnemySubsystem>();
+	if (!IsValid(EnemySubsystem))
+	{
+		return false;
+	}
+
+	// 기록이 실패했다면 액터를 먼저 제거하지 않음.
+	if (!EnemySubsystem->MarkEnemyDefeated(SpawnId))
+	{
+		return false;
+	}
+
+	bDefeatHandled = true;
+
+	Destroy();
+
+	return true;
 }
 
 void ACXFieldEnemy::BeginPlay()

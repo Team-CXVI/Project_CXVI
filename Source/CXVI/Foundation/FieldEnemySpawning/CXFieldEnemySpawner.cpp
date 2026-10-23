@@ -83,6 +83,8 @@ ACXFieldEnemy* ACXFieldEnemySpawner::SpawnEnemy()
 
 	// 생성 완료 전에 설정 전달.
 	SpawnedEnemy->InitializePatrolRadius(PatrolRadius);
+	SpawnedEnemy->InitializeSpawnId(SpawnId);
+	
 
 	SpawnedEnemy->FinishSpawning(SpawnTransform);
 
