@@ -8,6 +8,7 @@
 #include "BehaviorTree/BlackboardData.h"
 #include "BehaviorTree/BehaviorTree.h"
 #include "BehaviorTree/BlackboardComponent.h"
+#include "NavigationPath.h"
 
 
 ACXFieldAIController::ACXFieldAIController()
@@ -51,6 +52,47 @@ void ACXFieldAIController::StopAI()
 		// BT 실행 중지.
 		BTComponent->StopTree();
 	}
+}
+
+bool ACXFieldAIController::IsPathInsidePatrolArea(const FNavPathSharedPtr& Path) const
+{
+	if (!Path.IsValid() || !Path->IsValid() || Path->IsPartial())
+	{
+		return false;
+	}
+
+	ICXFieldEnemyAIInterface* AIPawn = Cast<ICXFieldEnemyAIInterface>(GetPawn());
+	if (!AIPawn)
+	{
+		return false; 
+	}
+
+	const FVector Center = AIPawn->GetAIPatrolCenter();
+	const float Radius = AIPawn->GetAIPatrolRadius();
+
+	if (Radius <= 0.0f)
+	{
+		return false;
+	}
+
+	const TArray<FNavPathPoint>& Points = Path->GetPathPoints();
+
+	if (Points.Num() < 2)
+	{
+		return false;
+	}
+
+	const float RadiusSquared = FMath::Square(Radius);
+
+	for (const FNavPathPoint& Point : Points)
+	{
+		if (FVector::DistSquared(Point.Location, Center) > RadiusSquared)
+		{
+			return false;
+		}
+	}
+
+	return true;
 }
 
 void ACXFieldAIController::OnPossess(APawn* InPawn)
