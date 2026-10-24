@@ -3,3 +3,4 @@
 
 #include "AbilitySystem/Abilities/Combat/CXAbilityData.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(CXAbilityData)
