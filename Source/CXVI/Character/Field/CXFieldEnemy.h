@@ -60,7 +60,9 @@ protected:
 	virtual float GetAIAttackRange()  override;
 	virtual float GetAITurnSpeed() override;
 	virtual float GetAIChaseRadius() override;
-	virtual void AttackByAI() override;
+	virtual bool AttackByAI() override;
+	virtual void CancelAttackByAI() override;
+	virtual bool IsAIAttacking() const override;
 	virtual void SetAIAttackDelegate(const FAICharacterAttackFinished& InOnAttackFinished) override;
 
 protected:
@@ -69,6 +71,10 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attack")
 	TObjectPtr<UAnimMontage> AttackMontage;
+
+	// AI 공격이 이동을 제한한 상태인지 구분.
+	UPROPERTY(Transient)
+	bool bAIAttacking = false;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PreemptiveAttack")
 	TObjectPtr<class UChildActorComponent> PreemptiveAttackTrigger;

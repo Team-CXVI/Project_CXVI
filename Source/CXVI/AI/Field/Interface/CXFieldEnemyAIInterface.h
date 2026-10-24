@@ -34,7 +34,9 @@ public:
 	virtual float GetAIChaseRadius() = 0;
 
 	// AI를 통해 공격 메시지를 전달할 떄 사용할 함수.
-	virtual void AttackByAI() = 0;
+	virtual bool AttackByAI() = 0;
+	virtual void CancelAttackByAI() = 0;
+	virtual bool IsAIAttacking() const = 0;
 
 	// 캐릭터에 델리게이트를 전달할 때 사용할 함수.
 	virtual void SetAIAttackDelegate(const FAICharacterAttackFinished& InOnAttackFinished) = 0;
