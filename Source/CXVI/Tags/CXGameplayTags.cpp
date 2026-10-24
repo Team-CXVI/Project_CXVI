@@ -9,7 +9,7 @@ namespace CXVIGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Input_Combat_Parry, "Input.Combat.Parry", "적 공격 패링 입력");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Input_Combat_Dodge, "Input.Combat.Dodge", "적 공격 회피 입력");
 
-	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Stunned, "Status.Stunned", "행동 불가 상태");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Status_Stunned, "Status.Stunned", "행동 불가 상태");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Status_Dead, "Status.Dead", "사망 상태");
 
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Event_Combat_ParrySucceeded, "Event.Combat.ParrySucceeded", "패링 성공 시 GAS 이벤트");

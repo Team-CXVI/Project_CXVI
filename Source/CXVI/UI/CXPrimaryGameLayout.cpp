@@ -45,7 +45,7 @@ void UCXPrimaryGameLayout::RegisterLayer(FGameplayTag InLayerTag, UCommonActivat
 
 	if (!InLayerTag.IsValid())
 	{
-		UE_LOG(LogCXUI, Warning, TEXT("[%s] RegisterLayer: 태그가 옮바르지 않습니다."), *GetName());
+		UE_LOG(LogCXUI, Warning, TEXT("[%s] RegisterLayer: 태그가 올바르지 않습니다."), *GetName());
 		return;
 	}
 
