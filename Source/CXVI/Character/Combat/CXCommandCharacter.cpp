@@ -277,54 +277,6 @@ void ACXCommandCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 
 }
 
-void ACXCommandCharacter::OnInputQ()
-{
-	if (CombatInputMode == ECombatInputMode::Command)
-	{
-		HandleMenuInput(ECommandKey::Q);
-	}
-	else if (CombatInputMode == ECombatInputMode::Reaction)
-	{
-		// 회피
-	}
-}
-
-void ACXCommandCharacter::OnInputW()
-{
-	HandleMenuInput(ECommandKey::W);
-}
-
-void ACXCommandCharacter::OnInputE()
-{
-	if (CombatInputMode == ECombatInputMode::Command)
-	{
-		HandleMenuInput(ECommandKey::E);
-	}
-	else if (CombatInputMode == ECombatInputMode::Reaction)
-	{
-		// 패링
-	}
-}
-
-void ACXCommandCharacter::OnInputF()
-{
-	HandleMenuInput(ECommandKey::F);
-}
-
-void ACXCommandCharacter::OnInputA()
-{
-	HandleMenuInput(ECommandKey::A);
-}
-
-void ACXCommandCharacter::OnInputD()
-{
-	HandleMenuInput(ECommandKey::D);
-}
-
-void ACXCommandCharacter::OnInputESC()
-{
-	HandleMenuInput(ECommandKey::ESC);
-}
 
 void ACXCommandCharacter::HandleMenuInput(ECommandKey Key)
 {
@@ -604,22 +556,6 @@ void ACXCommandCharacter::HandleInputCommand(const FInputActionValue& Value,
 	default:
 		break;
 	}
-}
-
-void ACXCommandCharacter::OnBasicAttackInput()
-{
-	if (CombatInputMode != ECombatInputMode::Command)
-	{
-		return;
-	}
-
-	ACXCombatCharacterPlayer* CommandPlayer = CommandCharacter.Get();
-	if (!CommandPlayer)
-	{
-		return;
-	}
-
-	CommandPlayer->BasicAttackAbility();
 }
 
 void ACXCommandCharacter::OnAimModeInput()
