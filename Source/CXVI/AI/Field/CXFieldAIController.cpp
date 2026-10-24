@@ -3,6 +3,8 @@
 
 #include "CXFieldAIController.h"
 #include "CXFieldAI.h"
+#include "Interface/CXFieldEnemyAIInterface.h"
+
 #include "BehaviorTree/BlackboardData.h"
 #include "BehaviorTree/BehaviorTree.h"
 #include "BehaviorTree/BlackboardComponent.h"
@@ -17,6 +19,12 @@ ACXFieldAIController::ACXFieldAIController()
 
 void ACXFieldAIController::RunAI()
 {
+	ICXFieldEnemyAIInterface* AIPawn = Cast<ICXFieldEnemyAIInterface>(GetPawn());
+	if (!AIPawn)
+	{
+		return;
+	}
+
 	// 블랙보드 컴포넌트 가져오기.
 	UBlackboardComponent* BlackboardPtr = Blackboard;
 
@@ -24,7 +32,7 @@ void ACXFieldAIController::RunAI()
 	if (UseBlackboard(BBAsset, BlackboardPtr))
 	{
 		// Enemy 폰이 생성된 위치를 블랙보드에 기록.
-		BlackboardPtr->SetValueAsVector(BBKEY_HOMEPOS, GetPawn()->GetActorLocation());
+		BlackboardPtr->SetValueAsVector(BBKEY_HOMEPOS, AIPawn->GetAIPatrolCenter());
 
 		// 비헤이비어 트리 실행.
 		bool RunResult = RunBehaviorTree(BTAsset);

@@ -34,9 +34,11 @@ ACXFieldEnemy::ACXFieldEnemy( )
 
 }
 
-void ACXFieldEnemy::InitializePatrolRadius(float InPatrolRadius)
+void ACXFieldEnemy::InitializePatrolArea(const FVector& InPatrolCenter, float InPatrolRadius)
 {
+	PatrolCenter = InPatrolCenter;
 	PatrolRadius = FMath::Max(0.0f, InPatrolRadius);
+	bPatrolAreaInitialize = true;
 }
 
 void ACXFieldEnemy::InitializeSpawnId(FName InSpawnId)
@@ -106,6 +108,11 @@ void ACXFieldEnemy::NotifyActionEnd()
 float ACXFieldEnemy::GetAIPatrolRadius()
 {
 	return PatrolRadius;
+}
+
+FVector ACXFieldEnemy::GetAIPatrolCenter()
+{
+	return PatrolCenter;
 }
 
 float ACXFieldEnemy::GetAIDetectRange()

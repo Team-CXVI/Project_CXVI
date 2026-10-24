@@ -25,8 +25,11 @@ public:
 	// Getter.
 	FORCEINLINE float GetAttackRadius() const { return AttackRadius; }
 
+	// AI 섹션.
+public:
 	// 생성 초기화 과정에서 스포너가 호출.
-	void InitializePatrolRadius(float InPatrolRadius);
+	// 생성 완료 전에 스포너가 담당 구역 정보를 전달.
+	void InitializePatrolArea(const FVector& InPatrolCenter,float InPatrolRadius);
 
 	// 스포너 섹션.
 public:
@@ -52,6 +55,7 @@ protected:
 	// AI Interface섹션.
 protected:
 	virtual float GetAIPatrolRadius() override;
+	virtual FVector GetAIPatrolCenter() override;
 	virtual float GetAIDetectRange() override;
 	virtual float GetAIAttackRange()  override;
 	virtual float GetAITurnSpeed() override;
@@ -74,6 +78,14 @@ protected:
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Transient, Category = "AI|Patrol")
 	float PatrolRadius = 500.0f;
+
+	// 담당 구역의 고정된 월드 좌표
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Transient, Category = "AI|Patrol")
+	FVector PatrolCenter = FVector::ZeroVector;
+
+	// 스포너가 담당 구역을 지정했는지 구분.
+	UPROPERTY(Transient)
+	bool bPatrolAreaInitialize = false;
 
 
 	// 스포너 변수.

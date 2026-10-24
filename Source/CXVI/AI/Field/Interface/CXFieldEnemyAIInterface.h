@@ -27,6 +27,7 @@ class CXVI_API ICXFieldEnemyAIInterface
 public:
 	// 에너미가 제공할 함수.
 	virtual float GetAIPatrolRadius() = 0;
+	virtual FVector GetAIPatrolCenter() = 0;
 	virtual float GetAIDetectRange() = 0;
 	virtual float GetAIAttackRange() = 0;
 	virtual float GetAITurnSpeed() = 0;
@@ -39,6 +40,7 @@ public:
 
 	// 공격 종료 시에 호출할 델리게이트
 	FAICharacterAttackFinished OnAttackFinished;
-
+	
+	
 	
 };
