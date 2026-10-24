@@ -31,6 +31,7 @@ public:
 	virtual float GetAIDetectRange() = 0;
 	virtual float GetAIAttackRange() = 0;
 	virtual float GetAITurnSpeed() = 0;
+	virtual float GetAIChaseRadius() = 0;
 
 	// AI를 통해 공격 메시지를 전달할 떄 사용할 함수.
 	virtual void AttackByAI() = 0;

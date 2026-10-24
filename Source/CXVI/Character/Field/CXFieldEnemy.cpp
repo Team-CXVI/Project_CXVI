@@ -130,6 +130,11 @@ float ACXFieldEnemy::GetAITurnSpeed()
 	return 0.0f;
 }
 
+float ACXFieldEnemy::GetAIChaseRadius()
+{
+	return PatrolRadius + FMath::Max(0.0f, ExtraChaseDistance);
+}
+
 void ACXFieldEnemy::AttackByAI()
 {
 	// 공격 실행.

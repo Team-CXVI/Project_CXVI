@@ -35,6 +35,8 @@ void ACXFieldAIController::RunAI()
 		// Enemy 폰이 생성된 위치를 블랙보드에 기록.
 		BlackboardPtr->SetValueAsVector(BBKEY_HOMEPOS, AIPawn->GetAIPatrolCenter());
 
+		BlackboardPtr->SetValueAsBool(BBKEY_ISRETURNING, false);
+
 		// 비헤이비어 트리 실행.
 		bool RunResult = RunBehaviorTree(BTAsset);
 

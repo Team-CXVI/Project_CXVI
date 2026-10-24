@@ -59,6 +59,7 @@ protected:
 	virtual float GetAIDetectRange() override;
 	virtual float GetAIAttackRange()  override;
 	virtual float GetAITurnSpeed() override;
+	virtual float GetAIChaseRadius() override;
 	virtual void AttackByAI() override;
 	virtual void SetAIAttackDelegate(const FAICharacterAttackFinished& InOnAttackFinished) override;
 
@@ -82,6 +83,10 @@ protected:
 	// 담당 구역의 고정된 월드 좌표
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Transient, Category = "AI|Patrol")
 	FVector PatrolCenter = FVector::ZeroVector;
+
+	// 정찰 구역 밖으로 추가 추적을 허용할 거리.
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="AI|Chase")
+	float ExtraChaseDistance = 400.0f;
 
 	// 스포너가 담당 구역을 지정했는지 구분.
 	UPROPERTY(Transient)

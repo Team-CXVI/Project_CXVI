@@ -45,6 +45,56 @@ void UCXBTService_FieldDetect::TickNode(UBehaviorTreeComponent& OwnerComp, uint8
 		return;
 	}
 
+	UBlackboardComponent* Blackboard = OwnerComp.GetBlackboardComponent();
+	if (!Blackboard)
+	{
+		return;
+	}
+
+	// 복귀 중에는 플레이어를 다시 감지하지 않음.
+	if (Blackboard->GetValueAsBool(BBKEY_ISRETURNING))
+	{
+		Blackboard->ClearValue(BBKEY_TARGET);
+		return;
+	}
+
+	const FVector PatrolCenter = AIPawn->GetAIPatrolCenter();
+	const float ChaseRadius = AIPawn->GetAIChaseRadius();
+	const float ChaseRadiusSquared = FMath::Square(ChaseRadius);
+
+	AActor* CurrentTarget = Cast<AActor>(Blackboard->GetValueAsObject(BBKEY_TARGET));
+
+	// Enemy와 타깃 각각 담당 구역 중심으로부터의 거리검사.
+	const bool bEnemyOutside = FVector::DistSquared(ControllingPawn->GetActorLocation(), PatrolCenter) > ChaseRadiusSquared;
+
+	const bool bTargetOutside = IsValid(CurrentTarget) && FVector::DistSquared(CurrentTarget->GetActorLocation(), PatrolCenter) > ChaseRadiusSquared;
+
+
+	if (bEnemyOutside || bTargetOutside)
+	{
+		// 복귀 상태를 먼저 설정한 후 타깃 해제.
+		Blackboard->SetValueAsBool(BBKEY_ISRETURNING, true);
+		Blackboard->ClearValue(BBKEY_TARGET);
+
+		UE_LOG(
+			LogTemp,
+			Display,
+			TEXT("[Chase] %s: 추적 한계 초과, 복귀 시작. EnemyOutside=%d TargetOutside=%d"),
+			*ControllingPawn->GetName(), bEnemyOutside, bTargetOutside
+		);
+
+		return;
+	}
+
+	// 이미 잡은 타깃은 추적 한계 안에 있으면 유지.
+	// 최초 감지 반경을 벗어났다고 즉시 지우지 않음.
+
+	if (IsValid(CurrentTarget))
+	{
+		return;
+	}
+
+
 	// 충돌 결과로 정보를 반환받을 변수.
 	TArray<FOverlapResult> OverlapResults;
 
@@ -82,8 +132,13 @@ void UCXBTService_FieldDetect::TickNode(UBehaviorTreeComponent& OwnerComp, uint8
 			APawn* Pawn = Cast<APawn>(OverlapResult.GetActor());
 
 			// 플레이어인지 확인 -> 폰을 제어하는 컨트롤러가 플레이어 컨트롤러인지 확인.
-			if (IsValid(Pawn) && Pawn->GetController()->IsPlayerController())
+			if (IsValid(Pawn) && IsValid(Pawn->GetController()) && Pawn->GetController()->IsPlayerController())
 			{
+				if (FVector::DistSquared(Pawn->GetActorLocation(), PatrolCenter) > ChaseRadiusSquared)
+				{
+					continue;
+				}
+
 				// 감지된 정보를 블랙보드에 저장.
 				OwnerComp.GetBlackboardComponent()->SetValueAsObject(
 					BBKEY_TARGET,
