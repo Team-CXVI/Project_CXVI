@@ -67,13 +67,6 @@ protected:
 
 	// 키 입력 함수
 private:
-	void OnInputQ();
-	void OnInputW();
-	void OnInputE();
-	void OnInputF();
-	void OnInputA();
-	void OnInputD();
-	void OnInputESC();
 
 	void HandleMenuInput(ECommandKey Key);
 
@@ -87,8 +80,6 @@ private:
 	void HandleInputAction(const struct FInputActionInstance& Instance, ETriggerEvent TriggerEvent);
 	void HandleInputCommand(const FInputActionValue& Value, ECXInputCommand Command);
 
-
-	void OnBasicAttackInput();
 
 	void OnAimModeInput();
 

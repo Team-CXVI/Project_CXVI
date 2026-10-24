@@ -12,21 +12,6 @@ ACXCombatPlayerController::ACXCombatPlayerController()
 {
 }
 
-void ACXCombatPlayerController::EnterCombatMode()
-{
-	if (IsValid(CommandCharacter))
-	{
-		Possess(CommandCharacter);
-	}
-}
-
-void ACXCombatPlayerController::EndCombatMode()
-{
-	if (IsValid(FieldCharacter))
-	{
-		Possess(FieldCharacter);
-	}
-}
 
 void ACXCombatPlayerController::BeginPlay()
 {

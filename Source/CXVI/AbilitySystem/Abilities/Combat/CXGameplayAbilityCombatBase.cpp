@@ -26,7 +26,7 @@ UCXGameplayAbilityCombatBase::UCXGameplayAbilityCombatBase()
 void UCXGameplayAbilityCombatBase::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
 	// 재생할 몽타주가 없으면 공격을 종료.
-	if (!AbilityData && !AbilityData->AnimMontage)
+	if (!AbilityData || !AbilityData->AnimMontage)
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true); // 마지막 인자 true -> 취소 됐다
 		return;

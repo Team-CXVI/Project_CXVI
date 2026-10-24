@@ -27,8 +27,6 @@ public:
 
 	void RequestEndBattle();
 
-	TObjectPtr<class UCXTurnManager> GetTurnManager() { return TurnManager; }
-
 	FORCEINLINE ACXTestCombatArena* GetCombatArena() const { return TestCombatArena.Get(); }
 
 protected:
