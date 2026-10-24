@@ -7,6 +7,7 @@
 
 #include "AIController.h"
 #include "Engine/OverlapResult.h"
+#include "Engine/World.h"
 #include "BehaviorTree/BlackboardComponent.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXBTService_FieldDetect)
@@ -61,6 +62,12 @@ void UCXBTService_FieldDetect::TickNode(UBehaviorTreeComponent& OwnerComp, uint8
 	const FVector PatrolCenter = AIPawn->GetAIPatrolCenter();
 	const float ChaseRadius = AIPawn->GetAIChaseRadius();
 	const float ChaseRadiusSquared = FMath::Square(ChaseRadius);
+
+	// 수평면 기준 Enemy의 정면 방향.
+	const FVector ForwardDirection = ControllingPawn->GetActorForwardVector().GetSafeNormal2D();
+
+	// 시야각 경계의 내적 기준값.
+	const float SightCosThreshold = FMath::Cos(FMath::DegreesToRadians(AIPawn->GetAISightHalfAngle()));
 
 	AActor* CurrentTarget = Cast<AActor>(Blackboard->GetValueAsObject(BBKEY_TARGET));
 
@@ -135,6 +142,43 @@ void UCXBTService_FieldDetect::TickNode(UBehaviorTreeComponent& OwnerComp, uint8
 			if (IsValid(Pawn) && IsValid(Pawn->GetController()) && Pawn->GetController()->IsPlayerController())
 			{
 				if (FVector::DistSquared(Pawn->GetActorLocation(), PatrolCenter) > ChaseRadiusSquared)
+				{
+					continue;
+				}
+
+				const FVector ToTarget = Pawn->GetActorLocation() - ControllingPawn->GetActorLocation();
+
+				// 수평 위치가 같으면 방향 검사 생략.
+				if (ToTarget.SizeSquared2D() > FMath::Square(KINDA_SMALL_NUMBER))
+				{
+					const FVector TargetDirection = ToTarget.GetSafeNormal2D();
+
+					const float FacingDot = FVector::DotProduct(ForwardDirection, TargetDirection);
+
+					// 시야각 밖의 후보는 제외.
+					if (FacingDot < SightCosThreshold)
+					{
+						continue;
+					}
+				}
+
+				// Enemy와 플레이어의 눈 위치.
+				FVector SightStart;
+				FRotator EnemyEyeRoatation;
+				ControllingPawn->GetActorEyesViewPoint(SightStart, EnemyEyeRoatation);
+
+				FVector SightEnd;
+				FRotator TargetEyeRotation;
+				Pawn->GetActorEyesViewPoint(SightEnd, TargetEyeRotation);
+
+				FCollisionQueryParams SightParams(SCENE_QUERY_STAT(FieldEnemySight), false, ControllingPawn);
+
+				FHitResult SightHit;
+
+				const bool bHit = World->LineTraceSingleByChannel(SightHit, SightStart, SightEnd, ECC_Visibility, SightParams);
+
+				// 플레이어보다 먼저 다른 물체에 막히면 감지 제외.
+				if (bHit && SightHit.GetActor() != Pawn)
 				{
 					continue;
 				}

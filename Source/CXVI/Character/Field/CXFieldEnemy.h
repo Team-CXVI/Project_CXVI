@@ -64,6 +64,7 @@ protected:
 	virtual void CancelAttackByAI() override;
 	virtual bool IsAIAttacking() const override;
 	virtual void SetAIAttackDelegate(const FAICharacterAttackFinished& InOnAttackFinished) override;
+	virtual float GetAISightHalfAngle() override;
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
@@ -97,6 +98,10 @@ protected:
 	// 스포너가 담당 구역을 지정했는지 구분.
 	UPROPERTY(Transient)
 	bool bPatrolAreaInitialize = false;
+
+	// 정면 기준 한쪽 시야각. 60이면 전체 시야각은 120도.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Sight")
+	float SightHalfAngle = 60.0f;
 
 
 	// 스포너 변수.

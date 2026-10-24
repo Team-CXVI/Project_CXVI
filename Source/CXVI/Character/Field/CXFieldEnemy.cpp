@@ -241,4 +241,9 @@ void ACXFieldEnemy::SetAIAttackDelegate(const FAICharacterAttackFinished& InOnAt
 	OnAttackFinished = InOnAttackFinished;
 }
 
+float ACXFieldEnemy::GetAISightHalfAngle()
+{
+	return FMath::Clamp(SightHalfAngle,0.0f,180.0f);
+}
+
 
