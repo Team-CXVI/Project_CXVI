@@ -46,6 +46,8 @@ void ACXCombatCharacterEnemy::PostInitializeComponents()
 void ACXCombatCharacterEnemy::ActionPhase()
 {
 	Super::ActionPhase();
-
-	BasicAttackAbility();
+	if (!BasicAttackAbility())
+	{
+		FinishAction();
+	}
 }

@@ -17,8 +17,6 @@ UCXGameplayAbilityCombatBase::UCXGameplayAbilityCombatBase()
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 
-	AbilityData = CreateDefaultSubobject<UCXAbilityData>("Data");
-
 	FGameplayTagContainer Tags = GetAssetTags();
 	Tags.AddTag(CXVIGameplayTags::Ability_Basic_Attack);
 

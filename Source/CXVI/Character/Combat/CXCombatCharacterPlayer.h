@@ -10,6 +10,8 @@
 
 #include "CXCombatCharacterPlayer.generated.h"
 
+DECLARE_MULTICAST_DELEGATE_TwoParams(FOnTargetSelectionRequested, ACXCombatCharacterPlayer*, const TArray<TWeakObjectPtr<APawn>>&);
+
 /**
  * 
  */
@@ -20,6 +22,8 @@ class CXVI_API ACXCombatCharacterPlayer : public ACXCombatCharacterBase
 	
 public:
 	ACXCombatCharacterPlayer();
+
+	FOnTargetSelectionRequested OnTargetSelectionRequested;
 
 	// Getter
 	UFUNCTION(BlueprintCallable)
@@ -35,6 +39,12 @@ public:
 protected:
 	virtual void PostInitializeComponents() override;
 
+	bool ActivateSelectedSkill(int32 SlotIndex);
+
+	virtual void SelectActionPhase() override;
+	virtual void SelectTargetPhase() override;
+	virtual void ActionPhase() override;
+
 
 protected:
 	UPROPERTY(VisibleAnywhere, Category = "Camera")
@@ -44,6 +54,9 @@ protected:
 	TObjectPtr<class UCameraComponent> Camera;
 
 	// Ability
+protected:
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|Skills")
+	TArray<TSubclassOf<class UGameplayAbility>> SkillAbilities;
 private:
 
 	bool bIsAimMode = false;

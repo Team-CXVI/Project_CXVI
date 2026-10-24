@@ -107,28 +107,36 @@ void ACXCombatCharacterBase::InitializeGAS()
 
 void ACXCombatCharacterBase::NotifyBattleAbilityEnded(FGameplayAbilitySpecHandle Handle, bool bWasCancelled)
 {
-	// 내가 기다렸던 어빌리티인지 확인하고 끝났으니 원래 배열에서 제거
-	if (CurrentActivatingHandles.Contains(Handle))
+	if (!CurrentActivatingHandles.Contains(Handle))
 	{
-		CurrentActivatingHandles.Remove(Handle);
-
-		// 다시 원래 자리로 돌아오기
-		ReturnToOriginLocation();
+		return;
 	}
 
-	if (bWasCancelled)
-	{
+	CurrentActivatingHandles.Remove(Handle);
 
-	}
-	else
+	if (!CurrentActivatingHandles.IsEmpty())
 	{
-		// 정상적인 스킬 종료
-		SavedMessage.Character = this;
-		SavedMessage.Phase = SavedMessage.Phase;
-		SavedMessage.MessageType = ECXCombatMessageType::Action;
-
-		CombatMessageResponse(SavedMessage);
+		return;
 	}
+
+	ReturnToOriginLocation();
+
+	// 이 예시는 중단된 행동도 종료 처리하여 턴을 소비한다.
+	FinishAction();
+}
+
+void ACXCombatCharacterBase::FinishAction()
+{
+	if (!bIsTurn || SavedMessage.Phase != ECXCombatPhase::ActionPhase)
+	{
+		return;
+	}
+
+	FCXCombatMessageData Response = SavedMessage;
+	Response.Character = this;
+	Response.MessageType = ECXCombatMessageType::Action;
+
+	CombatMessageResponse(Response);
 }
 
 UAbilitySystemComponent* ACXCombatCharacterBase::GetAbilitySystemComponent() const
@@ -155,15 +163,83 @@ void ACXCombatCharacterBase::CombatMessageRequest(const FCXCombatMessageData& Me
 	ProcessMessage(SavedMessage.Phase);
 }
 
-
-void ACXCombatCharacterBase::BasicAttackAbility()
+void ACXCombatCharacterBase::SubmitAction(const FCXActionSelection& Selection)
 {
-	if (!ASC)
+	if (!bIsTurn || SavedMessage.Phase != ECXCombatPhase::SelectActionPhase)
+	{
+		UE_LOG(LogTemp, Display, TEXT("폰에서 전달받은 액션"));
+		return;
+	}
+
+	PendingAction = Selection;
+
+	SavedMessage.Character = this;
+	SavedMessage.MessageType = PendingAction.TargetTeam == ECXTargetTeam::Player 
+		? ECXCombatMessageType::TeamTargetRequest : ECXCombatMessageType::EnemyTargetsRequest;
+
+	CombatMessageResponse(SavedMessage);
+}
+
+void ACXCombatCharacterBase::SubmitTarget(APawn* Target)
+{
+	if (!bIsTurn ||	SavedMessage.Phase != ECXCombatPhase::SelectTargetPhase)
 	{
 		return;
 	}
 
-	// Ability 처리중 부여 목록이 변경되어도 안전하도록 보호합니다.
+	ACXCombatCharacterBase* CombatTarget = Cast<ACXCombatCharacterBase>(Target);
+
+	if (!IsValid(CombatTarget) || !CombatTarget->GetIsCharacterAlive())
+	{
+		return;
+	}
+
+	const bool bCandidate = SavedMessage.Targets.ContainsByPredicate(
+		[Target](const TWeakObjectPtr<APawn>& Candidate)
+		{
+			return Candidate.Get() == Target;
+		});
+
+	if (!bCandidate)
+	{
+		return;
+	}
+
+	CurrentTargetPawn = Target;
+
+	FCXCombatMessageData Response = SavedMessage;
+	Response.Character = this;
+	Response.MessageType = ECXCombatMessageType::None;
+
+	CombatMessageResponse(Response);
+}
+
+void ACXCombatCharacterBase::CancelSelection()
+{
+	if (!bIsTurn || SavedMessage.Phase != ECXCombatPhase::SelectTargetPhase)
+	{
+		return;
+	}
+
+	PendingAction.Clear();
+	CurrentTargetPawn.Reset();
+	SavedMessage.Targets.Reset();
+
+	FCXCombatMessageData Response = SavedMessage;
+	Response.Character = this;
+	Response.MessageType = ECXCombatMessageType::SelectionCancelled;
+
+	CombatMessageResponse(Response);
+}
+
+
+bool ACXCombatCharacterBase::BasicAttackAbility()
+{
+	if (!IsValid(ASC) || !bIsCharacterAlive)
+	{
+		return false;
+	}
+
 	FScopedAbilityListLock AbilityListLock(*ASC);
 
 	FGameplayTagContainer AttackTags;
@@ -186,24 +262,41 @@ void ACXCombatCharacterBase::BasicAttackAbility()
 
 		Spec->InputPressed = true;
 
+		// 이미 공격 중이면 기존 콤보 입력 처리.
 		if (Spec->IsActive())
 		{
-			// 공격중 추가 클릭
 			ASC->AbilitySpecInputPressed(*Spec);
+			return true;
 		}
-		else
+
+		ACXCombatCharacterBase* Target = Cast<ACXCombatCharacterBase>(CurrentTargetPawn.Get());
+
+		if (!IsValid(Target) || !Target->GetIsCharacterAlive())
 		{
-			// 먼저 적앞으로 이동
-			TeleportToAttackLocation();
-
-
-			// 스킬 사용중인건 배열에 저장
-			CurrentActivatingHandles.Add(Spec->Handle);
-
-			// 첫 클릭
-			ASC->TryActivateAbility(Spec->Handle);
+			return false;
 		}
+
+		const FGameplayAbilitySpecHandle Handle = Spec->Handle;
+
+		TeleportToAttackLocation();
+
+		// 활성화 직후 종료 콜백이 올 수 있으므로 먼저 등록.
+		CurrentActivatingHandles.AddUnique(Handle);
+
+		if (!ASC->TryActivateAbility(Handle))
+		{
+			CurrentActivatingHandles.Remove(Handle);
+			ReturnToOriginLocation();
+
+			return false;
+		}
+
+		// 정상 종료 처리는 NotifyBattleAbilityEnded()가 담당.
+		return true;
 	}
+
+	// 사용할 기본 공격 어빌리티가 없음.
+	return false;
 }
 
 void ACXCombatCharacterBase::TeleportToAttackLocation()

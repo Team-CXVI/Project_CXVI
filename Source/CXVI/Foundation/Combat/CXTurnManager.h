@@ -13,6 +13,7 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerInputEnabledChanged, bool);
 DECLARE_MULTICAST_DELEGATE(FCXOnBattleEnded);
 
 class ACXCombatCharacterBase;
+class ACXCombatCharacterPlayer;
 
 USTRUCT()
 struct FTurnOrder
@@ -50,6 +51,9 @@ public:
 	FCXOnBattleEnded OnBattleEnded;
 
 	void StopBattle() { ResetBattle(); }
+
+	TArray<TObjectPtr<class ACXCombatCharacterBase>> GetPlayerArray() { return PlayerCharacters; }
+	TArray<TObjectPtr<class ACXCombatCharacterBase>> GetEnemyArray() { return EnemyCharacters; }
 
 private:
 
@@ -110,6 +114,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, Category = "CombatData")
 	FCXCombatMessageData SavedMessage;
+
+	TArray<TWeakObjectPtr<APawn>> TargetCandidates;
+	int32 SelectedTargetIndex = INDEX_NONE;
 
 	// 순서 정리 기준 코스트
 private:

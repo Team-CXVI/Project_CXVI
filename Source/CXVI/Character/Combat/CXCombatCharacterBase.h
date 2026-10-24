@@ -23,12 +23,17 @@ public:
 	// 가스 초기화 함수
 	void InitializeGAS();
 
-	void BasicAttackAbility();
+	bool BasicAttackAbility();
 
 	// 어빌리티 끝났다고 알리는 함수
 	void NotifyBattleAbilityEnded(FGameplayAbilitySpecHandle Handle, bool bWasCancelled);
+	void FinishAction();
 
 	virtual void CombatMessageRequest(const FCXCombatMessageData& MessageRequest) override;
+	void SubmitAction(const FCXActionSelection& Selection);
+	void SubmitTarget(APawn* Target);
+	void CancelSelection();
+
 
 	// Getter / Setter
 	FORCEINLINE const bool GetIsCharacterAlive() const { return bIsCharacterAlive; }
@@ -60,11 +65,14 @@ protected:
 	// 명령 실행 함수.
 	void BeginTurnPhase();
 	void BeforeSelectPhase();
-	void SelectActionPhase();
-	void SelectTargetPhase();
+	virtual void SelectActionPhase();
+	virtual void SelectTargetPhase();
 	virtual void ActionPhase();
 	void ReactionPhase();
 	void EndTurnPhase();
+
+	const TArray<TWeakObjectPtr<APawn>>& GetTargetCandidates() const { return SavedMessage.Targets; }
+	const FCXActionSelection& GetPendingAction() const { return PendingAction; }
 
 	
 protected:
@@ -90,6 +98,8 @@ private:
 
 	// 턴매니저에 보낼 메시지
 	FCXCombatMessageData SavedMessage;
+
+	FCXActionSelection PendingAction;
 
 	FTransform OriginTransform;
 	TWeakObjectPtr<APawn> CurrentTargetPawn;

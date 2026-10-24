@@ -151,21 +151,23 @@ void UCXCombatManagerSubsystem::HandlePlayerInputModeChanged(bool bAllowed)
 
 void UCXCombatManagerSubsystem::HandleArenaReady(const TArray<TObjectPtr<class ACXCombatCharacterBase>>& Players, const TArray<TObjectPtr<class ACXCombatCharacterBase>>& Enemies)
 {
-	if (!IsValid(TurnManager))
+	ACXCommandCharacter* CommandPawn = WeakCommandCharacter.Get();
+	if (!IsValid(TurnManager) || !IsValid(StoredPlayerController) || !IsValid(CommandPawn))
 	{
 		return;
 	}
+
+	// 기존 AI 빙의 해제 시 커맨드폰의 파티 목록이 초기화될 수 있어 먼저 빙의한다.
+	StoredPlayerController->Possess(CommandPawn);
 
 	for (const auto& Character : Players)
 	{
 		if (ACXCombatCharacterPlayer* Player = Cast<ACXCombatCharacterPlayer>(Character.Get()))
 		{
-			WeakCommandCharacter->AddCommandCharacter(Player);
+			CommandPawn->AddCommandCharacter(Player);
 		}
 	}
 	
-	StoredPlayerController->Possess(WeakCommandCharacter.Get());
-
 	StoredPlayerController->SetViewTargetWithBlend(TestCombatArena.Get(), 0.f);
 
 	TurnManager->StartBattle(Players, Enemies);
