@@ -25,9 +25,38 @@ public:
 	// Getter.
 	FORCEINLINE float GetAttackRadius() const { return AttackRadius; }
 
+	// 생성 초기화 과정에서 스포너가 호출.
+	void InitializePatrolRadius(float InPatrolRadius);
+
+	// 스포너 섹션.
+public:
+	// 생성 완료 전에 스포너가 호출.
+	void InitializeSpawnId(FName InSpawnId);
+
+	UFUNCTION(Blueprintpure, Category = "Field|Enemy")
+	FName GetSpawnId() const { return SpawnId; }
+
+	// 처치 확정 시 호출. 기록에 성공하면 액터를 제거한다.
+	UFUNCTION(BlueprintCallable, Category = "Field|Enemy")
+	bool Defeat();
+
 protected:
 	virtual void BeginPlay() override;
 
+protected:
+	void AttackEnded(UAnimMontage* Montage, bool bInterrupted);
+
+	// 공격이 끝나는 시점에 호출할 함수.
+	virtual void NotifyActionEnd();
+
+	// AI Interface섹션.
+protected:
+	virtual float GetAIPatrolRadius() override;
+	virtual float GetAIDetectRange() override;
+	virtual float GetAIAttackRange()  override;
+	virtual float GetAITurnSpeed() override;
+	virtual void AttackByAI() override;
+	virtual void SetAIAttackDelegate(const FAICharacterAttackFinished& InOnAttackFinished) override;
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
@@ -36,25 +65,23 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attack")
 	TObjectPtr<UAnimMontage> AttackMontage;
 
-	UPROPERTY(VisibleAnywhere,BlueprintReadOnly,Category="PreemptiveAttack")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PreemptiveAttack")
 	TObjectPtr<class UChildActorComponent> PreemptiveAttackTrigger;
 
 	// 공격 반경.
-	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Attack")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attack")
 	float AttackRadius;
 
-	void AttackEnded(UAnimMontage* Montage, bool bInterrupted);
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Transient, Category = "AI|Patrol")
+	float PatrolRadius = 500.0f;
 
-	// 공격이 끝나느 시점에 호출할 함수.
-	virtual void NotifyComboActionEnd();
 
-	// AI 섹션.
-protected:
-	float GetAIPatrolRadius() override;
-	float GetAIDetectRange() override;
-	float GetAIAttackRange() override;
-	float GetAITurnSpeed() override;
-	virtual void AttackByAI() override;
-	virtual void SetAIAttackDelegate(const FAICharacterAttackFinished& InOnAttackFinished) override;
+	// 스포너 변수.
+	// 이 몬스터가 어느 스폰 지점에서 생성됐는지 식별.
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Transient, Category = "Field|Enemy")
+	FName SpawnId = NAME_None;
 
+	// 처치 처리를 중복 실행하지 않도록 구분.
+	UPROPERTY(Transient)
+	bool bDefeatHandled = false;
 };
