@@ -19,8 +19,6 @@ class CXVI_API ACXCombatPlayerController : public APlayerController
 public:
 	ACXCombatPlayerController();
 
-	void EnterCombatMode();
-	void EndCombatMode();
 
 protected:
 	virtual void BeginPlay() override;
