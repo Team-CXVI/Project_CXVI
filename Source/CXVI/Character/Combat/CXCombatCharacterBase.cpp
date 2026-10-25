@@ -13,6 +13,8 @@
 #include "Components/WidgetComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "AbilitySystemComponent.h"
+#include "Abilities/GameplayAbility.h"
+#include "GameplayEffect.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXCombatCharacterBase)
 
@@ -80,6 +82,8 @@ void ACXCombatCharacterBase::PostInitializeComponents()
 	CXPostInitializeComponents();
 
 	ASC->GetSet<UCXCombatAttributeSet>()->OnOutOfHealth.AddDynamic(this, &ACXCombatCharacterBase::OnOutOfHealthCpp);
+
+	CharacterAttributeSet->OnDamageApplied.AddUniqueDynamic(this, &ACXCombatCharacterBase::HandleDamageApplied);
 }
 
 void ACXCombatCharacterBase::InitializeGAS()
@@ -148,6 +152,25 @@ void ACXCombatCharacterBase::OnOutOfHealthCpp(AActor* InInstigator)
 	HpBar->SetVisibility(false);
 
 	bIsCharacterAlive = false;
+}
+
+void ACXCombatCharacterBase::HandleDamageApplied(AActor* InInstigator, float AppliedDamage)
+{
+	if (AppliedDamage <= 0.f)
+	{
+		return;
+	}
+
+	ACXCombatCharacterBase* Attacker = Cast<ACXCombatCharacterBase>(InInstigator);
+
+	// this는 본인이 치고 본인이 맞은 경우는 제거
+	if (!IsValid(Attacker) || Attacker == this)
+	{
+		return;
+	}
+
+	Attacker->TryGainBasicAttackMana();
+
 }
 
 float ACXCombatCharacterBase::GetCombatSpeed() const
@@ -370,6 +393,9 @@ bool ACXCombatCharacterBase::TryStartCombatAbility(FGameplayAbilitySpecHandle Ha
 		SetActorRotation(Direction.Rotation());
 	}
 
+	// 새 행동에서는 다시 한번 마나 획득 가능
+	bBasicAttackManaGranted = false;
+
 	ExecutingCombatAbility = Handle;
 	CurrentActivatingHandles.AddUnique(Handle);
 
@@ -515,4 +541,40 @@ void ACXCombatCharacterBase::EndTurnPhase()
 	SavedMessage.Character = this;
 	SavedMessage.MessageType = ECXCombatMessageType::TurnCompleted;
 	CombatMessageResponse(SavedMessage);
+}
+
+void ACXCombatCharacterBase::TryGainBasicAttackMana()
+{
+	if (!HasAuthority() || !IsValid(ASC) ||
+		!bIsCharacterAlive || bBasicAttackManaGranted || !ExecutingCombatAbility.IsValid() || !BasicAttackManaGainEffect)
+	{
+		return;
+	}
+
+	const FGameplayAbilitySpec* AbilitySpec = ASC->FindAbilitySpecFromHandle(ExecutingCombatAbility);
+
+	if (!AbilitySpec || !AbilitySpec->Ability)
+	{
+		return;
+	}
+
+	// 현재 실행중인 행동이 기본공격인지 확인.
+	const bool bIsBasicAttack = AbilitySpec->Ability->GetAssetTags().HasTagExact(CXVIGameplayTags::Ability_Basic_Attack);
+
+	if (!bIsBasicAttack)
+	{
+		return;
+	}
+
+	FGameplayEffectSpecHandle EffectSpec = ASC->MakeOutgoingSpec(BasicAttackManaGainEffect, 1.f, ASC->MakeEffectContext());
+
+	if (!EffectSpec.IsValid())
+	{
+		return;
+	}
+
+	// GE적용으로 추가 콜백이 발생해도 중복 획득하지 않도록 적용전에 기록
+	bBasicAttackManaGranted = true;
+
+	ASC->ApplyGameplayEffectSpecToSelf(*EffectSpec.Data.Get());
 }
