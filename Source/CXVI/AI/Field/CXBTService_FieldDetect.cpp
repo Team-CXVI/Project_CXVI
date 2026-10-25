@@ -71,7 +71,7 @@ void UCXBTService_FieldDetect::TickNode(UBehaviorTreeComponent& OwnerComp, uint8
 
 	AActor* CurrentTarget = Cast<AActor>(Blackboard->GetValueAsObject(BBKEY_TARGET));
 
-	const bool bCanSeeCurrentTarget = IsValid(CurrentTarget) && CanSeeTarget(ControllingPawn, CurrentTarget, AIPawn->GetAISightHalfAngle());
+	const bool bCanSeeCurrentTarget = IsValid(CurrentTarget) && CanSeeTarget(ControllingPawn, CurrentTarget, 180.0f);
 
 	// Enemy와 타깃 각각 담당 구역 중심으로부터의 거리검사.
 	const bool bEnemyOutside = FVector::DistSquared(ControllingPawn->GetActorLocation(), PatrolCenter) > ChaseRadiusSquared;
@@ -263,7 +263,7 @@ bool UCXBTService_FieldDetect::CanSeeTarget(APawn* Observer, AActor* Target, flo
 
 	const FVector ToTarget = Target->GetActorLocation() - Observer->GetActorLocation();
 
-	if (ToTarget.SizeSquared2D() > FMath::Square(KINDA_SMALL_NUMBER))
+	if (SightHalfAngle<180.f && ToTarget.SizeSquared2D() > FMath::Square(KINDA_SMALL_NUMBER))
 	{
 		const FVector Forward = Observer->GetActorForwardVector().GetSafeNormal2D();
 
