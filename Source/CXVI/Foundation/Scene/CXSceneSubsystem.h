@@ -12,7 +12,11 @@ class ULevelStreaming;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogCXScene, Log, All);
 
+// Scene의 OnEnter 직후, Fade In 전에 호출(레벨은 Visible인 상태)
+DECLARE_MULTICAST_DELEGATE_OneParam(FCXOnSceneEntered, UCXGameScene* /*EnteredScene*/);
+
 DECLARE_MULTICAST_DELEGATE_TwoParams(FCXOnSceneChanged, UCXGameScene* /*NewScene*/, UCXGameScene* /*OldScene*/);
+
 
 // 값이 클수록 우선 순위가 높음(Scene에 중복으로 걸친 Sublevel이 있고 그중 Visible인 Scene이 있다면 거길 따라감)
 enum class ECXSublevelTarget : uint8
@@ -140,6 +144,8 @@ private:
 	bool StartFade(bool bInFadeOut, float InDuration, const FLinearColor& InColor);
 
 public:
+	FCXOnSceneEntered OnSceneEntered;
+
 	FCXOnSceneChanged OnSceneChanged;
 
 private:

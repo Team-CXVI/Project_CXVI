@@ -283,6 +283,7 @@ bool UCXSceneSubsystem::ExecuteStep(ECXSceneTransitionStep InStep)
 		case ECXSceneTransitionStep::EnterIncoming:
 		{
 			T.IncomingScene->OnEnter(T.Context);
+			OnSceneEntered.Broadcast(T.IncomingScene);
 			return false;
 		}
 
