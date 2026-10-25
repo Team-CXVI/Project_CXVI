@@ -11,42 +11,52 @@
 
 UCXBTDecorator_FieldAttackInRange::UCXBTDecorator_FieldAttackInRange()
 {
+    bNotifyTick = true;
+
     NodeName = TEXT("Can Attack");
 }
 
 bool UCXBTDecorator_FieldAttackInRange::CalculateRawConditionValue(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) const
 {
-    bool bResult = Super::CalculateRawConditionValue(OwnerComp, NodeMemory);
+    AAIController* Controller = OwnerComp.GetAIOwner();
 
-    // 감지된 캐릭터와 NPC의 거리가 공격 가능 범위보다 작은지 비교.
-    APawn* ControllingPawn = OwnerComp.GetAIOwner()->GetPawn();
+    UBlackboardComponent* Blackboard = OwnerComp.GetBlackboardComponent();
+
+    if (!IsValid(Controller) || !Blackboard)
+    {
+        return false;
+    }
+
+    // 보이지 않는 타깃에게 새 공격을 시작하지 않음.
+    if (!Blackboard->GetValueAsBool(BBEKY_HASTARGETSIGHT))
+    {
+        return false;
+    }
+
+    APawn* ControllingPawn = Controller->GetPawn();
     if (!IsValid(ControllingPawn))
     {
         return false;
     }
 
     ICXFieldEnemyAIInterface* AIPawn = Cast<ICXFieldEnemyAIInterface>(ControllingPawn);
-	if (nullptr == AIPawn)
+    if (!AIPawn)
     {
         return false;
     }
 
-    // 감지된 캐릭터 정보를 블랙보드에서 얻어오기.
-    APawn* Target = Cast<APawn>(OwnerComp.GetBlackboardComponent()->GetValueAsObject(BBKEY_TARGET));
+    APawn* Target = Cast<APawn>(Blackboard->GetValueAsObject(BBKEY_TARGET));
     if (!IsValid(Target))
     {
         return false;
     }
 
-    // 캐릭터와의 거리 계산.
-    float DistanceToTarget = ControllingPawn->GetDistanceTo(Target);
+    return ControllingPawn->GetDistanceTo(Target) <= AIPawn->GetAIAttackRange();
+}
 
-    // 공격 범위 가져오기.
-    float AttackRange = AIPawn->GetAIAttackRange();
+void UCXBTDecorator_FieldAttackInRange::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds)
+{
+    Super::TickNode(OwnerComp, NodeMemory, DeltaSeconds);
 
-    // 결과 계산.
-    bResult = (DistanceToTarget <= AttackRange);
-
-    //  결과 반환.
-    return bResult;
+    ConditionalFlowAbort(OwnerComp, EBTDecoratorAbortRequest::ConditionResultChanged);
 }

@@ -55,6 +55,10 @@ void UCXBTService_FieldDetect::TickNode(UBehaviorTreeComponent& OwnerComp, uint8
 	// 복귀 중에는 플레이어를 다시 감지하지 않음.
 	if (Blackboard->GetValueAsBool(BBKEY_ISRETURNING))
 	{
+		Blackboard->SetValueAsBool(BBEKY_HASTARGETSIGHT, false);
+
+		Blackboard->ClearValue(BBKEY_LASTSEENTARGETPOS);
+
 		Blackboard->SetValueAsFloat(BBKEY_SIGHTLOSTSTARTTIME, -1.0f);
 
 		Blackboard->ClearValue(BBKEY_TARGET);
@@ -67,14 +71,20 @@ void UCXBTService_FieldDetect::TickNode(UBehaviorTreeComponent& OwnerComp, uint8
 
 	AActor* CurrentTarget = Cast<AActor>(Blackboard->GetValueAsObject(BBKEY_TARGET));
 
+	const bool bCanSeeCurrentTarget = IsValid(CurrentTarget) && CanSeeTarget(ControllingPawn, CurrentTarget, AIPawn->GetAISightHalfAngle());
+
 	// Enemy와 타깃 각각 담당 구역 중심으로부터의 거리검사.
 	const bool bEnemyOutside = FVector::DistSquared(ControllingPawn->GetActorLocation(), PatrolCenter) > ChaseRadiusSquared;
 
-	const bool bTargetOutside = IsValid(CurrentTarget) && FVector::DistSquared(CurrentTarget->GetActorLocation(), PatrolCenter) > ChaseRadiusSquared;
+	const bool bTargetOutside = bCanSeeCurrentTarget && FVector::DistSquared(CurrentTarget->GetActorLocation(), PatrolCenter) > ChaseRadiusSquared;
 
 
 	if (bEnemyOutside || bTargetOutside)
 	{
+		Blackboard->SetValueAsBool(BBEKY_HASTARGETSIGHT, false);
+
+		Blackboard->ClearValue(BBKEY_LASTSEENTARGETPOS);
+
 		Blackboard->SetValueAsFloat(BBKEY_SIGHTLOSTSTARTTIME, -1.0f);
 
 		// 복귀 상태를 먼저 설정한 후 타깃 해제.
@@ -99,11 +109,18 @@ void UCXBTService_FieldDetect::TickNode(UBehaviorTreeComponent& OwnerComp, uint8
 		const float LostStartTime = Blackboard->GetValueAsFloat(BBKEY_SIGHTLOSTSTARTTIME);
 
 		// 다시 보이면 시야 상실 기록 초기화.
-		if (CanSeeTarget(ControllingPawn, CurrentTarget, AIPawn->GetAISightHalfAngle()))
+		if (bCanSeeCurrentTarget)
 		{
+			Blackboard->SetValueAsVector(BBKEY_LASTSEENTARGETPOS, CurrentTarget->GetActorLocation());
+
+			Blackboard->SetValueAsBool(BBEKY_HASTARGETSIGHT, true);
+
 			Blackboard->SetValueAsFloat(BBKEY_SIGHTLOSTSTARTTIME, -1.0f);
 			return;
 		}
+
+		// 보이지 않으면 위치를 갱신하지 않고 마지막 기록 유지.
+		Blackboard->SetValueAsBool(BBEKY_HASTARGETSIGHT, false);
 
 		const float Now = World->GetTimeSeconds();
 		float StartTime = LostStartTime;
@@ -121,6 +138,10 @@ void UCXBTService_FieldDetect::TickNode(UBehaviorTreeComponent& OwnerComp, uint8
 		// 유예 시간이 지나면 추적을 포기하고 복귀.
 		if (Now - StartTime >= AIPawn->GetAISightLossGraceTime())
 		{
+			Blackboard->SetValueAsBool(BBEKY_HASTARGETSIGHT, false);
+
+			Blackboard->ClearValue(BBKEY_LASTSEENTARGETPOS);
+
 			Blackboard->SetValueAsFloat(BBKEY_SIGHTLOSTSTARTTIME, -1.0f);
 
 			Blackboard->SetValueAsBool(BBKEY_ISRETURNING, true);
@@ -135,6 +156,10 @@ void UCXBTService_FieldDetect::TickNode(UBehaviorTreeComponent& OwnerComp, uint8
 
 	// 타깃이 없으면 이전 시야 상실 기록 제거.
 	Blackboard->SetValueAsFloat(BBKEY_SIGHTLOSTSTARTTIME, -1.0f);
+
+	Blackboard->SetValueAsBool(BBEKY_HASTARGETSIGHT, false);
+
+	Blackboard->ClearValue(BBKEY_LASTSEENTARGETPOS);
 
 
 	// 충돌 결과로 정보를 반환받을 변수.
@@ -185,6 +210,13 @@ void UCXBTService_FieldDetect::TickNode(UBehaviorTreeComponent& OwnerComp, uint8
 				{
 					continue;
 				}
+
+				// Target 변경으로 BT가 반응하기 전에 관련 정보부터 준비.
+				Blackboard->SetValueAsVector(BBKEY_LASTSEENTARGETPOS, Pawn->GetActorLocation());
+
+				Blackboard->SetValueAsBool(BBEKY_HASTARGETSIGHT, true);
+
+				Blackboard->SetValueAsFloat(BBKEY_SIGHTLOSTSTARTTIME, -1.0f);
 
 				// 감지된 정보를 블랙보드에 저장.
 				OwnerComp.GetBlackboardComponent()->SetValueAsObject(
