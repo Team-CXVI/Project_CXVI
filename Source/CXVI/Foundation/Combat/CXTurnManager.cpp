@@ -432,7 +432,14 @@ void UCXTurnManager::NextTurnPhase(ECXCombatPhase& PreviousPhase)
 
 void UCXTurnManager::SendPhaseRequest(const FCXCombatMessageData& OutMessage)
 {
-	const bool bAllowInput = IsValid(CurrentTurnPlayer) && PlayerCharacters.Contains(CurrentTurnPlayer) && OutMessage.Phase == ECXCombatPhase::ActionPhase;
+	const bool bSelecting =
+		OutMessage.Phase == ECXCombatPhase::SelectActionPhase ||
+		OutMessage.Phase == ECXCombatPhase::SelectTargetPhase;
+
+	const bool bAllowInput =
+		IsValid(CurrentTurnPlayer) &&
+		PlayerCharacters.Contains(CurrentTurnPlayer) &&
+		bSelecting;
 
 	OnPlayerInputEnabledChanged.Broadcast(bAllowInput);
 

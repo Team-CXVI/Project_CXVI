@@ -176,3 +176,74 @@ void ACXCombatCharacterPlayer::PostInitializeComponents()
 	ASC->SetNumericAttributeBase(CharacterAttributeSet->GetHealthAttribute(), 200.f);
 	ASC->SetNumericAttributeBase(CharacterAttributeSet->GetCombatSpeedAttribute(), 200.f);
 }
+
+bool ACXCombatCharacterPlayer::ActivateSelectedSkill(int32 SlotIndex)
+{
+	if (!ASC ||
+		!SkillAbilities.IsValidIndex(SlotIndex) ||
+		!SkillAbilities[SlotIndex])
+	{
+		return false;
+	}
+
+	FGameplayAbilitySpec* Spec =
+		ASC->FindAbilitySpecFromClass(SkillAbilities[SlotIndex]);
+
+	if (!Spec || Spec->IsActive())
+	{
+		return false;
+	}
+
+	const FGameplayAbilitySpecHandle Handle = Spec->Handle;
+
+	// 테스트용: 선택한 대상 앞으로 즉시 이동.
+	TeleportToAttackLocation();
+
+	CurrentActivatingHandles.AddUnique(Handle);
+
+	if (!ASC->TryActivateAbility(Handle))
+	{
+		CurrentActivatingHandles.Remove(Handle);
+		return false;
+	}
+
+	return true;
+}
+
+void ACXCombatCharacterPlayer::SelectActionPhase()
+{
+	// 커맨드 폰의 SubmitAction() 기다리는 중
+}
+
+void ACXCombatCharacterPlayer::SelectTargetPhase()
+{
+
+	OnTargetSelectionRequested.Broadcast(this, GetTargetCandidates());
+
+	// 대상 확정 전이므로 응답하지 않음.
+}
+
+void ACXCombatCharacterPlayer::ActionPhase()
+{
+	const FCXActionSelection Action = GetPendingAction();
+
+	switch (Action.Type)
+	{
+	case ECXActionType::BasicAttack:
+		if (!BasicAttackAbility())
+		{
+			FinishAction();
+		}
+		return;
+
+	case ECXActionType::Skill:
+		if (!ActivateSelectedSkill(Action.SlotIndex))
+		{
+			FinishAction();
+		}
+		return;
+
+	default:
+		return;
+	}
+}

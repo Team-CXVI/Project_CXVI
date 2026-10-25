@@ -111,6 +111,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category = "CombatData")
 	FCXCombatMessageData SavedMessage;
 
+	TArray<TWeakObjectPtr<APawn>> TargetCandidates;
+	int32 SelectedTargetIndex = INDEX_NONE;
+
 	// 순서 정리 기준 코스트
 private:
 

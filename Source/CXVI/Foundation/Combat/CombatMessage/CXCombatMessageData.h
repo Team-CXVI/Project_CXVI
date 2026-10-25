@@ -30,6 +30,22 @@ enum class ECXCombatMessageType : uint8
 	TurnCompleted
 };
 
+enum class ECXActionType : uint8
+{
+	None,
+	BasicAttack,
+	Skill,
+	Item
+};
+
+enum class ECXTargetTeam : uint8
+{
+	Enemy,
+	Player
+};
+
+
+
 USTRUCT()
 struct FCXCombatMessageData
 {
@@ -41,4 +57,13 @@ struct FCXCombatMessageData
 	TWeakObjectPtr<APawn> Character;
 	TArray<TWeakObjectPtr<APawn>> Targets;
 
+};
+
+struct FCXActionSelection
+{
+	ECXActionType Type = ECXActionType::None;
+	int32 SlotIndex = INDEX_NONE;
+	ECXTargetTeam TargetTeam = ECXTargetTeam::Enemy;
+
+	void Clear() { Type = ECXActionType::None; SlotIndex = INDEX_NONE; TargetTeam = ECXTargetTeam::Enemy; }
 };
