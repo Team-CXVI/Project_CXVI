@@ -36,7 +36,7 @@ void UCXLevelTransitionSubsystem::Initialize(FSubsystemCollectionBase& Collectio
 	// 레벨 로드 실패 시 전환 상태에 갇히지 않도록 초기화
 	TravelFailureHandle = GEngine->OnTravelFailure().AddUObject(this, &ThisClass::HandleTravelFailure);
 
-	// 액터 초기화 직후에 현재 레벨 정의를 갱신
+	// 액터 초기화 직후(플레이어 스폰 전)에 현재 레벨 정의 갱신 + 첫 Scene 서브레벨 동기 로드 처리
 	WorldActorsInitializedHandle = FWorldDelegates::OnWorldInitializedActors.AddUObject(this, &ThisClass::HandleWorldActorsInitialized);
 
 #if !UE_BUILD_SHIPPING
@@ -110,20 +110,32 @@ bool UCXLevelTransitionSubsystem::QuitGame()
 	return true;
 }
 
+void UCXLevelTransitionSubsystem::ApplyScreenCover(APlayerCameraManager* InCameraManager) const
+{
+	if (bScreenCovered && InCameraManager)
+	{
+		InCameraManager->SetManualCameraFade(1.f, CoverColor, /*bInFadeAudio*/ false);
+	}
+}
+
 void UCXLevelTransitionSubsystem::NotifyLevelReady()
 {
-	// 레벨 전이 없이 호출된 이벤트 (부트 맵, 에디터에서 바로 PIE)
-	if (!bIsTransitioning)
+	// 레벨 전이 없이 호출된 이벤트 (부트 맵, 에디터에서 바로 PIE) 또는 이미 카메라 노출 중
+	if (!bIsTransitioning || bIsRevealing)
 	{
 		return;
 	}
 
-	const UCXLevelDefinition* FinishedDefinition = PendingDefinition;
-	ResetTransition();
+	bIsRevealing = true;
+	bScreenCovered = false;
 
-	UE_LOG(LogCXLevelTransition, Log, TEXT("Level transition finished: %s"), *GetNameSafe(FinishedDefinition));
+	const float FadeInDuration = CurrentDefinition ? CurrentDefinition->FadeInDuration : 0.f;
+	const FTimerDelegate OnRevealed = FTimerDelegate::CreateUObject(this, &ThisClass::FinishTransition);
 
-	OnTransitionFinished.Broadcast(FinishedDefinition);
+	if (!StartCameraFade(/*bInFadeOut*/ false, FadeInDuration, CoverColor, OnRevealed))
+	{
+		FinishTransition();
+	}
 }
 
 bool UCXLevelTransitionSubsystem::BeginTransition(UCXLevelDefinition* InDefinition, FName InEntryTag)
@@ -153,13 +165,18 @@ bool UCXLevelTransitionSubsystem::BeginTransition(UCXLevelDefinition* InDefiniti
 	PendingDefinition = InDefinition;
 	PendingEntryTag = InEntryTag;
 
+	// Fade Out 시작 : 이후 새 월드의 CameraManager에도 이 상태가 다시 적용됨
+	bScreenCovered = true;
+	CoverColor = InDefinition->FadeColor;
+
 	UE_LOG(LogCXLevelTransition, Log, TEXT("Level transition started: %s -> %s (Entry: %s)"),
 		*GetNameSafe(CurrentDefinition), *InDefinition->GetName(), *InEntryTag.ToString());
 
 	OnTransitionStarted.Broadcast(InDefinition);
 
-	// 페이드는 각 목표 레벨 정의의 값을 사용
-	if (!StartFadeOut(InDefinition->FadeOutDuration, InDefinition->FadeColor))
+	// 페이드 아웃은 목표 레벨 정의의 값을 사용. 끝나면 레벨 열기
+	const FTimerDelegate OnCovered = FTimerDelegate::CreateUObject(this, &ThisClass::OpenPendingLevel);
+	if (!StartCameraFade(/*bInFadeOut*/ true, InDefinition->FadeOutDuration, CoverColor, OnCovered))
 	{
 		OpenPendingLevel();
 	}
@@ -219,26 +236,46 @@ void UCXLevelTransitionSubsystem::HandleWorldActorsInitialized(const UWorld::FAc
 	CurrentDefinition = (bIsTransitioning && PendingDefinition) ? PendingDefinition.Get() : FindLevelDefinitionForWorld(World);
 
 	UE_LOG(LogCXLevelTransition, Log, TEXT("Current level definition: %s"), *GetNameSafe(CurrentDefinition));
+
+	// 레벨 열기 = 첫 Scene 서브레벨까지 열린 상태
+	// 이 시점은 플레이어 스폰 전이므로, 여기서 동기 로드하면 서브레벨의 PlayerStart를 스폰에 사용할 수 있음
+	// 비동기 로드까지 기다리도록 Full Flush
+	if (CurrentDefinition && CurrentDefinition->InitialScene)
+	{
+		if (UCXSceneSubsystem* SceneSubsystem = World->GetSubsystem<UCXSceneSubsystem>())
+		{
+			SceneSubsystem->LoadSceneLevelsImmediately(CurrentDefinition->InitialScene);
+		}
+	}
 }
 
-bool UCXLevelTransitionSubsystem::StartFadeOut(float InDuration, const FLinearColor& InColor)
+bool UCXLevelTransitionSubsystem::StartCameraFade(bool bInFadeOut, float InDuration, const FLinearColor& InColor, const FTimerDelegate& InOnComplete)
 {
 	APlayerCameraManager* CameraManager = UGameplayStatics::GetPlayerCameraManager(GetGameInstance()->GetWorld(), 0);
 	if (nullptr == CameraManager || InDuration <= 0.f)
 	{
 		if (CameraManager)
 		{
-			CameraManager->SetManualCameraFade(1.f, InColor, /*bInFadeAudio*/ false);
+			if (bInFadeOut)
+			{
+				CameraManager->SetManualCameraFade(1.f, InColor, /*bInFadeAudio*/ false);
+			}
+			else
+			{
+				CameraManager->StopCameraFade();
+			}
 		}
 		return false;
 	}
 
-	// 레벨이 열릴 때까지 화면을 가린 상태로 유지(bHoldWhenFinished)
-	CameraManager->StartCameraFade(0.f, 1.f, InDuration, InColor, /*bShouldFadeAudio*/ true, /*bHoldWhenFinished*/ true);
+	const float FromAlpha = bInFadeOut ? 0.f : 1.f;
+	const float ToAlpha = bInFadeOut ? 1.f : 0.f;
 
-	// 월드가 타이머가 유지되도록 GameInstance쪽 TimerManager 사용
-	// FadeOut이 끝나면 OpenPendingLevel을 호출
-	GetGameInstance()->GetTimerManager().SetTimer(FadeHandle, this, &ThisClass::OpenPendingLevel, InDuration, false);
+	// 가림은 끝난 뒤에도 유지(bHoldWhenFinished), 공개는 끝나면 해제
+	CameraManager->StartCameraFade(FromAlpha, ToAlpha, InDuration, InColor, /*bShouldFadeAudio*/ true, /*bHoldWhenFinished*/ bInFadeOut);
+
+	// 월드가 바뀌어도 타이머가 유지되도록 GameInstance쪽 TimerManager 사용
+	GetGameInstance()->GetTimerManager().SetTimer(FadeHandle, InOnComplete, InDuration, false);
 	return true;
 }
 
@@ -255,6 +292,16 @@ void UCXLevelTransitionSubsystem::OpenPendingLevel()
 	UGameplayStatics::OpenLevelBySoftObjectPtr(World, PendingDefinition->Level);
 }
 
+void UCXLevelTransitionSubsystem::FinishTransition()
+{
+	const UCXLevelDefinition* FinishedDefinition = PendingDefinition;
+	ResetTransition();
+
+	UE_LOG(LogCXLevelTransition, Log, TEXT("Level transition finished: %s"), *GetNameSafe(FinishedDefinition));
+
+	OnTransitionFinished.Broadcast(FinishedDefinition);
+}
+
 void UCXLevelTransitionSubsystem::HandleTravelFailure(UWorld* InWorld, ETravelFailure::Type InFailureType, const FString& InErrorString)
 {
 	if (!bIsTransitioning)
@@ -265,9 +312,11 @@ void UCXLevelTransitionSubsystem::HandleTravelFailure(UWorld* InWorld, ETravelFa
 	UE_LOG(LogCXLevelTransition, Error, TEXT("레벨 이동 실패: %s (%s) %s"),
 		*GetNameSafe(PendingDefinition), ETravelFailure::ToString(InFailureType), *InErrorString);
 
+	bScreenCovered = false;
+	GetGameInstance()->GetTimerManager().ClearTimer(FadeHandle);
 	ResetTransition();
 
-	// FadeIn 처리
+	// 현재 월드에서 가림 해제
 	if (APlayerCameraManager* CameraManager = UGameplayStatics::GetPlayerCameraManager(InWorld, 0))
 	{
 		CameraManager->StopCameraFade();
@@ -277,6 +326,7 @@ void UCXLevelTransitionSubsystem::HandleTravelFailure(UWorld* InWorld, ETravelFa
 void UCXLevelTransitionSubsystem::ResetTransition()
 {
 	bIsTransitioning = false;
+	bIsRevealing = false;
 	PendingDefinition = nullptr;
 	PendingEntryTag = NAME_None;
 }

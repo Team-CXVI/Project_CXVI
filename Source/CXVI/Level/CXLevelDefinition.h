@@ -41,13 +41,17 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Level")
 	TSoftObjectPtr<UWorld> Level;
 
-	// 도착하면 Push할 첫 Scene (인게임 레벨만 사용. 타이틀은 비움)
+	// 첫 Scene. 레벨을 열 때 이 Scene의 서브레벨이 플레이어 스폰 전에 동기로 로드되고, 도착 후 Push됨 (InGame은 필수 설정)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Scene")
 	TObjectPtr<UCXSceneDefinition> InitialScene;
 	
 	// 이 레벨로 이동할 때의 페이드 아웃 시간. 0이면 즉시 검은 화면으로 전환
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Transition", meta = (ClampMin = 0.0, Units = "s"))
 	float FadeOutDuration = 0.5f;
+
+	// 이 레벨에 준비가 끝난 뒤 화면을 여는 페이드 인 시간. 0이면 즉시 공개
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Transition", meta = (ClampMin = 0.0, Units = "s"))
+	float FadeInDuration = 0.5f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Transition")
 	FLinearColor FadeColor = FLinearColor::Black;

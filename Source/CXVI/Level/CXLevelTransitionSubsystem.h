@@ -8,6 +8,7 @@
 #include "CXLevelTransitionSubsystem.generated.h"
 
 class UCXLevelDefinition;
+class APlayerCameraManager;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogCXLevelTransition, Log, All);
 
@@ -17,6 +18,8 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FCXOnLevelTransition, const UCXLevelDefiniti
  * 레벨 간 전환 관리
  * - 타이틀 이동은 TravelToTitle, 인게임 레벨 이동은 TravelToLevel 호출 (두 함수는 내부에서 같은 이동 경로를 사용)
  * - 전환 = 이동 요청부터 도착한 레벨의 준비 완료(NotifyLevelReady)까지
+ * - 레벨 열기 = 퍼시스턴트 + 첫 Scene 서브레벨까지 열린 상태 (서브레벨은 플레이어 스폰 전에 동기 로드)
+ * - 전환 구간의 화면 가림 / 공개는 이 Subsystem만 담당 (월드가 바뀌어도 가림 상태 유지)
  * - 전환 중에는 다른 이동 요청과 게임 종료를 거부
  * - 진입 태그를 보관해서 도착한 GameMode가 스폰 위치를 고를 수 있게 함
  * - 세션 데이터는 다루지 않음
@@ -60,7 +63,10 @@ public:
 	// 현재 레벨의 GameMode가 스폰할 위치 Tag
 	FName GetPendingEntryTag() const { return PendingEntryTag; }
 
-	// 도착한 레벨의 GameMode가 레벨 준비 완료 시 호출. 레벨 전환 상태에서만 처리
+	// 새 월드의 CameraManager가 생성되면 호출. 전환 중이면 첫 프레임부터 화면을 가린 상태로 시작
+	void ApplyScreenCover(APlayerCameraManager* InCameraManager) const;
+
+	// 도착한 레벨의 GameMode가 레벨 준비 완료 시 호출 -> 화면 공개 후 전환 종료. 레벨 전환 상태에서만 처리
 	void NotifyLevelReady();
 
 private:
@@ -72,14 +78,18 @@ private:
 	// 요청 없이 시작된 월드(부트 맵, 에디터에서 바로 PIE)의 레벨 정의 검색
 	UCXLevelDefinition* FindLevelDefinitionForWorld(const UWorld* InWorld) const;
 
+	// 액터 초기화 직후(플레이어 스폰 전) : 현재 레벨 정의 결정 + 첫 Scene 서브레벨 동기 로드
 	void HandleWorldActorsInitialized(const UWorld::FActorsInitializedParams& InParams);
 
 	// Return Value
-	// true = 페이드 대기 시작 (완료 시 OpenPendingLevel 호출)
-	// false = 즉시 완료
-	bool StartFadeOut(float InDuration, const FLinearColor& InColor);
+	// true = 페이드 대기 시작 (완료 시 InOnComplete 호출)
+	// false = 즉시 완료 (InOnComplete는 호출하지 않으므로 호출한 쪽에서 바로 이어서 처리)
+	bool StartCameraFade(bool bInFadeOut, float InDuration, const FLinearColor& InColor, const FTimerDelegate& InOnComplete);
 
 	void OpenPendingLevel();
+
+	// 공개 페이드 인이 끝나면 전환 종료
+	void FinishTransition();
 
 	void HandleTravelFailure(UWorld* InWorld, ETravelFailure::Type InFailureType, const FString& InErrorString);
 
@@ -104,6 +114,14 @@ private:
 	TObjectPtr<UCXLevelDefinition> CurrentDefinition;
 
 	bool bIsTransitioning = false;
+
+	// 공개(페이드 인) 진행 중 (NotifyLevelReady 중복 호출 방지)
+	bool bIsRevealing = false;
+
+	// 화면이 가려진 상태 (가림 시작 ~ 공개 시작). 새 월드의 CameraManager에 다시 적용하는 기준
+	bool bScreenCovered = false;
+
+	FLinearColor CoverColor = FLinearColor::Black;
 
 	// EntryTag : PlayerStart 지정을 위한 Tag
 	FName PendingEntryTag;

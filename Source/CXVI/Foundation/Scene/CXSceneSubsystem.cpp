@@ -55,7 +55,7 @@ void UCXSceneSubsystem::Deinitialize()
 	Super::Deinitialize();
 }
 
-bool UCXSceneSubsystem::PushScene(UCXSceneDefinition* InDefinition, const FCXSceneContext& InContext)
+bool UCXSceneSubsystem::PushScene(UCXSceneDefinition* InDefinition, const FCXSceneContext& InContext, bool bInUseFade)
 {
 	if (!CanStartTransition(TEXT("PushScene")))
 	{
@@ -75,15 +75,23 @@ bool UCXSceneSubsystem::PushScene(UCXSceneDefinition* InDefinition, const FCXSce
 	Transition.FadeOutDuration = InDefinition->FadeOutDuration;
 	Transition.FadeInDuration = InDefinition->FadeInDuration;
 	Transition.FadeColor = InDefinition->FadeColor;
-	Transition.Steps = {
-		ECXSceneTransitionStep::FadeOut,
+
+	// 화면 제어를 하지 않으면 FadeOut / FadeIn 단계를 빼고 진행
+	if (bInUseFade)
+	{
+		Transition.Steps.Add(ECXSceneTransitionStep::FadeOut);
+	}
+	Transition.Steps.Append({
 		ECXSceneTransitionStep::ShowIncomingLevels,
 		ECXSceneTransitionStep::SuspendOutgoing,
 		ECXSceneTransitionStep::PushIncoming,
 		ECXSceneTransitionStep::ResolveLevels,
-		ECXSceneTransitionStep::EnterIncoming,
-		ECXSceneTransitionStep::FadeIn
-	};
+		ECXSceneTransitionStep::EnterIncoming
+		});
+	if (bInUseFade)
+	{
+		Transition.Steps.Add(ECXSceneTransitionStep::FadeIn);
+	}
 
 	StartTransition();
 	return true;
@@ -170,6 +178,26 @@ ULevelStreaming* UCXSceneSubsystem::FindStreamingLevel(const TSoftObjectPtr<UWor
 
 	// GetStreamingLevel이 PIE 패키지 이름 접두사(UEDPIE_N_)를 알아서 처리함
 	return UGameplayStatics::GetStreamingLevel(GetWorld(), FName(*InLevel.GetLongPackageName()));
+}
+
+void UCXSceneSubsystem::LoadSceneLevelsImmediately(const UCXSceneDefinition* InDefinition)
+{
+	if (nullptr == InDefinition)
+	{
+		return;
+	}
+
+	TMap<FSoftObjectPath, ECXSublevelTarget> Targets;
+	for (const TSoftObjectPtr<UWorld>& Level : InDefinition->Sublevels)
+	{
+		Targets.Add(Level.ToSoftObjectPath(), ECXSublevelTarget::Visible);
+	}
+
+	// 로드/표시 요청만 걸고(대기 없음) 엔진 Flush로 동기 처리
+	ApplyLevelTargets(Targets, /*bInWait*/ false);
+	GetWorld()->FlushLevelStreaming(EFlushLevelStreamingType::Full);
+
+	UE_LOG(LogCXScene, Log, TEXT("Scene levels loaded immediately: %s"), *InDefinition->GetName());
 }
 
 bool UCXSceneSubsystem::CanStartTransition(const TCHAR* InRequestName) const

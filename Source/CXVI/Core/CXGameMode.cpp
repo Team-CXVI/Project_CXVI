@@ -8,9 +8,32 @@
 #include "Level/CXLevelTransitionSubsystem.h"
 #include "Level/CXLevelDefinition.h"
 
+#include <EngineUtils.h>
 #include <GameFramework/PlayerStart.h>
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXGameMode)
+
+AActor* ACXGameMode::ChoosePlayerStart_Implementation(AController* Player)
+{
+	const UCXLevelTransitionSubsystem* LevelTransition = UCXLevelTransitionSubsystem::TryGet(this);
+	const FName EntryTag = LevelTransition ? LevelTransition->GetPendingEntryTag() : NAME_None;
+
+	if (!EntryTag.IsNone())
+	{
+		// 첫 Scene 서브레벨이 이미 로딩된 상태이므로 서브레벨의 PlayerStart까지 검색됨
+		for (TActorIterator<APlayerStart> It(GetWorld()); It; ++It)
+		{
+			if (It->PlayerStartTag == EntryTag)
+			{
+				return *It;
+			}
+		}
+
+		UE_LOG(LogCXLevelTransition, Warning, TEXT("진입 태그 '%s'에 해당하는 PlayerStart가 없습니다. 기본 위치에 스폰합니다."), *EntryTag.ToString());
+	}
+
+	return Super::ChoosePlayerStart_Implementation(Player);
+}
 
 void ACXGameMode::BeginPlay()
 {
@@ -24,19 +47,17 @@ void ACXGameMode::BeginPlay()
 	if (nullptr == SceneSubsystem || nullptr == InitialScene)
 	{
 		UE_LOG(LogCXLevelTransition, Warning, TEXT("현재 레벨에 레벨 정의 또는 InitialScene이 없습니다. 첫 Scene 없이 시작합니다."));
-		SpawnPendingPlayers();
 		NotifyLevelReady();
 		return;
 	}
 
-	// Scene Push 전에 구독 : 진입 직후(페이드 인 전) 스폰, 전환 완료 후 준비 완료 알림
-	SceneEnteredHandle = SceneSubsystem->OnSceneEntered.AddUObject(this, &ThisClass::HandleInitialSceneEntered);
+	// 첫 Scene 진입이 끝나는 시점을 받기 위해 Push 전에 구독
 	SceneChangedHandle = SceneSubsystem->OnSceneChanged.AddUObject(this, &ThisClass::HandleInitialSceneReady);
 
-	if (!SceneSubsystem->PushScene(InitialScene, FCXSceneContext()))
+	// 서브레벨은 이미 Visible. 레벨 전환 구간의 화면은 레벨 전환이 맡으므로 화면 제어 없이 Push
+	if (!SceneSubsystem->PushScene(InitialScene, FCXSceneContext(), /*bInUseFade*/ false))
 	{
 		UnbindSceneDelegates();
-		SpawnPendingPlayers();
 		NotifyLevelReady();
 	}
 }
@@ -48,92 +69,25 @@ void ACXGameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	Super::EndPlay(EndPlayReason);
 }
 
-void ACXGameMode::HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer)
-{
-	// 아직 Scene 로딩 대기중 -> 필드 서브레벨이 없어서 PlayerStart를 찾을 수 없음
-	if (bWaitingForInitialScene)
-	{
-		PendingStartPlayers.Add(NewPlayer);
-		return;
-	}
-
-	// 그렇지 않다면 원래 흐름대로 Player Pawn을 스폰
-	Super::HandleStartingNewPlayer_Implementation(NewPlayer);
-}
-
-void ACXGameMode::HandleInitialSceneEntered(UCXGameScene* InEnteredScene)
-{
-	if (UCXSceneSubsystem* SceneSubsystem = UCXSceneSubsystem::TryGet(this))
-	{
-		SceneSubsystem->OnSceneEntered.Remove(SceneEnteredHandle);
-	}
-	SceneEnteredHandle.Reset();
-
-	// 지연 생성 Pawn이 있다면 생성
-	SpawnPendingPlayers();
-}
-
 void ACXGameMode::HandleInitialSceneReady(UCXGameScene* InNewScene, UCXGameScene* InOldScene)
 {
 	// 첫 Scene 전환만 필요하므로 한 번 받으면 구독 해제
-	if (UCXSceneSubsystem* SceneSubsystem = UCXSceneSubsystem::TryGet(this))
-	{
-		SceneSubsystem->OnSceneChanged.Remove(SceneChangedHandle);
-	}
-	SceneChangedHandle.Reset();
+	UnbindSceneDelegates();
 
-	// 레벨 준비가 완료되었다고 레벨 전이 서브시스템에 알림
 	NotifyLevelReady();
-}
-
-void ACXGameMode::SpawnPendingPlayers()
-{
-	bWaitingForInitialScene = false;
-
-	const UCXLevelTransitionSubsystem* LevelTransition = UCXLevelTransitionSubsystem::TryGet(this);
-	const FName EntryTag = LevelTransition ? LevelTransition->GetPendingEntryTag() : NAME_None;
-
-	// 생성 지연된 플레이어 컨트롤러를 확인
-	for (const TWeakObjectPtr<APlayerController>& WeakPlayer : PendingStartPlayers)
-	{
-		APlayerController* Player = WeakPlayer.Get();
-		if (nullptr == Player)
-		{
-			continue;
-		}
-
-		// IncomingName이 있으면 PlayerStartTag가 같은 PlayerStart를 찾음 (엔진 기본 동작), 없으면 ChoosePlayerStart
-		AActor* StartSpot = FindPlayerStart(Player, EntryTag.IsNone() ? FString() : EntryTag.ToString());
-
-		const APlayerStart* PlayerStart = Cast<APlayerStart>(StartSpot);
-		if (!EntryTag.IsNone() && (nullptr == PlayerStart || PlayerStart->PlayerStartTag != EntryTag))
-		{
-			UE_LOG(LogCXLevelTransition, Warning, TEXT("진입 태그 '%s'에 해당하는 PlayerStart가 없습니다. 기본 위치에 스폰합니다."), *EntryTag.ToString());
-		}
-
-		if (StartSpot)
-		{
-			RestartPlayerAtPlayerStart(Player, StartSpot);
-		}
-		else
-		{
-			RestartPlayer(Player);
-		}
-	}
-
-	PendingStartPlayers.Reset();
 }
 
 void ACXGameMode::UnbindSceneDelegates()
 {
-	if (UCXSceneSubsystem* SceneSubsystem = UCXSceneSubsystem::TryGet(this))
+	if (SceneChangedHandle.IsValid())
 	{
-		SceneSubsystem->OnSceneEntered.Remove(SceneEnteredHandle);
-		SceneSubsystem->OnSceneChanged.Remove(SceneChangedHandle);
-	}
+		if (UCXSceneSubsystem* SceneSubsystem = UCXSceneSubsystem::TryGet(this))
+		{
+			SceneSubsystem->OnSceneChanged.Remove(SceneChangedHandle);
+		}
 
-	SceneEnteredHandle.Reset();
-	SceneChangedHandle.Reset();
+		SceneChangedHandle.Reset();
+	}
 }
 
 void ACXGameMode::NotifyLevelReady()
