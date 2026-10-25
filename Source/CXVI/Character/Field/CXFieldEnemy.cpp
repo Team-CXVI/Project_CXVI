@@ -4,6 +4,8 @@
 #include "CXFieldEnemy.h"
 #include "Interactions/CXPreemptiveAttackTriggerBox.h"
 #include "CXVI/Foundation/FieldEnemySpawning/CXFieldEnemySubsystem.h"
+#include "CXVI/AI/Field/CXFieldAI.h"
+#include "BehaviorTree/BlackboardComponent.h"
 
 #include "Engine/World.h"
 #include "Animation/AnimInstance.h"
@@ -17,6 +19,9 @@
 
 ACXFieldEnemy::ACXFieldEnemy( )
 {
+	PrimaryActorTick.bCanEverTick = true;
+
+
 	PreemptiveAttackTrigger = CreateDefaultSubobject<UChildActorComponent>(TEXT("PreemptiveAttackTrigger"));
 	
 	PreemptiveAttackTrigger->SetupAttachment(GetRootComponent());
@@ -32,6 +37,41 @@ ACXFieldEnemy::ACXFieldEnemy( )
 
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 
+}
+
+void ACXFieldEnemy::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	if (!bTurningAfterAttack)
+	{
+		return;
+	}
+
+	AAIController* EnemyController = Cast<AAIController>(GetController());
+
+	UBlackboardComponent* Blackboard = IsValid(EnemyController) ? EnemyController->GetBlackboardComponent() : nullptr;
+
+	// 복귀 요청이 들어오면 방향 정렬을 끝내고 BT에 완료 알림.
+	if (!Blackboard || Blackboard->GetValueAsBool(BBKEY_ISRETURNING))
+	{
+		FinishAttackAction();
+		return;
+	}
+
+	const float NewYaw = FMath::FixedTurn(GetActorRotation().Yaw, AttackTargetYaw, FMath::Max(1.0f, AttackTurnSpeed) * DeltaSeconds);
+
+	const FRotator NewRotation(0.0f, NewYaw, 0.0f);
+
+	EnemyController->SetControlRotation(NewRotation);
+	SetActorRotation(NewRotation);
+
+	const float RemainingAngle = FMath::Abs(FMath::FindDeltaAngleDegrees(NewYaw, AttackTargetYaw));
+
+	if (RemainingAngle <= 1.0f)
+	{
+		FinishAttackAction();
+	}
 }
 
 void ACXFieldEnemy::InitializePatrolArea(const FVector& InPatrolCenter, float InPatrolRadius)
@@ -93,21 +133,19 @@ void ACXFieldEnemy::BeginPlay()
 
 void ACXFieldEnemy::AttackEnded(UAnimMontage* Montage, bool bInterrupted)
 {
-	if (!bAIAttacking || Montage != AttackMontage.Get())
+	if (!bAIAttacking|| bTurningAfterAttack || Montage != AttackMontage.Get())
 	{
 		return;
 	}
 
-	bAIAttacking = false;
-
-	UCharacterMovementComponent* Movement = GetCharacterMovement();
-	if (IsValid(Movement) && Movement->MovementMode == EMovementMode::MOVE_None)
+	// 정상 종료 후 회전이 필요하면, 완료 알림을 잠시 보류.
+	if (!bInterrupted && FaceAttackTarget())
 	{
-		Movement->SetMovementMode(EMovementMode::MOVE_Walking);
+		return;
 	}
 
-	// 공격이 끝나는 시점을 알 수 있도록 가상함수 호출.
-	NotifyActionEnd();
+
+	FinishAttackAction();
 }
 
 void ACXFieldEnemy::NotifyActionEnd()
@@ -118,6 +156,70 @@ void ACXFieldEnemy::NotifyActionEnd()
 
 	// 공격 종료를 알리는 델리게이트 호출.
 	FinishedCallback.ExecuteIfBound();
+}
+
+bool ACXFieldEnemy::FaceAttackTarget()
+{
+	AAIController* EnemyController = Cast<AAIController>(GetController());
+
+	UBlackboardComponent* Blackboard = IsValid(EnemyController) ? EnemyController->GetBlackboardComponent() : nullptr;
+	if (!Blackboard)
+	{
+		return false;
+	}
+
+	// 복귀 중이거나 타깃이 보이지 않으면 방향을 갱신하지 않음.
+	if (Blackboard->GetValueAsBool(BBKEY_ISRETURNING) || !Blackboard->GetValueAsBool(BBEKY_HASTARGETSIGHT))
+	{
+		return false;
+	}
+
+
+	AActor* Target = Cast<AActor>(Blackboard->GetValueAsObject(BBKEY_TARGET));
+	if (!IsValid(Target) || GetDistanceTo(Target) > GetAIAttackRange())
+	{
+		return false;
+	}
+
+	FVector Direction = Target->GetActorLocation() - GetActorLocation();
+	Direction.Z = 0.0f;
+
+	if (Direction.IsNearlyZero())
+	{
+		return false;
+	}
+
+	AttackTargetYaw = Direction.Rotation().Yaw;
+
+	const float AngleDifference = FMath::Abs(FMath::FindDeltaAngleDegrees(GetActorRotation().Yaw, AttackTargetYaw));
+
+	if (AngleDifference <= 1.0f)
+	{
+		return false;
+	}
+	
+	// 여기서 바로 회전 하지 않고 Tick에서 회전.
+	bTurningAfterAttack = true;
+	return true;
+}
+
+void ACXFieldEnemy::FinishAttackAction()
+{
+	if (!bAIAttacking)
+	{
+		return;
+	}
+
+	bTurningAfterAttack = false;
+	bAIAttacking = false;
+
+	UCharacterMovementComponent* EnemyMovement = GetCharacterMovement();
+	if (IsValid(EnemyMovement) && EnemyMovement->MovementMode == EMovementMode::MOVE_None)
+	{
+		EnemyMovement->SetMovementMode(EMovementMode::MOVE_Walking);
+	}
+	
+	NotifyActionEnd();
 }
 
 float ACXFieldEnemy::GetAIPatrolRadius()
@@ -201,6 +303,9 @@ void ACXFieldEnemy::CancelAttackByAI()
 {
 	// 취소된 Task에 완료 알림을 보내지 않음.
 	OnAttackFinished.Unbind();
+
+	// 강제 취소 시 프레임별 회전도 중단.
+	bTurningAfterAttack = false;
 
 	if (!bAIAttacking)
 	{

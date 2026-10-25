@@ -21,6 +21,8 @@ class CXVI_API ACXFieldEnemy : public ACharacter, public ICXFieldEnemyAIInterfac
 public:
 	ACXFieldEnemy();
 
+	virtual void Tick(float DeltaSeconds) override;
+
 public:
 	// Getter.
 	FORCEINLINE float GetAttackRadius() const { return AttackRadius; }
@@ -51,6 +53,11 @@ protected:
 
 	// 공격이 끝나는 시점에 호출할 함수.
 	virtual void NotifyActionEnd();
+
+	bool FaceAttackTarget();
+
+	// 회전까지 끝난 뒤 이동 복구와 공격 온료 알림 처리.
+	void FinishAttackAction();
 
 	// AI Interface섹션.
 protected:
@@ -107,6 +114,17 @@ protected:
 	// 타깃이 보이지 않아도 추적을 유지할 시간.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category="AI|Sight")
 	float SightLossGraceTime = 2.0f;
+
+	// 공격 종료 후 방향 정렬 중인지 구분.
+	UPROPERTY(Transient)
+	bool bTurningAfterAttack = false;
+
+	// 이번 방향 전환의 목표 각도.
+	float AttackTargetYaw = 0.0f;
+
+	// 초당 회전 각도. 540이면 180도 회전에 약 0.33초.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Attack")
+	float AttackTurnSpeed = 540.0f;
 
 
 	// 스포너 변수.
