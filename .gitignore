@@ -85,3 +85,9 @@ DerivedDataCache/*
 
 # LiveCoding Temp Folder
 enc_temp_folder/*
+
+# Claude Code (local only)
+CLAUDE.md
+CLAUDE.local.md
+.claude/
+.mcp.json

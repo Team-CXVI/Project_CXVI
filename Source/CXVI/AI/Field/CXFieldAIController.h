@@ -23,6 +23,9 @@ public:
 	// AI 중지 함수.
 	void StopAI();
 
+	// 완전한 경로이며 모든 경로 점이 담당 구역 안인지 확인.
+	bool IsPathInsidePatrolArea(const FNavPathSharedPtr& Path) const;
+
 protected:
 	// 컨트롤러가 폰에 빙의할 때 호출되는 함수.
 	virtual void OnPossess(APawn* InPawn)override;

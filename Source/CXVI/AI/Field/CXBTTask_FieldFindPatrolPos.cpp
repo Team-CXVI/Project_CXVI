@@ -7,7 +7,9 @@
 
 #include "BehaviorTree/BlackboardComponent.h"
 #include "NavigationSystem.h"
+#include "NavigationPath.h"
 #include "AIController.h"
+
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXBTTask_FieldFindPatrolPos)
 
@@ -41,21 +43,92 @@ EBTNodeResult::Type UCXBTTask_FieldFindPatrolPos::ExecuteTask(UBehaviorTreeCompo
 
     // AI 인터페이스로 형변환.
     ICXFieldEnemyAIInterface* AIPawn = Cast<ICXFieldEnemyAIInterface>(ControllingPawn);
+    if (!AIPawn)
+    {
+        return EBTNodeResult::Failed;
+    }
 
     // 폰이 생성된 초기 위치 가져오기.
-    FVector Origin = OwnerComp.GetBlackboardComponent()->GetValueAsVector(BBKEY_HOMEPOS);
+    const FVector PatrolCenter = AIPawn->GetAIPatrolCenter();
 
     // 정찰 반경 얻어오기.
     float PatrolRadius = AIPawn->GetAIPatrolRadius();
 
-    // 네비게이션 기능 활용 - 이동 가능한 위치를 랜덤으로 선택.
-    FNavLocation NextPatrolPos;
-    if (NavSystem->GetRandomPointInNavigableRadius(Origin, PatrolRadius, NextPatrolPos))
+    if (PatrolRadius <= 0.0f)
     {
-        // 선택된 랜덤 위치를 블랙보드에 기록.
+        return EBTNodeResult::Failed;
+    }
+
+    // 네비게이션 기능 활용 - 이동 가능한 위치를 랜덤으로 선택.
+    // 한 번에 무한히 찾지 않도록 시도 횟수 제한.
+    constexpr int32 MaxAttempts = 10;
+    const float PatrolRadiusSquared = FMath::Square(PatrolRadius);
+
+	for (int32 Attempt = 0;Attempt < MaxAttempts;++Attempt)
+    {
+        FNavLocation NextPatrolPos;
+
+        if (!NavSystem->GetRandomPointInNavigableRadius(PatrolCenter, PatrolRadius, NextPatrolPos))
+        {
+            continue;
+        }
+
+        UNavigationPath* Path = UNavigationSystemV1::FindPathToLocationSynchronously(
+            ControllingPawn->GetWorld(),
+            ControllingPawn->GetNavAgentLocation(),
+            NextPatrolPos.Location,
+            ControllingPawn
+        );
+
+        // 목적지 까지 도달하는 완전한 경로만 허용.
+        if (!Path || !Path->IsValid() || Path->IsPartial() || Path->PathPoints.Num() < 2)
+        {
+            UE_LOG(LogTemp, Display,
+                TEXT("[Patrol] %s: 완전한 경로 없음. Goal=%s"),
+                *ControllingPawn->GetName(),
+                *NextPatrolPos.Location.ToString());
+
+            continue;
+        }
+
+        bool bInsidePatrolArea = true;
+
+        for (const FVector& Point : Path->PathPoints)
+        {
+            if (FVector::DistSquared(Point, PatrolCenter) > PatrolRadiusSquared)
+            {
+                UE_LOG(LogTemp, Display,
+                    TEXT("[Patrol] %s: 구역 이탈 경로 거절. Goal=%s OutsidePoint=%s Distance=%.1f Radius=%.1f"),
+                    *ControllingPawn->GetName(),
+                    *NextPatrolPos.Location.ToString(),
+                    *Point.ToString(),
+                    FVector::Dist(Point, PatrolCenter),
+                    PatrolRadius);
+
+                bInsidePatrolArea = false;
+                break;
+            }
+
+        }
+        
+        // 경로가 담당 구역을 벗어나면 다음 후보를 검사.
+        if (!bInsidePatrolArea)
+        {
+            continue;
+        }
+
+        UE_LOG(LogTemp, Display,
+            TEXT("[Patrol] %s: 후보 경로 통과. Goal=%s"),
+            *ControllingPawn->GetName(),
+            *NextPatrolPos.Location.ToString());
+
         OwnerComp.GetBlackboardComponent()->SetValueAsVector(BBKEY_PATROLPOS, NextPatrolPos.Location);
+
         return EBTNodeResult::Succeeded;
     }
+
+    // 유효한 후보가 없으면 이전 목적지를 남기지 않음,
+    OwnerComp.GetBlackboardComponent()->ClearValue(BBKEY_PATROLPOS);
 
     return EBTNodeResult::Failed;
 }
