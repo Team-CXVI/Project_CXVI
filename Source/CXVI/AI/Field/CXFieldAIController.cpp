@@ -3,9 +3,12 @@
 
 #include "CXFieldAIController.h"
 #include "CXFieldAI.h"
+#include "Interface/CXFieldEnemyAIInterface.h"
+
 #include "BehaviorTree/BlackboardData.h"
 #include "BehaviorTree/BehaviorTree.h"
 #include "BehaviorTree/BlackboardComponent.h"
+#include "NavigationPath.h"
 
 
 ACXFieldAIController::ACXFieldAIController()
@@ -17,6 +20,12 @@ ACXFieldAIController::ACXFieldAIController()
 
 void ACXFieldAIController::RunAI()
 {
+	ICXFieldEnemyAIInterface* AIPawn = Cast<ICXFieldEnemyAIInterface>(GetPawn());
+	if (!AIPawn)
+	{
+		return;
+	}
+
 	// 블랙보드 컴포넌트 가져오기.
 	UBlackboardComponent* BlackboardPtr = Blackboard;
 
@@ -24,7 +33,15 @@ void ACXFieldAIController::RunAI()
 	if (UseBlackboard(BBAsset, BlackboardPtr))
 	{
 		// Enemy 폰이 생성된 위치를 블랙보드에 기록.
-		BlackboardPtr->SetValueAsVector(BBKEY_HOMEPOS, GetPawn()->GetActorLocation());
+		BlackboardPtr->SetValueAsVector(BBKEY_HOMEPOS, AIPawn->GetAIPatrolCenter());
+
+		BlackboardPtr->SetValueAsBool(BBKEY_ISRETURNING, false);
+
+		BlackboardPtr->SetValueAsFloat(BBKEY_SIGHTLOSTSTARTTIME, -1.0f);
+
+		BlackboardPtr->ClearValue(BBKEY_LASTSEENTARGETPOS);
+
+		BlackboardPtr->SetValueAsBool(BBEKY_HASTARGETSIGHT,false);
 
 		// 비헤이비어 트리 실행.
 		bool RunResult = RunBehaviorTree(BTAsset);
@@ -43,6 +60,47 @@ void ACXFieldAIController::StopAI()
 		// BT 실행 중지.
 		BTComponent->StopTree();
 	}
+}
+
+bool ACXFieldAIController::IsPathInsidePatrolArea(const FNavPathSharedPtr& Path) const
+{
+	if (!Path.IsValid() || !Path->IsValid() || Path->IsPartial())
+	{
+		return false;
+	}
+
+	ICXFieldEnemyAIInterface* AIPawn = Cast<ICXFieldEnemyAIInterface>(GetPawn());
+	if (!AIPawn)
+	{
+		return false; 
+	}
+
+	const FVector Center = AIPawn->GetAIPatrolCenter();
+	const float Radius = AIPawn->GetAIPatrolRadius();
+
+	if (Radius <= 0.0f)
+	{
+		return false;
+	}
+
+	const TArray<FNavPathPoint>& Points = Path->GetPathPoints();
+
+	if (Points.Num() < 2)
+	{
+		return false;
+	}
+
+	const float RadiusSquared = FMath::Square(Radius);
+
+	for (const FNavPathPoint& Point : Points)
+	{
+		if (FVector::DistSquared(Point.Location, Center) > RadiusSquared)
+		{
+			return false;
+		}
+	}
+
+	return true;
 }
 
 void ACXFieldAIController::OnPossess(APawn* InPawn)

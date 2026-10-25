@@ -7,6 +7,7 @@
 
 #include "AIController.h"
 #include "Engine/OverlapResult.h"
+#include "Engine/World.h"
 #include "BehaviorTree/BlackboardComponent.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXBTService_FieldDetect)
@@ -45,6 +46,122 @@ void UCXBTService_FieldDetect::TickNode(UBehaviorTreeComponent& OwnerComp, uint8
 		return;
 	}
 
+	UBlackboardComponent* Blackboard = OwnerComp.GetBlackboardComponent();
+	if (!Blackboard)
+	{
+		return;
+	}
+
+	// 복귀 중에는 플레이어를 다시 감지하지 않음.
+	if (Blackboard->GetValueAsBool(BBKEY_ISRETURNING))
+	{
+		Blackboard->SetValueAsBool(BBEKY_HASTARGETSIGHT, false);
+
+		Blackboard->ClearValue(BBKEY_LASTSEENTARGETPOS);
+
+		Blackboard->SetValueAsFloat(BBKEY_SIGHTLOSTSTARTTIME, -1.0f);
+
+		Blackboard->ClearValue(BBKEY_TARGET);
+		return;
+	}
+
+	const FVector PatrolCenter = AIPawn->GetAIPatrolCenter();
+	const float ChaseRadius = AIPawn->GetAIChaseRadius();
+	const float ChaseRadiusSquared = FMath::Square(ChaseRadius);
+
+	AActor* CurrentTarget = Cast<AActor>(Blackboard->GetValueAsObject(BBKEY_TARGET));
+
+	const bool bCanSeeCurrentTarget = IsValid(CurrentTarget) && CanSeeTarget(ControllingPawn, CurrentTarget, 180.0f);
+
+	// Enemy와 타깃 각각 담당 구역 중심으로부터의 거리검사.
+	const bool bEnemyOutside = FVector::DistSquared(ControllingPawn->GetActorLocation(), PatrolCenter) > ChaseRadiusSquared;
+
+	const bool bTargetOutside = bCanSeeCurrentTarget && FVector::DistSquared(CurrentTarget->GetActorLocation(), PatrolCenter) > ChaseRadiusSquared;
+
+
+	if (bEnemyOutside || bTargetOutside)
+	{
+		Blackboard->SetValueAsBool(BBEKY_HASTARGETSIGHT, false);
+
+		Blackboard->ClearValue(BBKEY_LASTSEENTARGETPOS);
+
+		Blackboard->SetValueAsFloat(BBKEY_SIGHTLOSTSTARTTIME, -1.0f);
+
+		// 복귀 상태를 먼저 설정한 후 타깃 해제.
+		Blackboard->SetValueAsBool(BBKEY_ISRETURNING, true);
+		Blackboard->ClearValue(BBKEY_TARGET);
+
+		UE_LOG(
+			LogTemp,
+			Display,
+			TEXT("[Chase] %s: 추적 한계 초과, 복귀 시작. EnemyOutside=%d TargetOutside=%d"),
+			*ControllingPawn->GetName(), bEnemyOutside, bTargetOutside
+		);
+
+		return;
+	}
+
+	// 이미 잡은 타깃은 추적 한계 안에 있으면 유지.
+	// 최초 감지 반경을 벗어났다고 즉시 지우지 않음.
+
+	if (IsValid(CurrentTarget))
+	{
+		const float LostStartTime = Blackboard->GetValueAsFloat(BBKEY_SIGHTLOSTSTARTTIME);
+
+		// 다시 보이면 시야 상실 기록 초기화.
+		if (bCanSeeCurrentTarget)
+		{
+			Blackboard->SetValueAsVector(BBKEY_LASTSEENTARGETPOS, CurrentTarget->GetActorLocation());
+
+			Blackboard->SetValueAsBool(BBEKY_HASTARGETSIGHT, true);
+
+			Blackboard->SetValueAsFloat(BBKEY_SIGHTLOSTSTARTTIME, -1.0f);
+			return;
+		}
+
+		// 보이지 않으면 위치를 갱신하지 않고 마지막 기록 유지.
+		Blackboard->SetValueAsBool(BBEKY_HASTARGETSIGHT, false);
+
+		const float Now = World->GetTimeSeconds();
+		float StartTime = LostStartTime;
+
+		// 안 보이는 것을 처음 확인한 시점.
+		if (StartTime < 0.0f)
+		{
+			StartTime = Now;
+
+			Blackboard->SetValueAsFloat(BBKEY_SIGHTLOSTSTARTTIME, StartTime);
+
+			UE_LOG(LogTemp, Display, TEXT("[Sight] %s: 타깃 시야 상실. 유예 시작"), *ControllingPawn->GetName());
+		}
+
+		// 유예 시간이 지나면 추적을 포기하고 복귀.
+		if (Now - StartTime >= AIPawn->GetAISightLossGraceTime())
+		{
+			Blackboard->SetValueAsBool(BBEKY_HASTARGETSIGHT, false);
+
+			Blackboard->ClearValue(BBKEY_LASTSEENTARGETPOS);
+
+			Blackboard->SetValueAsFloat(BBKEY_SIGHTLOSTSTARTTIME, -1.0f);
+
+			Blackboard->SetValueAsBool(BBKEY_ISRETURNING, true);
+			Blackboard->ClearValue(BBKEY_TARGET);
+
+			UE_LOG(LogTemp, Display, TEXT("[Sight] %s: 시야 상실 유예 초과. 복귀 시작"), *ControllingPawn->GetName());
+		}
+
+		// 유예 중에는 기존 Target유지.
+		return;
+	}
+
+	// 타깃이 없으면 이전 시야 상실 기록 제거.
+	Blackboard->SetValueAsFloat(BBKEY_SIGHTLOSTSTARTTIME, -1.0f);
+
+	Blackboard->SetValueAsBool(BBEKY_HASTARGETSIGHT, false);
+
+	Blackboard->ClearValue(BBKEY_LASTSEENTARGETPOS);
+
+
 	// 충돌 결과로 정보를 반환받을 변수.
 	TArray<FOverlapResult> OverlapResults;
 
@@ -82,8 +199,25 @@ void UCXBTService_FieldDetect::TickNode(UBehaviorTreeComponent& OwnerComp, uint8
 			APawn* Pawn = Cast<APawn>(OverlapResult.GetActor());
 
 			// 플레이어인지 확인 -> 폰을 제어하는 컨트롤러가 플레이어 컨트롤러인지 확인.
-			if (IsValid(Pawn) && Pawn->GetController()->IsPlayerController())
+			if (IsValid(Pawn) && IsValid(Pawn->GetController()) && Pawn->GetController()->IsPlayerController())
 			{
+				if (FVector::DistSquared(Pawn->GetActorLocation(), PatrolCenter) > ChaseRadiusSquared)
+				{
+					continue;
+				}
+
+				if (!CanSeeTarget(ControllingPawn, Pawn, AIPawn->GetAISightHalfAngle()))
+				{
+					continue;
+				}
+
+				// Target 변경으로 BT가 반응하기 전에 관련 정보부터 준비.
+				Blackboard->SetValueAsVector(BBKEY_LASTSEENTARGETPOS, Pawn->GetActorLocation());
+
+				Blackboard->SetValueAsBool(BBEKY_HASTARGETSIGHT, true);
+
+				Blackboard->SetValueAsFloat(BBKEY_SIGHTLOSTSTARTTIME, -1.0f);
+
 				// 감지된 정보를 블랙보드에 저장.
 				OwnerComp.GetBlackboardComponent()->SetValueAsObject(
 					BBKEY_TARGET,
@@ -112,4 +246,50 @@ void UCXBTService_FieldDetect::TickNode(UBehaviorTreeComponent& OwnerComp, uint8
 
 	// 디버그 드로우를 활용해서 시가적으로 표시.
 	DrawDebugSphere(World, Center, DetectRadius, 16, FColor::Red, false, 0.2f);
+}
+
+bool UCXBTService_FieldDetect::CanSeeTarget(APawn* Observer, AActor* Target, float SightHalfAngle) const
+{
+	if (!IsValid(Observer) || !IsValid(Target))
+	{
+		return false;
+	}
+
+	UWorld* World = Observer->GetWorld();
+	if (!IsValid(World))
+	{
+		return false;
+	}
+
+	const FVector ToTarget = Target->GetActorLocation() - Observer->GetActorLocation();
+
+	if (SightHalfAngle<180.f && ToTarget.SizeSquared2D() > FMath::Square(KINDA_SMALL_NUMBER))
+	{
+		const FVector Forward = Observer->GetActorForwardVector().GetSafeNormal2D();
+
+		const float FacingDot = FVector::DotProduct(Forward, ToTarget.GetSafeNormal2D());
+
+		const float CosThreshold = FMath::Cos(FMath::DegreesToRadians(SightHalfAngle));
+
+		if (FacingDot < CosThreshold)
+		{
+			return false;
+		}
+	}
+	
+	FVector SightStart;
+	FRotator ObserverRotation;
+	Observer->GetActorEyesViewPoint(SightStart, ObserverRotation);
+
+	FVector SightEnd;
+	FRotator TargetRotation;
+	Target->GetActorEyesViewPoint(SightEnd, TargetRotation);
+
+	FCollisionQueryParams SightParams(SCENE_QUERY_STAT(FieldEnemySight), false, Observer);
+
+	FHitResult SightHit;
+
+	const bool bHit = World->LineTraceSingleByChannel(SightHit, SightStart, SightEnd, ECC_Visibility, SightParams);
+
+	return !bHit||SightHit.GetActor()==Target;
 }
