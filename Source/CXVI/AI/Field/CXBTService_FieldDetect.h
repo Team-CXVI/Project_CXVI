@@ -20,5 +20,7 @@ protected:
 	// 서비스가 실행될 때마다 호출되는 함수 오버라이드.
 	virtual void TickNode(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds) override;
 
+	bool CanSeeTarget(APawn* Observer, AActor* Target, float SightHalfAngle) const;
+
 	
 };

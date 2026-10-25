@@ -13,7 +13,8 @@
 				"CoreUObject",
 				"DeveloperSettings",
 				"CommonUI",
-				"GameplayAbilities"
+				"GameplayAbilities",
+				"AIModule"
 			]
 		}
 	],
