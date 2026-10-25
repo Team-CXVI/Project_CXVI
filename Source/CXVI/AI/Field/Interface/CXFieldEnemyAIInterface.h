@@ -26,13 +26,18 @@ class CXVI_API ICXFieldEnemyAIInterface
 	// Add interface functions to this class. This is the class that will be inherited to implement this interface.
 public:
 	// 에너미가 제공할 함수.
+
+	// 정찰.
 	virtual float GetAIPatrolRadius() = 0;
 	virtual FVector GetAIPatrolCenter() = 0;
 	virtual float GetAIDetectRange() = 0;
-	virtual float GetAIAttackRange() = 0;
-	virtual float GetAITurnSpeed() = 0;
 	virtual float GetAIChaseRadius() = 0;
 	virtual float GetAISightHalfAngle() = 0;
+	virtual float GetAISightLossGraceTime() = 0;
+	
+	virtual float GetAIAttackRange() = 0;
+	virtual float GetAITurnSpeed() = 0;
+
 
 	// AI를 통해 공격 메시지를 전달할 떄 사용할 함수.
 	virtual bool AttackByAI() = 0;

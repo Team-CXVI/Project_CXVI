@@ -55,6 +55,8 @@ void UCXBTService_FieldDetect::TickNode(UBehaviorTreeComponent& OwnerComp, uint8
 	// 복귀 중에는 플레이어를 다시 감지하지 않음.
 	if (Blackboard->GetValueAsBool(BBKEY_ISRETURNING))
 	{
+		Blackboard->SetValueAsFloat(BBKEY_SIGHTLOSTSTARTTIME, -1.0f);
+
 		Blackboard->ClearValue(BBKEY_TARGET);
 		return;
 	}
@@ -62,12 +64,6 @@ void UCXBTService_FieldDetect::TickNode(UBehaviorTreeComponent& OwnerComp, uint8
 	const FVector PatrolCenter = AIPawn->GetAIPatrolCenter();
 	const float ChaseRadius = AIPawn->GetAIChaseRadius();
 	const float ChaseRadiusSquared = FMath::Square(ChaseRadius);
-
-	// 수평면 기준 Enemy의 정면 방향.
-	const FVector ForwardDirection = ControllingPawn->GetActorForwardVector().GetSafeNormal2D();
-
-	// 시야각 경계의 내적 기준값.
-	const float SightCosThreshold = FMath::Cos(FMath::DegreesToRadians(AIPawn->GetAISightHalfAngle()));
 
 	AActor* CurrentTarget = Cast<AActor>(Blackboard->GetValueAsObject(BBKEY_TARGET));
 
@@ -79,6 +75,8 @@ void UCXBTService_FieldDetect::TickNode(UBehaviorTreeComponent& OwnerComp, uint8
 
 	if (bEnemyOutside || bTargetOutside)
 	{
+		Blackboard->SetValueAsFloat(BBKEY_SIGHTLOSTSTARTTIME, -1.0f);
+
 		// 복귀 상태를 먼저 설정한 후 타깃 해제.
 		Blackboard->SetValueAsBool(BBKEY_ISRETURNING, true);
 		Blackboard->ClearValue(BBKEY_TARGET);
@@ -98,8 +96,45 @@ void UCXBTService_FieldDetect::TickNode(UBehaviorTreeComponent& OwnerComp, uint8
 
 	if (IsValid(CurrentTarget))
 	{
+		const float LostStartTime = Blackboard->GetValueAsFloat(BBKEY_SIGHTLOSTSTARTTIME);
+
+		// 다시 보이면 시야 상실 기록 초기화.
+		if (CanSeeTarget(ControllingPawn, CurrentTarget, AIPawn->GetAISightHalfAngle()))
+		{
+			Blackboard->SetValueAsFloat(BBKEY_SIGHTLOSTSTARTTIME, -1.0f);
+			return;
+		}
+
+		const float Now = World->GetTimeSeconds();
+		float StartTime = LostStartTime;
+
+		// 안 보이는 것을 처음 확인한 시점.
+		if (StartTime < 0.0f)
+		{
+			StartTime = Now;
+
+			Blackboard->SetValueAsFloat(BBKEY_SIGHTLOSTSTARTTIME, StartTime);
+
+			UE_LOG(LogTemp, Display, TEXT("[Sight] %s: 타깃 시야 상실. 유예 시작"), *ControllingPawn->GetName());
+		}
+
+		// 유예 시간이 지나면 추적을 포기하고 복귀.
+		if (Now - StartTime >= AIPawn->GetAISightLossGraceTime())
+		{
+			Blackboard->SetValueAsFloat(BBKEY_SIGHTLOSTSTARTTIME, -1.0f);
+
+			Blackboard->SetValueAsBool(BBKEY_ISRETURNING, true);
+			Blackboard->ClearValue(BBKEY_TARGET);
+
+			UE_LOG(LogTemp, Display, TEXT("[Sight] %s: 시야 상실 유예 초과. 복귀 시작"), *ControllingPawn->GetName());
+		}
+
+		// 유예 중에는 기존 Target유지.
 		return;
 	}
+
+	// 타깃이 없으면 이전 시야 상실 기록 제거.
+	Blackboard->SetValueAsFloat(BBKEY_SIGHTLOSTSTARTTIME, -1.0f);
 
 
 	// 충돌 결과로 정보를 반환받을 변수.
@@ -146,39 +181,7 @@ void UCXBTService_FieldDetect::TickNode(UBehaviorTreeComponent& OwnerComp, uint8
 					continue;
 				}
 
-				const FVector ToTarget = Pawn->GetActorLocation() - ControllingPawn->GetActorLocation();
-
-				// 수평 위치가 같으면 방향 검사 생략.
-				if (ToTarget.SizeSquared2D() > FMath::Square(KINDA_SMALL_NUMBER))
-				{
-					const FVector TargetDirection = ToTarget.GetSafeNormal2D();
-
-					const float FacingDot = FVector::DotProduct(ForwardDirection, TargetDirection);
-
-					// 시야각 밖의 후보는 제외.
-					if (FacingDot < SightCosThreshold)
-					{
-						continue;
-					}
-				}
-
-				// Enemy와 플레이어의 눈 위치.
-				FVector SightStart;
-				FRotator EnemyEyeRoatation;
-				ControllingPawn->GetActorEyesViewPoint(SightStart, EnemyEyeRoatation);
-
-				FVector SightEnd;
-				FRotator TargetEyeRotation;
-				Pawn->GetActorEyesViewPoint(SightEnd, TargetEyeRotation);
-
-				FCollisionQueryParams SightParams(SCENE_QUERY_STAT(FieldEnemySight), false, ControllingPawn);
-
-				FHitResult SightHit;
-
-				const bool bHit = World->LineTraceSingleByChannel(SightHit, SightStart, SightEnd, ECC_Visibility, SightParams);
-
-				// 플레이어보다 먼저 다른 물체에 막히면 감지 제외.
-				if (bHit && SightHit.GetActor() != Pawn)
+				if (!CanSeeTarget(ControllingPawn, Pawn, AIPawn->GetAISightHalfAngle()))
 				{
 					continue;
 				}
@@ -211,4 +214,50 @@ void UCXBTService_FieldDetect::TickNode(UBehaviorTreeComponent& OwnerComp, uint8
 
 	// 디버그 드로우를 활용해서 시가적으로 표시.
 	DrawDebugSphere(World, Center, DetectRadius, 16, FColor::Red, false, 0.2f);
+}
+
+bool UCXBTService_FieldDetect::CanSeeTarget(APawn* Observer, AActor* Target, float SightHalfAngle) const
+{
+	if (!IsValid(Observer) || !IsValid(Target))
+	{
+		return false;
+	}
+
+	UWorld* World = Observer->GetWorld();
+	if (!IsValid(World))
+	{
+		return false;
+	}
+
+	const FVector ToTarget = Target->GetActorLocation() - Observer->GetActorLocation();
+
+	if (ToTarget.SizeSquared2D() > FMath::Square(KINDA_SMALL_NUMBER))
+	{
+		const FVector Forward = Observer->GetActorForwardVector().GetSafeNormal2D();
+
+		const float FacingDot = FVector::DotProduct(Forward, ToTarget.GetSafeNormal2D());
+
+		const float CosThreshold = FMath::Cos(FMath::DegreesToRadians(SightHalfAngle));
+
+		if (FacingDot < CosThreshold)
+		{
+			return false;
+		}
+	}
+	
+	FVector SightStart;
+	FRotator ObserverRotation;
+	Observer->GetActorEyesViewPoint(SightStart, ObserverRotation);
+
+	FVector SightEnd;
+	FRotator TargetRotation;
+	Target->GetActorEyesViewPoint(SightEnd, TargetRotation);
+
+	FCollisionQueryParams SightParams(SCENE_QUERY_STAT(FieldEnemySight), false, Observer);
+
+	FHitResult SightHit;
+
+	const bool bHit = World->LineTraceSingleByChannel(SightHit, SightStart, SightEnd, ECC_Visibility, SightParams);
+
+	return !bHit||SightHit.GetActor()==Target;
 }

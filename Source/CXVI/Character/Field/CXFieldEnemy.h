@@ -65,6 +65,7 @@ protected:
 	virtual bool IsAIAttacking() const override;
 	virtual void SetAIAttackDelegate(const FAICharacterAttackFinished& InOnAttackFinished) override;
 	virtual float GetAISightHalfAngle() override;
+	virtual float GetAISightLossGraceTime() override;
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
@@ -102,6 +103,10 @@ protected:
 	// 정면 기준 한쪽 시야각. 60이면 전체 시야각은 120도.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Sight")
 	float SightHalfAngle = 60.0f;
+
+	// 타깃이 보이지 않아도 추적을 유지할 시간.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,Category="AI|Sight")
+	float SightLossGraceTime = 2.0f;
 
 
 	// 스포너 변수.

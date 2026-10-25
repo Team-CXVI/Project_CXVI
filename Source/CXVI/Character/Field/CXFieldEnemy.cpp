@@ -246,4 +246,9 @@ float ACXFieldEnemy::GetAISightHalfAngle()
 	return FMath::Clamp(SightHalfAngle,0.0f,180.0f);
 }
 
+float ACXFieldEnemy::GetAISightLossGraceTime()
+{
+	return FMath::Max(0.0f,SightLossGraceTime);
+}
+
 

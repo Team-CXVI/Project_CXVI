@@ -37,6 +37,8 @@ void ACXFieldAIController::RunAI()
 
 		BlackboardPtr->SetValueAsBool(BBKEY_ISRETURNING, false);
 
+		BlackboardPtr->SetValueAsFloat(BBKEY_SIGHTLOSTSTARTTIME, -1.0f);
+
 		// 비헤이비어 트리 실행.
 		bool RunResult = RunBehaviorTree(BTAsset);
 
