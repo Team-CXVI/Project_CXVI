@@ -150,7 +150,7 @@ void UCXGA_FieldPlayerAttack::OnAttackHitEvent(FGameplayEventData Payload)
 		return;
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("[FieldAttack] 명중 Enemy=%s Group=%s Spawn=%s"),*Enemy->GetName(),*Enemy->GetEnemyGroupId().ToString(), *Enemy->GetSpawnId().ToString());
+	UE_LOG(LogTemp, Log, TEXT("[FieldAttack] 명중 Enemy=%s Group=%s Spawn=%s"),*Enemy->GetName(),*Enemy->GetEncounterId().ToString(), *Enemy->GetSpawnId().ToString());
 
 	/*=================================플레이어 공격======================================*/
 	UCXSceneSubsystem* SceneSubsystem = World->GetSubsystem<UCXSceneSubsystem>();

@@ -48,9 +48,12 @@ public:
 	// 에너미와 상호작용.
 public:
 	// 생성 완료 전에 스포너가 전달.
-	void InitializeEnemyGroupId(FName InEnemyGroupId);
+	void InitializeEncounterId(FName InEncounterId);
 
-	FName GetEnemyGroupId() const { return EncounterId; }
+	FName GetEncounterId() const { return EncounterId; }
+
+	// 공격 몽타주의 타격 Notify에서 호출.
+	void NotifyAttackHit();
 
 protected:
 	virtual void BeginPlay() override;

@@ -108,7 +108,7 @@ ACXFieldEnemy* ACXFieldEnemySpawner::SpawnEnemy()
 	}
 
 	// 생성 완료 전에 설정 전달.
-	SpawnedEnemy->InitializeEnemyGroupId(EnemyGroupId);
+	SpawnedEnemy->InitializeEncounterId(EncounterId);
 	SpawnedEnemy->InitializePatrolArea(SpawnTransform.GetLocation(),PatrolRadius);
 	SpawnedEnemy->InitializeSpawnId(SpawnId);
 	
