@@ -6,6 +6,8 @@
 #include "Character/Field/CXFieldPlayerCharacter.h"
 #include "Character/Field/CXFieldEnemy.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
+#include "CXVI/Foundation/Scene/CXSceneSubsystem.h"
+#include "CXVI/Foundation/Scene/Scenes/CXFieldScene.h"
 
 #include "Engine/World.h"
 #include "DrawDebugHelpers.h"
@@ -149,4 +151,20 @@ void UCXGA_FieldPlayerAttack::OnAttackHitEvent(FGameplayEventData Payload)
 	}
 
 	UE_LOG(LogTemp, Log, TEXT("[FieldAttack] 명중 Enemy=%s Group=%s Spawn=%s"),*Enemy->GetName(),*Enemy->GetEnemyGroupId().ToString(), *Enemy->GetSpawnId().ToString());
+
+	/*=================================플레이어 공격======================================*/
+	UCXSceneSubsystem* SceneSubsystem = World->GetSubsystem<UCXSceneSubsystem>();
+	if (!IsValid(SceneSubsystem) || SceneSubsystem->IsTransitioning())
+	{
+		return;
+	}
+
+	UCXFieldScene* FieldScene = Cast<UCXFieldScene>(SceneSubsystem->GetCurrentScene());
+	if (!IsValid(FieldScene))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Encounter] 현재 씬이 필드 씬이 아닙니다."));
+		return;
+	}
+
+	//const bool bAccepted = FieldScene->RequestCombat(/*컴뱃 씬*/,/*EncounterId*/)
 }
