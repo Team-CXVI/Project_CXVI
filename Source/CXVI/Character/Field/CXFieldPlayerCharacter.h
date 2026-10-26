@@ -83,6 +83,10 @@ protected:
 	void StartSave();
 
 	void OnSaveMontageChanged(class UAnimMontage* Montage, FName SectionName, bool bLooped);
+
+	// 플레이어 공격.
+	void Attack();
+
 	
 
 protected:
@@ -111,6 +115,8 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input)
 	TObjectPtr<UInputAction> SaveAction;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input)
+	TObjectPtr<UInputAction> AttackAction;
 
 	// 게임플레이 어빌리티 - 스프린트
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = GameplayAbilities)
@@ -165,5 +171,12 @@ protected:
 
 	// 앉기에서 추가한 이동 제한을 관리.
 	bool bSaveMovementBlocked = false;
+
+	// 플레이어 공격.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = GameplayAbilities)
+	TSubclassOf<UGameplayAbility> AttackAbility;
+
+	// 공격 스펙을 관리할 핸들.
+	FGameplayAbilitySpecHandle AttackAbilityHandle;
 
 };

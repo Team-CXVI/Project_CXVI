@@ -45,6 +45,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Field|Enemy")
 	bool Defeat();
 
+	// 에너미와 상호작용.
+public:
+	// 생성 완료 전에 스포너가 전달.
+	void InitializeEnemyGroupId(FName InEnemyGroupId);
+
+	FName GetEnemyGroupId() const { return EnemyGroupId; }
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -131,6 +138,9 @@ protected:
 	// 이 몬스터가 어느 스폰 지점에서 생성됐는지 식별.
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Transient, Category = "Field|Enemy")
 	FName SpawnId = NAME_None;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Transient, Category = "Field|Enemy")
+	FName EnemyGroupId = NAME_None;
 
 	// 처치 처리를 중복 실행하지 않도록 구분.
 	UPROPERTY(Transient)

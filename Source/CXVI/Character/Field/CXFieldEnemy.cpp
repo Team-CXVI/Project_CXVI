@@ -125,6 +125,11 @@ bool ACXFieldEnemy::Defeat()
 	return true;
 }
 
+void ACXFieldEnemy::InitializeEnemyGroupId(FName InEnemyGroupId)
+{
+	EnemyGroupId = InEnemyGroupId;
+}
+
 void ACXFieldEnemy::BeginPlay()
 {
 	Super::BeginPlay();
