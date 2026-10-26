@@ -41,9 +41,11 @@ protected:
 
 	bool ActivateSelectedSkill(int32 SlotIndex);
 
+	virtual bool ExecuteCombatAbility() override;
+
 	virtual void SelectActionPhase() override;
 	virtual void SelectTargetPhase() override;
-	virtual void ActionPhase() override;
+	//virtual void ActionPhase() override;
 
 
 protected:

@@ -401,7 +401,7 @@ bool UCXTurnManager::ShouldEndBattle()
 
 	for (int32 Index = 0; Index < EnemyCharacters.Num(); ++Index)
 	{
-		if (EnemyCharacters[Index]->GetIsCharacterAlive())
+		if (EnemyCharacters[Index] && EnemyCharacters[Index]->GetIsCharacterAlive())
 		{
 			bIsAliveEnemy = true;
 		}

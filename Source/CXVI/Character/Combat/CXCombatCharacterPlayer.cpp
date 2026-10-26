@@ -186,28 +186,31 @@ bool ACXCombatCharacterPlayer::ActivateSelectedSkill(int32 SlotIndex)
 		return false;
 	}
 
-	FGameplayAbilitySpec* Spec =
-		ASC->FindAbilitySpecFromClass(SkillAbilities[SlotIndex]);
+	FGameplayAbilitySpec* Spec = ASC->FindAbilitySpecFromClass(SkillAbilities[SlotIndex]);
 
 	if (!Spec || Spec->IsActive())
 	{
 		return false;
 	}
 
-	const FGameplayAbilitySpecHandle Handle = Spec->Handle;
+	return Spec ? TryStartCombatAbility(Spec->Handle) : false;
+}
 
-	// 테스트용: 선택한 대상 앞으로 즉시 이동.
-	TeleportToAttackLocation();
+bool ACXCombatCharacterPlayer::ExecuteCombatAbility()
+{
+	const FCXActionSelection Action = GetPendingAction();
 
-	CurrentActivatingHandles.AddUnique(Handle);
-
-	if (!ASC->TryActivateAbility(Handle))
+	switch (Action.Type)
 	{
-		CurrentActivatingHandles.Remove(Handle);
+	case ECXActionType::BasicAttack:
+		return BasicAttackAbility();
+
+	case ECXActionType::Skill:
+		return ActivateSelectedSkill(Action.SlotIndex);
+
+	default:
 		return false;
 	}
-
-	return true;
 }
 
 void ACXCombatCharacterPlayer::SelectActionPhase()
@@ -223,27 +226,27 @@ void ACXCombatCharacterPlayer::SelectTargetPhase()
 	// 대상 확정 전이므로 응답하지 않음.
 }
 
-void ACXCombatCharacterPlayer::ActionPhase()
-{
-	const FCXActionSelection Action = GetPendingAction();
-
-	switch (Action.Type)
-	{
-	case ECXActionType::BasicAttack:
-		if (!BasicAttackAbility())
-		{
-			FinishAction();
-		}
-		return;
-
-	case ECXActionType::Skill:
-		if (!ActivateSelectedSkill(Action.SlotIndex))
-		{
-			FinishAction();
-		}
-		return;
-
-	default:
-		return;
-	}
-}
+//void ACXCombatCharacterPlayer::ActionPhase()
+//{
+//	const FCXActionSelection Action = GetPendingAction();
+//
+//	switch (Action.Type)
+//	{
+//	case ECXActionType::BasicAttack:
+//		if (!BasicAttackAbility())
+//		{
+//			FinishAction();
+//		}
+//		return;
+//
+//	case ECXActionType::Skill:
+//		if (!ActivateSelectedSkill(Action.SlotIndex))
+//		{
+//			FinishAction();
+//		}
+//		return;
+//
+//	default:
+//		return;
+//	}
+//}

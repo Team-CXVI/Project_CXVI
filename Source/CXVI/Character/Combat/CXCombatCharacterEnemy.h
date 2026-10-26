@@ -20,6 +20,5 @@ public:
 protected:
 	virtual void PostInitializeComponents() override;
 
-	virtual void ActionPhase() override;
 
 };
