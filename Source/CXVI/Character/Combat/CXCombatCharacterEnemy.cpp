@@ -42,12 +42,3 @@ void ACXCombatCharacterEnemy::PostInitializeComponents()
 	ASC->SetNumericAttributeBase(CharacterAttributeSet->GetHealthAttribute(), 300.f);
 	ASC->SetNumericAttributeBase(CharacterAttributeSet->GetCombatSpeedAttribute(), 100.f);
 }
-
-void ACXCombatCharacterEnemy::ActionPhase()
-{
-	Super::ActionPhase();
-	if (!BasicAttackAbility())
-	{
-		FinishAction();
-	}
-}

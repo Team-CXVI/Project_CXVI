@@ -16,11 +16,6 @@
 UCXGameplayAbilityCombatBase::UCXGameplayAbilityCombatBase()
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
-
-	FGameplayTagContainer Tags = GetAssetTags();
-	Tags.AddTag(CXVIGameplayTags::Ability_Basic_Attack);
-
-	SetAssetTags(Tags);
 }
 
 void UCXGameplayAbilityCombatBase::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)

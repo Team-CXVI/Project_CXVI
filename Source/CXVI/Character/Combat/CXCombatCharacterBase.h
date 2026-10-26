@@ -11,6 +11,8 @@
 
 #include "CXCombatCharacterBase.generated.h"
 
+DECLARE_MULTICAST_DELEGATE_OneParam(FCXOnCombatAbilityFinished, bool);
+
 UCLASS()
 class CXVI_API ACXCombatCharacterBase : public ACharacter, public IAbilitySystemInterface, public ICXCombatMessageInterface
 {
@@ -34,6 +36,13 @@ public:
 	void SubmitTarget(APawn* Target);
 	void CancelSelection();
 
+	//
+	FCXOnCombatAbilityFinished OnCombatAbilityFinished;
+
+	virtual bool ExecuteCombatAbility();
+
+	void CompleteCombatBehavior();
+	void CancelCombatAbility();
 
 	// Getter / Setter
 	FORCEINLINE const bool GetIsCharacterAlive() const { return bIsCharacterAlive; }
@@ -59,6 +68,14 @@ protected:
 
 	void TeleportToAttackLocation();
 	void ReturnToOriginLocation();
+
+	bool TryStartCombatAbility(FGameplayAbilitySpecHandle Handle);
+
+	virtual bool ShouldApproachTarget() const
+	{
+		// 근접공격은 true 원거리는 false 일단 근접공격만하도록
+		return true;
+	}
 
 	void ProcessMessage(const ECXCombatPhase& CurPhase);
 
@@ -100,6 +117,8 @@ private:
 	FCXCombatMessageData SavedMessage;
 
 	FCXActionSelection PendingAction;
+
+	FGameplayAbilitySpecHandle ExecutingCombatAbility;
 
 	FTransform OriginTransform;
 	TWeakObjectPtr<APawn> CurrentTargetPawn;

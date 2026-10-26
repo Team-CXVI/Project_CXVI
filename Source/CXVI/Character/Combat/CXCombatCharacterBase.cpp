@@ -7,6 +7,8 @@
 
 #include "CXVI/AbilitySystem/Attributes/Combat/CXCombatAttributeSet.h"
 
+#include "AI/Combat/CXCombatAIController.h"
+
 #include "Components/CapsuleComponent.h"
 #include "Components/WidgetComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -57,6 +59,9 @@ ACXCombatCharacterBase::ACXCombatCharacterBase()
 	// 캐릭터 기본변수 초기화
 	bIsCharacterAlive = true;
 	bIsTurn = false;
+
+	AIControllerClass = ACXCombatAIController::StaticClass();
+	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 }
 
 // Called when the game starts or when spawned
@@ -107,22 +112,16 @@ void ACXCombatCharacterBase::InitializeGAS()
 
 void ACXCombatCharacterBase::NotifyBattleAbilityEnded(FGameplayAbilitySpecHandle Handle, bool bWasCancelled)
 {
-	if (!CurrentActivatingHandles.Contains(Handle))
-	{
-		return;
-	}
-
 	CurrentActivatingHandles.Remove(Handle);
 
-	if (!CurrentActivatingHandles.IsEmpty())
+	if (Handle != ExecutingCombatAbility)
 	{
 		return;
 	}
 
-	ReturnToOriginLocation();
+	ExecutingCombatAbility = FGameplayAbilitySpecHandle();
 
-	// 이 예시는 중단된 행동도 종료 처리하여 턴을 소비한다.
-	FinishAction();
+	OnCombatAbilityFinished.Broadcast(bWasCancelled);
 }
 
 void ACXCombatCharacterBase::FinishAction()
@@ -232,6 +231,55 @@ void ACXCombatCharacterBase::CancelSelection()
 	CombatMessageResponse(Response);
 }
 
+bool ACXCombatCharacterBase::ExecuteCombatAbility()
+{
+	return BasicAttackAbility();
+}
+
+void ACXCombatCharacterBase::CompleteCombatBehavior()
+{
+	ACXCombatAIController* AIController = Cast<ACXCombatAIController>(GetController());
+
+	if (!AIController || !AIController->EndCombatAction())
+	{
+		return;
+	}
+
+	GetCharacterMovement()->StopMovementImmediately();
+
+	const FVector CurrentLocation = GetActorLocation();
+	const FVector OriginLocation = OriginTransform.GetLocation();
+
+	const float Error2D = FVector::Dist2D(CurrentLocation, OriginLocation);
+
+	UE_LOG(LogTemp, Display, TEXT("%s 복귀 위치 오차 : %.2f cm"), *GetName(), Error2D);
+
+	if (Error2D <= 15.f)
+	{
+		FVector CorrectedLocation = CurrentLocation;
+		CorrectedLocation.X = OriginLocation.X;
+		CorrectedLocation.Y = OriginLocation.Y;
+
+		SetActorLocation(CorrectedLocation);
+	}
+
+	// 위치는 Move To로 돌아오고 방향만 복원.
+	SetActorRotation(OriginTransform.GetRotation().Rotator());
+
+	// 다음 턴이 시작될수있으므로 마지막에 호출.
+	FinishAction();
+}
+
+void ACXCombatCharacterBase::CancelCombatAbility()
+{
+	if (ASC && ExecutingCombatAbility.IsValid())
+	{
+		const FGameplayAbilitySpecHandle Handle = ExecutingCombatAbility;
+
+		ASC->CancelAbilityHandle(Handle);
+	}
+}
+
 
 bool ACXCombatCharacterBase::BasicAttackAbility()
 {
@@ -260,39 +308,14 @@ bool ACXCombatCharacterBase::BasicAttackAbility()
 			continue;
 		}
 
-		Spec->InputPressed = true;
-
-		// 이미 공격 중이면 기존 콤보 입력 처리.
 		if (Spec->IsActive())
 		{
-			ASC->AbilitySpecInputPressed(*Spec);
-			return true;
-		}
-
-		ACXCombatCharacterBase* Target = Cast<ACXCombatCharacterBase>(CurrentTargetPawn.Get());
-
-		if (!IsValid(Target) || !Target->GetIsCharacterAlive())
-		{
 			return false;
 		}
 
-		const FGameplayAbilitySpecHandle Handle = Spec->Handle;
+		Spec->InputPressed = true;
 
-		TeleportToAttackLocation();
-
-		// 활성화 직후 종료 콜백이 올 수 있으므로 먼저 등록.
-		CurrentActivatingHandles.AddUnique(Handle);
-
-		if (!ASC->TryActivateAbility(Handle))
-		{
-			CurrentActivatingHandles.Remove(Handle);
-			ReturnToOriginLocation();
-
-			return false;
-		}
-
-		// 정상 종료 처리는 NotifyBattleAbilityEnded()가 담당.
-		return true;
+		return TryStartCombatAbility(Spec->Handle);
 	}
 
 	// 사용할 기본 공격 어빌리티가 없음.
@@ -316,6 +339,48 @@ void ACXCombatCharacterBase::TeleportToAttackLocation()
 void ACXCombatCharacterBase::ReturnToOriginLocation()
 {
 	SetActorTransform(OriginTransform);
+}
+
+bool ACXCombatCharacterBase::TryStartCombatAbility(FGameplayAbilitySpecHandle Handle)
+{
+	if (!ASC || !Handle.IsValid() || ExecutingCombatAbility.IsValid())
+	{
+		return false;
+	}
+
+	FGameplayAbilitySpec* Spec = ASC->FindAbilitySpecFromHandle(Handle);
+
+	if (!Spec || Spec->IsActive())
+	{
+		return false;
+	}
+
+	ACXCombatCharacterBase* Target = Cast<ACXCombatCharacterBase>(CurrentTargetPawn.Get());
+
+	if (!IsValid(Target) || !Target->GetIsCharacterAlive())
+	{
+		return false;
+	}
+
+	FVector Direction = Target->GetActorLocation() - GetActorLocation();
+	Direction.Z = 0.f;
+
+	if (!Direction.IsNearlyZero())
+	{
+		SetActorRotation(Direction.Rotation());
+	}
+
+	ExecutingCombatAbility = Handle;
+	CurrentActivatingHandles.AddUnique(Handle);
+
+	if (!ASC->TryActivateAbility(Handle))
+	{
+		CurrentActivatingHandles.Remove(Handle);
+		ExecutingCombatAbility = FGameplayAbilitySpecHandle();
+
+		return false;
+	}
+	return true;
 }
 
 FOnTurnPhaseFinished& ACXCombatCharacterBase::GetPhaseFinishedDelegate()
@@ -397,11 +462,37 @@ void ACXCombatCharacterBase::SelectTargetPhase()
 
 void ACXCombatCharacterBase::ActionPhase()
 {
-	// 선택한 행동을 실행한다
+	ACXCombatCharacterBase* Target = Cast<ACXCombatCharacterBase>(CurrentTargetPawn.Get());
 
-	// 예를들면 스킬애니메이션 발동
+	if (!IsValid(Target) || !Target->GetIsCharacterAlive())
+	{
+		FinishAction();
+		return;
+	}
 
-	// BasicAttack()
+	if (!GetController())
+	{
+		SpawnDefaultController();
+	}
+
+	ACXCombatAIController* AIController = Cast<ACXCombatAIController>(GetController());
+	
+	if (!AIController)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("%s : CombatAicontroller가 없음"), *GetName());
+
+		FinishAction();
+		return;
+	}
+
+	const float Distance = GetCapsuleComponent()->GetScaledCapsuleRadius() + Target->GetCapsuleComponent()->GetScaledCapsuleRadius() + 25.f;
+
+	const FVector AttackLocation = Target->GetActorLocation() + Target->GetActorForwardVector() * Distance;
+
+	if (!AIController->RequestCombatAction(Target, AttackLocation, OriginTransform.GetLocation(), ShouldApproachTarget()))
+	{
+		FinishAction();
+	}
 }
 
 void ACXCombatCharacterBase::ReactionPhase()
