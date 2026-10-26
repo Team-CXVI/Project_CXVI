@@ -127,7 +127,7 @@ bool ACXFieldEnemy::Defeat()
 
 void ACXFieldEnemy::InitializeEnemyGroupId(FName InEnemyGroupId)
 {
-	EnemyGroupId = InEnemyGroupId;
+	EncounterId = InEnemyGroupId;
 }
 
 void ACXFieldEnemy::BeginPlay()

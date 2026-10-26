@@ -50,7 +50,7 @@ public:
 	// 생성 완료 전에 스포너가 전달.
 	void InitializeEnemyGroupId(FName InEnemyGroupId);
 
-	FName GetEnemyGroupId() const { return EnemyGroupId; }
+	FName GetEnemyGroupId() const { return EncounterId; }
 
 protected:
 	virtual void BeginPlay() override;
@@ -140,7 +140,7 @@ protected:
 	FName SpawnId = NAME_None;
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Transient, Category = "Field|Enemy")
-	FName EnemyGroupId = NAME_None;
+	FName EncounterId = NAME_None;
 
 	// 처치 처리를 중복 실행하지 않도록 구분.
 	UPROPERTY(Transient)

@@ -48,7 +48,7 @@ protected:
 
 	// 전투에서 사용할 적 편성을 식별.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawner|Combat")
-	FName EnemyGroupId = NAME_None;
+	FName EncounterId = NAME_None;
 
 	// 생성할 몬스터 클래스.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawner")
