@@ -4,6 +4,7 @@
 #include "UI/CXUIManagerSubsystem.h"
 
 #include "CXUISettings.h"
+#include "CXNavigationConfig.h"
 
 #include <CommonActivatableWidget.h>
 #include <Engine/LocalPlayer.h>
@@ -29,9 +30,19 @@ UCXUIManagerSubsystem* UCXUIManagerSubsystem::TryGet(const UObject* WorldContext
 	return LocalPlayer ? LocalPlayer->GetSubsystem<UCXUIManagerSubsystem>() : nullptr;
 }
 
+void UCXUIManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
+{
+	Super::Initialize(Collection);
+	
+	// 새 내비게이션 설정
+	ApplyNavigationConfig(true);
+}
+
 void UCXUIManagerSubsystem::Deinitialize()
 {
 	DestroyPrimaryLayout();
+
+	ApplyNavigationConfig(false);
 
 	Super::Deinitialize();
 }
@@ -128,5 +139,30 @@ void UCXUIManagerSubsystem::ApplyUIInputMapping(bool bInApply) const
 	else
 	{
 		InputSubsystem->RemoveMappingContext(MappingContext, Options);
+	}
+}
+
+void UCXUIManagerSubsystem::ApplyNavigationConfig(bool bInApply)
+{
+	if (!FSlateApplication::IsInitialized())
+	{
+		return;
+	}
+
+	FSlateApplication& SlateApplication = FSlateApplication::Get();
+
+	if (bInApply)
+	{
+		// 싱글 플레이 기준: 이미 등록했으면 다시 등록하지 않음 (복구할 원래 설정 보존)
+		if (!PreviousNavigationConfig.IsValid())
+		{
+			PreviousNavigationConfig = SlateApplication.GetNavigationConfig();
+			SlateApplication.SetNavigationConfig(MakeShared<FCXNavigationConfig>());
+		}
+	}
+	else if (PreviousNavigationConfig.IsValid())
+	{
+		SlateApplication.SetNavigationConfig(PreviousNavigationConfig.ToSharedRef());
+		PreviousNavigationConfig.Reset();
 	}
 }

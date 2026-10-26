@@ -10,6 +10,7 @@
 #include "CXUIManagerSubsystem.generated.h"
 
 class APlayerController;
+struct FCXNavigationConfig;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogCXUI, Log, All);
 
@@ -33,6 +34,8 @@ public:
 	static UCXUIManagerSubsystem& Get(const UObject* WorldContextObject);
 
 	static UCXUIManagerSubsystem* TryGet(const UObject* WorldContextObject);
+
+	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 
 	virtual void Deinitialize() override;
 
@@ -70,8 +73,13 @@ private:
 	// Remove : bInApply == false
 	void ApplyUIInputMapping(bool bInApply) const;
 	
+	// Apply : 기본 키 이외에 WASD을 내비게이션 등록 / Restore : 등록 전 설정으로 복구
+	void ApplyNavigationConfig(bool bInApply);
+
 private:
 	UPROPERTY(Transient)
 	TObjectPtr<UCXPrimaryGameLayout> PrimaryLayout;
 
+	// 복구할 Slate 내비게이션 캐시
+	TSharedPtr<FNavigationConfig> PreviousNavigationConfig;
 };
