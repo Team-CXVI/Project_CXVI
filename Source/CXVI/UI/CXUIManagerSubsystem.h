@@ -82,4 +82,17 @@ private:
 
 	// 복구할 Slate 내비게이션 캐시
 	TSharedPtr<FNavigationConfig> PreviousNavigationConfig;
+
+
+#if WITH_EDITOR
+private:
+	// 에디터 PIE 전용
+	// 화면 활성화 시점에 뷰포트 포커스가 없으면 CommonUI가 입력 설정을 건너뛰므로,
+	// 뷰포트에 포커스가 들어올 때 맨 위 화면의 입력 설정과 포커스를 다시 적용
+	void HandleSlateFocusChanging(const FFocusEvent& InFocusEvent, const FWeakWidgetPath& InOldFocusedPath, const TSharedPtr<SWidget>& InOldFocusedWidget, const FWidgetPath& InNewFocusedPath, const TSharedPtr<SWidget>& InNewFocusedWidget);
+
+	void ReapplyTopWidgetInputConfig();
+
+	FDelegateHandle FocusChangingHandle;
+#endif
 };

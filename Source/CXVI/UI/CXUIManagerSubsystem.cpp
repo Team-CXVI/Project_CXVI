@@ -12,6 +12,11 @@
 #include <EnhancedInputSubsystems.h>
 #include <InputMappingContext.h>
 
+#if WITH_EDITOR
+#include <Input/CommonUIActionRouterBase.h>
+#include <Engine/GameViewportClient.h>
+#endif
+
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXUIManagerSubsystem)
 
 DEFINE_LOG_CATEGORY(LogCXUI);
@@ -36,6 +41,14 @@ void UCXUIManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	
 	// 새 내비게이션 설정
 	ApplyNavigationConfig(true);
+
+#if WITH_EDITOR
+	if (FSlateApplication::IsInitialized())
+	{
+		// 에디터 실행 후 포커싱이 들어왔을 때 실행할 델리게이트 바운딩
+		FocusChangingHandle = FSlateApplication::Get().OnFocusChanging().AddUObject(this, &ThisClass::HandleSlateFocusChanging);
+	}
+#endif
 }
 
 void UCXUIManagerSubsystem::Deinitialize()
@@ -43,6 +56,13 @@ void UCXUIManagerSubsystem::Deinitialize()
 	DestroyPrimaryLayout();
 
 	ApplyNavigationConfig(false);
+
+#if WITH_EDITOR
+	if (FSlateApplication::IsInitialized())
+	{
+		FSlateApplication::Get().OnFocusChanging().Remove(FocusChangingHandle);
+	}
+#endif
 
 	Super::Deinitialize();
 }
@@ -166,3 +186,55 @@ void UCXUIManagerSubsystem::ApplyNavigationConfig(bool bInApply)
 		PreviousNavigationConfig.Reset();
 	}
 }
+
+#if WITH_EDITOR
+
+void UCXUIManagerSubsystem::HandleSlateFocusChanging(const FFocusEvent& InFocusEvent, const FWeakWidgetPath& InOldFocusedPath, const TSharedPtr<SWidget>& InOldFocusedWidget, const FWidgetPath& InNewFocusedPath, const TSharedPtr<SWidget>& InNewFocusedWidget)
+{
+	const ULocalPlayer* LocalPlayer = GetLocalPlayer();
+	if (nullptr == PrimaryLayout || nullptr == LocalPlayer || nullptr == LocalPlayer->ViewportClient)
+	{
+		return;
+	}
+
+	const TSharedPtr<SViewport> ViewportWidget = LocalPlayer->ViewportClient->GetGameViewportWidget();
+	if (!ViewportWidget.IsValid())
+	{
+		return;
+	}
+
+	// 뷰포트 밖이 포커스인 경우 처리하지 않음
+	const bool bWasInViewport = InOldFocusedPath.IsValid() && InOldFocusedPath.ContainsWidget(ViewportWidget.Get());
+	const bool bIsInViewport = InNewFocusedPath.ContainsWidget(ViewportWidget.Get());
+	if (bWasInViewport || !bIsInViewport)
+	{
+		return;
+	}
+
+	// 포커스 변경 처리 도중에 다시 포커스를 바꾸지 않도록 다음 틱에 적용
+	if (UWorld* World = PrimaryLayout->GetWorld())
+	{
+		World->GetTimerManager().SetTimerForNextTick(this, &ThisClass::ReapplyTopWidgetInputConfig);
+	}
+}
+
+void UCXUIManagerSubsystem::ReapplyTopWidgetInputConfig()
+{
+	UCommonActivatableWidget* TopWidget = PrimaryLayout ? PrimaryLayout->GetTopActiveWidget() : nullptr;
+	UCommonUIActionRouterBase* ActionRouter = TopWidget ? UCommonUIActionRouterBase::Get(*TopWidget) : nullptr;
+	if (nullptr == ActionRouter)
+	{
+		return;
+	}
+
+	const TOptional<FUIInputConfig> DesiredConfig = TopWidget->GetDesiredInputConfig();
+	if (DesiredConfig.IsSet())
+	{
+		ActionRouter->SetActiveUIInputConfig(DesiredConfig.GetValue(), TopWidget);
+	}
+
+	ActionRouter->RefreshActiveRootFocus();
+}
+
+#endif // WITH_EDITOR
+

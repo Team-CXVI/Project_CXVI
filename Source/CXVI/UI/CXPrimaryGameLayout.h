@@ -53,6 +53,9 @@ public:
 	// LayerTag를 모르는 상태에서 UClass로 접근해서 위젯을 삭제
 	void FindAndRemoveWidgetFromLayer(UCommonActivatableWidget* InWidget);
 
+	// 위에 그려지는 레이어 순으로 확인해서 활성 화면 위젯 반환 (Modal > Menu > GameMenu > Game)
+	UCommonActivatableWidget* GetTopActiveWidget() const;
+
 protected:
 	UFUNCTION(BlueprintCallable, Category = "CXVI|UI")
 	void RegisterLayer(UPARAM(meta = (Categories = "UI.Layer")) FGameplayTag InLayerTag, UCommonActivatableWidgetContainerBase* InLayerWidget);
