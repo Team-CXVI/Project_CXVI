@@ -30,6 +30,8 @@ void UCXGameplayAbilityCombatBase::ActivateAbility(const FGameplayAbilitySpecHan
 	// 설정한 비용과 쿨다운 적용.
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
+		UE_LOG(LogTemp, Display, TEXT("%s: 스킬 사용 확정 실패. 비용 또는 쿨다운 확인 "), *GetName());
+
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}

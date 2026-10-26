@@ -36,6 +36,8 @@ public:
 	bool ToggleAimMode();
 	void FireAbility();
 
+	bool CanActivateSelectSkill(int32 SlotIndex) const;
+
 protected:
 	virtual void PostInitializeComponents() override;
 
