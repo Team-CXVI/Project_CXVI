@@ -136,6 +136,16 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI|Attack")
 	float AttackTurnSpeed = 540.0f;
 
+	// 실제 타격 판정의 전방 도달 거리.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack|Hit")
+	float AttackHitRange = 200.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack|Hit")
+	float AttackHitRadius = 50.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack|Hit")
+	bool bDrawAttackHitDebug = true;
+
 
 	// 스포너 변수.
 	// 이 몬스터가 어느 스폰 지점에서 생성됐는지 식별.

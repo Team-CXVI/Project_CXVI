@@ -5,14 +5,18 @@
 #include "Interactions/CXPreemptiveAttackTriggerBox.h"
 #include "CXVI/Foundation/FieldEnemySpawning/CXFieldEnemySubsystem.h"
 #include "CXVI/AI/Field/CXFieldAI.h"
-#include "BehaviorTree/BlackboardComponent.h"
+#include "Character/Field/CXFIeldPlayerCharacter.h"
+#include "CXVI/Foundation/Scene/CXSceneSubsystem.h"
+#include "CXVI/Foundation/Scene/Scenes/CXFieldScene.h"
 
+#include "BehaviorTree/BlackboardComponent.h"
 #include "Engine/World.h"
 #include "Animation/AnimInstance.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/ChildActorComponent.h"
 #include "AIController.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "DrawDebugHelpers.h"
 
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXFieldEnemy)
@@ -125,9 +129,112 @@ bool ACXFieldEnemy::Defeat()
 	return true;
 }
 
-void ACXFieldEnemy::InitializeEnemyGroupId(FName InEnemyGroupId)
+void ACXFieldEnemy::InitializeEncounterId(FName InEnemyGroupId)
 {
 	EncounterId = InEnemyGroupId;
+}
+
+void ACXFieldEnemy::NotifyAttackHit()
+{
+	// 취소됐거나 이미 처치된 적의 타격은 무시.
+	if (!bAIAttacking || bDefeatHandled || bTurningAfterAttack)
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	AAIController* EnemyController = Cast<AAIController>(GetController());
+	UBlackboardComponent* Blackboard = IsValid(EnemyController) ? EnemyController->GetBlackboardComponent() : nullptr;
+	if (!World || !IsValid(Blackboard))
+	{
+		return;
+	}
+
+
+	// 복귀 중인 적은 타격을 인정하지 않음.
+	if (Blackboard->GetValueAsBool(BBKEY_ISRETURNING))
+	{
+		return;
+	}
+
+	// 적이 탐지해서 유지하고 있는 플레이어 타깃.
+	ACXFieldPlayerCharacter* TargetPlayer = Cast<ACXFieldPlayerCharacter>(Blackboard->GetValueAsObject(BBKEY_TARGET));
+	if (!IsValid(TargetPlayer))
+	{
+		return;
+	}
+
+	const float Range = FMath::Max(2.0f, AttackHitRange);
+	const float Radius = FMath::Clamp(AttackHitRadius, 1.0f, Range * 0.5f);
+
+	const FVector Forward = GetActorForwardVector();
+	const FVector Origin = GetActorLocation();
+
+	const FVector Start = Origin + Forward * Radius;
+	const FVector End = Origin + Forward * (Range - Radius);
+
+	FCollisionQueryParams QueryParams(
+		SCENE_QUERY_STAT(FieldEnemyAttack),
+		false,
+		this
+	);
+
+	FHitResult Hit;
+
+	const bool bHit = World->SweepSingleByChannel(
+		Hit,
+		Start,
+		End,
+		FQuat::Identity,
+		ECC_Visibility,
+		FCollisionShape::MakeSphere(Radius),
+		QueryParams
+	);
+	
+	// 실제로 맞은 액터가 추적하던 플레이어인지 확인.
+	const bool bHitTarget = bHit && Hit.GetActor() == TargetPlayer;
+
+	if (bDrawAttackHitDebug)
+	{
+		DrawDebugCapsule(
+			World,
+			(Start + End) * 0.5f,
+			FVector::Distance(Start, End) * 0.5f + Radius,
+			Radius,
+			FRotationMatrix::MakeFromZ(Forward).ToQuat(),
+			bHitTarget ? FColor::Green : FColor::Red,
+			false,
+			1.0f);
+	}
+
+	if (!bHitTarget)
+	{
+		UE_LOG(LogTemp, Log, TEXT("[EnemyAttack] 명중 실패 Target=%s Blocker=%s"), *GetNameSafe(TargetPlayer), *GetNameSafe(Hit.GetActor()));
+		return;
+	}
+
+	UE_LOG(LogTemp, Log,
+		TEXT("[EnemyAttack] 플레이어 명중 Enemy=%s Player=%s Encounter=%s Spawn=%s"),
+		*GetName(),
+		*TargetPlayer->GetName(),
+		*GetEncounterId().ToString(),
+		*GetSpawnId().ToString());
+
+	/*=================================에너미 공격======================================*/
+	UCXSceneSubsystem* SceneSubsystem = World->GetSubsystem<UCXSceneSubsystem>();
+	if (!IsValid(SceneSubsystem) || SceneSubsystem->IsTransitioning())
+	{
+		return;
+	}
+
+	UCXFieldScene* FieldScene = Cast<UCXFieldScene>(SceneSubsystem->GetCurrentScene());
+	if (!IsValid(FieldScene))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Encounter] 현재 씬이 필드 씬이 아닙니다."));
+		return;
+	}
+
+	//const bool bAccepted = FieldScene->RequestCombat(/*컴뱃 씬*/,/*EncounterId*/)
 }
 
 void ACXFieldEnemy::BeginPlay()
@@ -281,7 +388,7 @@ bool ACXFieldEnemy::AttackByAI()
 	}
 
 	// 공격 실행.
-	const float AttackSpeedRate = 1.0f;
+	const float AttackSpeedRate = 0.5f;
 
 	const float PlayResult = AnimInstane->Montage_Play(AttackMontage, AttackSpeedRate);
 	if (PlayResult <= 0.0f)
