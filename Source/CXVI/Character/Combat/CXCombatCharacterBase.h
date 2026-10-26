@@ -50,6 +50,8 @@ public:
 	FORCEINLINE void SetOriginTransform(const FTransform& NewTransform) { OriginTransform = NewTransform; }
 	float GetCombatSpeed() const;
 
+	APawn* GetSelectedCombatTarget() const { return CurrentTargetPawn.Get(); }
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
