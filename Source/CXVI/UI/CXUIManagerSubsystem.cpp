@@ -11,9 +11,10 @@
 #include <GameFramework/PlayerController.h>
 #include <EnhancedInputSubsystems.h>
 #include <InputMappingContext.h>
+#include <Input/CommonUIActionRouterBase.h>
+#include <GameFramework/InputSettings.h>
 
 #if WITH_EDITOR
-#include <Input/CommonUIActionRouterBase.h>
 #include <Engine/GameViewportClient.h>
 #endif
 
@@ -76,6 +77,9 @@ void UCXUIManagerSubsystem::CreatePrimaryLayout(APlayerController* InPlayerContr
 
 	// 월드 이동으로 이전 레이아웃이 남아 있을 수 있으므로 먼저 정리
 	DestroyPrimaryLayout();
+
+	// 이전 레벨 화면의 입력 설정이 남지 않도록 초기화 (이 레벨의 화면이 활성화되면 그 설정으로 덮어씀)
+	ResetInputConfigToGameDefault();
 
 	// DefaultGame.ini에서 Layout UI 경로를 획득
 	const UCXUISettings* Settings = GetDefault<UCXUISettings>();
@@ -187,6 +191,19 @@ void UCXUIManagerSubsystem::ApplyNavigationConfig(bool bInApply)
 	}
 }
 
+void UCXUIManagerSubsystem::ResetInputConfigToGameDefault() const
+{
+	UCommonUIActionRouterBase* ActionRouter = GetLocalPlayer() ? GetLocalPlayer()->GetSubsystem<UCommonUIActionRouterBase>() : nullptr;
+	if (nullptr == ActionRouter)
+	{
+		return;
+	}
+
+	// 마우스 캡처는 프로젝트 기본값(Project Settings > Input > Default Viewport Mouse Capture Mode)을 따름
+	const EMouseCaptureMode CaptureMode = GetDefault<UInputSettings>()->DefaultViewportMouseCaptureMode;
+	ActionRouter->SetActiveUIInputConfig(FUIInputConfig(ECommonInputMode::Game, CaptureMode));
+}
+
 #if WITH_EDITOR
 
 void UCXUIManagerSubsystem::HandleSlateFocusChanging(const FFocusEvent& InFocusEvent, const FWeakWidgetPath& InOldFocusedPath, const TSharedPtr<SWidget>& InOldFocusedWidget, const FWidgetPath& InNewFocusedPath, const TSharedPtr<SWidget>& InNewFocusedWidget)
@@ -227,12 +244,22 @@ void UCXUIManagerSubsystem::ReapplyTopWidgetInputConfig()
 		return;
 	}
 
+	// 입력 설정을 선언하지 않는 화면은 건드리지 않음
 	const TOptional<FUIInputConfig> DesiredConfig = TopWidget->GetDesiredInputConfig();
-	if (DesiredConfig.IsSet())
+	if (!DesiredConfig.IsSet())
 	{
-		ActionRouter->SetActiveUIInputConfig(DesiredConfig.GetValue(), TopWidget);
+		return;
 	}
 
+	// 엔진이 이미 적용한 경우는 처리하지 않음 (활성화 시점에 건너뛴 경우만 보완)
+	const bool bAlreadyApplied = ActionRouter->GetActiveInputMode() == DesiredConfig->GetInputMode()
+		&& ActionRouter->GetActiveMouseCaptureMode() == DesiredConfig->GetMouseCaptureMode();
+	if (bAlreadyApplied)
+	{
+		return;
+	}
+
+	ActionRouter->SetActiveUIInputConfig(DesiredConfig.GetValue(), TopWidget);
 	ActionRouter->RefreshActiveRootFocus();
 }
 
