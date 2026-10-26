@@ -76,6 +76,10 @@ private:
 	// Apply : 기본 키 이외에 WASD을 내비게이션 등록 / Restore : 등록 전 설정으로 복구
 	void ApplyNavigationConfig(bool bInApply);
 
+	// 새 레벨 시작 시 이전 레벨 화면이 남긴 입력 설정을 버리고 게임 기본 입력으로 초기화
+	// (CommonUI는 활성 화면이 없어져도 입력 설정을 되돌리지 않고, Action Router는 레벨이 바뀌어도 유지됨)
+	void ResetInputConfigToGameDefault() const;
+
 private:
 	UPROPERTY(Transient)
 	TObjectPtr<UCXPrimaryGameLayout> PrimaryLayout;
