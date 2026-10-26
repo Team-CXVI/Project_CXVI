@@ -35,14 +35,25 @@ AActor* ACXGameMode::ChoosePlayerStart_Implementation(AController* Player)
 	return Super::ChoosePlayerStart_Implementation(Player);
 }
 
+void ACXGameMode::HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer)
+{
+	// 첫 Scene이 컨트롤 Pawn을 정하면 Scene 진입 때 생성/빙의하므로 여기서는 따로 생성하지 않음
+	// (StartSpot은 로그인 때 이미 정해져 있어서 Scene이 그대로 사용)
+	const UCXSceneDefinition* InitialScene = GetInitialScene();
+	if (InitialScene && InitialScene->PawnClass)
+	{
+		return;
+	}
+
+	// 게임 모드가 직접 컨트롤 Pawn을 생성
+	Super::HandleStartingNewPlayer_Implementation(NewPlayer);
+}
+
 void ACXGameMode::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	const UCXLevelTransitionSubsystem* LevelTransition = UCXLevelTransitionSubsystem::TryGet(this);
-	const UCXLevelDefinition* LevelDefinition = LevelTransition ? LevelTransition->GetCurrentLevelDefinition() : nullptr;
-	UCXSceneDefinition* InitialScene = LevelDefinition ? LevelDefinition->InitialScene.Get() : nullptr;
-
+	UCXSceneDefinition* InitialScene = GetInitialScene();
 	UCXSceneSubsystem* SceneSubsystem = UCXSceneSubsystem::TryGet(this);
 	if (nullptr == SceneSubsystem || nullptr == InitialScene)
 	{
@@ -96,4 +107,21 @@ void ACXGameMode::NotifyLevelReady()
 	{
 		LevelTransition->NotifyLevelReady();
 	}
+}
+
+UCXSceneDefinition* ACXGameMode::GetInitialScene() const
+{
+	const UCXLevelTransitionSubsystem* LevelTransition = UCXLevelTransitionSubsystem::TryGet(this);
+	if (nullptr == LevelTransition)
+	{
+		return nullptr;
+	}
+
+	const UCXLevelDefinition* LevelDefinition = LevelTransition->GetCurrentLevelDefinition();
+	if (nullptr == LevelDefinition)
+	{
+		return nullptr;
+	}
+
+	return LevelDefinition->InitialScene.Get();
 }

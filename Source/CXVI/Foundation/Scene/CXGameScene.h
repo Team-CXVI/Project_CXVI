@@ -12,11 +12,17 @@
 class UCXSceneDefinition;
 class UCXSceneSubsystem;
 class UInputAction;
+class APawn;
+class APlayerController;
+class UEnhancedInputLocalPlayerSubsystem;
 
 /**
  * Scene Object의 베이스 클래스(추상 클래스)
  * Lifecycle : OnEnter -> (OnSuspend <-> OnResume)* -> OnExit
- * 베이스가 IMC, Scene 입력 바인딩, Suspendable 알림, Spawn Actor 정리를 처리하므로 자식은 반드시 Super롤 호출해야 함
+ * 베이스가 Pawn, IMC, Scene 입력 바인딩, Suspendable 알림, Spawn Actor 정리를 처리하므로 자식은 반드시 Super롤 호출해야 함
+ * - 컨트롤 Pawn : Definition의 PawnClass를 Scene 레벨에서 찾거나 생성해서 Enter / Resume 때 빙의
+ * - IMC : Definition의 IMCs는 이 Scene이 활성인 동안만 등록.
+ * - 같은 IMC를 Pawn 등 다른 곳에서 별도로 등록하지 않아야 함.
  */
 UCLASS(Abstract, Blueprintable)
 class CXVI_API UCXGameScene : public UObject
@@ -37,6 +43,9 @@ public:
 
 	// Sublevels 중 메인 레벨(배열을 0번 인덱스)
 	ULevel* GetPrimaryLevel() const;
+
+	// 이 Scene의 컨트롤 Pawn (PawnClass가 없거나 확보 실패 시 nullptr)
+	APawn* GetScenePawn() const { return ScenePawn; }
 
 	// Scene 레벨에서 T 타입 액터를 검색
 	template<typename T>
@@ -114,7 +123,12 @@ protected:
 	}
 
 private:
+	APlayerController* GetPlayerController() const;
+
 	UEnhancedInputComponent* GetPlayerInputComponent() const;
+
+	// 월드 정리 중(PlayerController 제거 후)에도 접근할 수 있도록 GameInstance의 로컬 플레이어 기준
+	UEnhancedInputLocalPlayerSubsystem* GetInputSubsystem() const;
 
 	void ApplyInputMappings() const;
 
@@ -129,11 +143,35 @@ private:
 	void DestroySpawnedActors();
 
 private:
+	// Scene 레벨에 배치된 Pawn 검색 -> 없으면 생성 (Enter 시 1회)
+	void AcquireScenePawn();
+
+	APawn* FindPawnInSceneLevels() const;
+
+	// GameMode가 고른 PlayerStart 위치에 퍼시스턴트 레벨로 생성
+	APawn* SpawnScenePawn() const;
+
+	void PossessScenePawn();
+
+	// Suspend 시: 서브레벨 Pawn이면 레벨이 Hidden 되기 전에 빙의 해제
+	void ReleasePossessionBeforeHide();
+
+	// Exit 시: 빙의 해제 + 생성한 Pawn은 Destroy
+	void ReleaseScenePawn();
+
+private:
 	UPROPERTY()
 	TObjectPtr<UCXSceneDefinition> Definition;
 
+	// 유저가 이 Scene에서 조종할 Pawn
+	UPROPERTY()
+	TObjectPtr<APawn> ScenePawn;
+
 	UPROPERTY()
 	TArray<TObjectPtr<AActor>> SpawnedActors;
+
+	// ScenePawn을 이 Scene이 생성했는지 (Scene에 의해 생성된 Pawn은 Scene의 Exit 때 파괴하지 않고 유지)
+	bool bSpawnedScenePawn = false;
 
 	TArray<uint32> InputBindingHandles;
 };
