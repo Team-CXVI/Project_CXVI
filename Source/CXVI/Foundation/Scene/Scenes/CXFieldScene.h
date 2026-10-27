@@ -9,6 +9,7 @@
 
 class ACharacter;
 class UCXSceneDefinition;
+struct FInputActionValue;
 
 /**
  * 
@@ -28,7 +29,19 @@ protected:
 
 	virtual void OnSuspend() override;
 
+	virtual void OnExit() override;
+
+	virtual void SetupSceneInput() override;
+
 private:
 	// TODO : 임시. 필드 Pawn이 ICXSceneSuspendable을 구현하면 제거
 	TWeakObjectPtr<ACharacter> FrozenCharacter;
+
+	// TODO : 임시. 일시정지 메뉴가 생기면 제거 (ESC -> 타이틀 이동)
+	void HandleEscapeKey(FKey InKey, FInputActionValue InValue);
+
+	void ClearEscapeBinding();
+
+	// 디버그 키 바인딩 핸들 (베이스의 Scene 입력 핸들과 별도로 해제)
+	uint32 EscapeBindingHandle = 0;
 };
