@@ -10,6 +10,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
 #include "AbilitySystemComponent.h"
+#include "Abilities/GameplayAbility.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXCombatCharacterPlayer)
 
@@ -164,6 +165,54 @@ void ACXCombatCharacterPlayer::FireAbility()
 		ASC->TryActivateAbility(Spec->Handle);
 
 	}
+}
+
+bool ACXCombatCharacterPlayer::CanActivateSelectSkill(int32 SlotIndex) const
+{
+	if (!IsValid(ASC) || !ASC->AbilityActorInfo.IsValid() ||
+		!SkillAbilities.IsValidIndex(SlotIndex) || !SkillAbilities[SlotIndex])
+	{
+		UE_LOG(LogTemp, Warning, TEXT("%s: 스킬 슬롯 설정을 확인해주세요. 슬롯=%d"), *GetName(), SlotIndex);
+		return false;
+	}
+
+	const FGameplayAbilitySpec* Spec = ASC->FindAbilitySpecFromClass(SkillAbilities[SlotIndex]);
+
+	if (!Spec || !Spec->Ability)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("%s: 선택한 스킬이 ASC에 부여되어있지 않음."), *GetName());
+		return false;
+	}
+
+	if (Spec->IsActive())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("%s: 이미 실행중인 스킬입니다."), *GetName());
+		return false;
+	}
+
+	const UGameplayAbility* Ability = Spec->Ability.Get();
+
+	const FGameplayAbilityActorInfo* ActorInfo = ASC->AbilityActorInfo.Get();
+
+	// 실제 차감에 사용할 비용 GE를 기준으로 검사
+	// 이 호출은 마나를 소비하지 않음
+	if (!Ability->CheckCost(Spec->Handle, ActorInfo))
+	{
+		const float CurrentMana = CharacterAttributeSet ? CharacterAttributeSet->GetMana() : 0.f;
+
+		UE_LOG(LogTemp, Display, TEXT("%s: 마나 부족으로 스킬을 사용할 수  없습니다. 현재 마나 =%.0f"), *GetName(), CurrentMana);
+		
+		return false;
+	}
+
+	// 비용 외에도 쿨다운 태그 등 GAS의 활성화 조건을 확인한다.
+	if (!Ability->CanActivateAbility(Spec->Handle, ActorInfo))
+	{
+		UE_LOG(LogTemp, Display, TEXT("%s: 현재 상태에서는 스킬을 사용할수 없습니다."), *GetName());
+		return false;
+	}
+
+	return true;
 }
 
 void ACXCombatCharacterPlayer::PostInitializeComponents()

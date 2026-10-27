@@ -18,6 +18,13 @@ class CXVI_API UCXGameplayAbilityCombatBase : public UGameplayAbility
 public:
 	UCXGameplayAbilityCombatBase();
 
+	float GetManaCost() const;
+
+	virtual bool CheckCost(
+		const FGameplayAbilitySpecHandle Handle,
+		const FGameplayAbilityActorInfo* ActorInfo,
+		FGameplayTagContainer* OptionalRelevantTags = nullptr) const override;
+
 private:
 	virtual void ActivateAbility(
 		const FGameplayAbilitySpecHandle Handle,
@@ -48,6 +55,8 @@ private:
 		bool bWasCancelled
 	) override;
 
+	
+
 private:
 	// 공격 몽타주가 정상적으로 끝났을 경우
 	UFUNCTION()
@@ -60,10 +69,19 @@ private:
 private:
 	void RegisterMontageTask();
 
+	UFUNCTION()
+	void OnAttackEvent(FGameplayEventData Payload);
+
+	bool RegisterHitEventTask();
 
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Montage")
 	TObjectPtr<class UCXAbilityData> AbilityData;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Damage")
+	TSubclassOf<class UGameplayEffect> SkillDamageEffect;
 
+private:
+	// 이번 스킬 사용에서 이미 처리한 타격 번호.
+	TSet<int32> ProcessedHitIndices;
 };
