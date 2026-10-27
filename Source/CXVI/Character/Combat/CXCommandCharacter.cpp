@@ -64,6 +64,43 @@ void ACXCommandCharacter::SetCombatInputMode(ECXCombatInputMode NewMode)
 		SavedSelection.Clear();
 	}
 
+
+	// 태그 부여로 다른 입력 차단
+	UEnhancedInputLocalPlayerSubsystem* Subsystem = InputSubsystem.Get();
+
+	if (!Subsystem)
+	{
+		return;
+	}
+
+	// 기존 UI 기본 모드 태그는 유지
+	FGameplayTagContainer Modes = Subsystem->GetInputMode();
+
+	Modes.RemoveTag(CXVIGameplayTags::InputMode_Combat_Command);
+	Modes.RemoveTag(CXVIGameplayTags::InputMode_Combat_Reaction);
+
+	switch (NewMode)
+	{
+	case ECXCombatInputMode::Command:
+		Modes.AddTag(CXVIGameplayTags::InputMode_Combat_Command);
+		break;
+
+	case ECXCombatInputMode::Reaction:
+		Modes.AddTag(CXVIGameplayTags::InputMode_Combat_Reaction);
+		break;
+
+	default:
+		// disabled에서는 둘다 태그 없음
+		break;
+	}
+
+	if (Modes != Subsystem->GetInputMode())
+	{
+		FModifyContextOptions Options;
+		Options.bIgnoreAllPressedKeysUntilRelease = true;
+
+		Subsystem->SetInputMode(Modes, Options);
+	}
 }
 
 void ACXCommandCharacter::SetMenuState(ECommandMenuState NewState)
