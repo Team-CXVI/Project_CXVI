@@ -55,7 +55,13 @@ void UCXCombatAttributeSet::PostAttributeChange(const FGameplayAttribute& Attrib
 	}
 	else if (Attribute == GetManaAttribute())
 	{
-		UE_LOG(LogTemp, Display, TEXT("%s 마나: %.0f -> %.0f / %.0f"), *GetNameSafe(GetOwningActor()), OldValue, NewValue, GetMaxMana());
+		if (!FMath::IsNearlyEqual(OldValue, NewValue))
+		{
+			UE_LOG(LogTemp, Display,
+				TEXT("%s 마나: %.0f -> %.0f / %.0f"),
+				*GetNameSafe(GetOwningActor()),
+				OldValue, NewValue, GetMaxMana());
+		}
 	}
 }
 
