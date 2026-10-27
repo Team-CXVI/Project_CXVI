@@ -37,7 +37,7 @@ ACXExpeditionFlag::ACXExpeditionFlag()
     ExpeditionFlagTrigger->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
 }
 
-bool ACXExpeditionFlag::CanRest(const ACXFieldPlayerCharacter* Player) const
+bool ACXExpeditionFlag::CanFlag(const ACXFieldPlayerCharacter* Player) const
 {
     if (!IsValid(Player) || !IsValid(ExpeditionFlagTrigger))
     {
@@ -53,7 +53,7 @@ bool ACXExpeditionFlag::CanRest(const ACXFieldPlayerCharacter* Player) const
     return Trigger->IsOverlappingActor(Player);
 }
 
-void ACXExpeditionFlag::CompleteRest()
+void ACXExpeditionFlag::CompleteFlag()
 {
     UWorld* World = GetWorld();
     if (!IsValid(World))

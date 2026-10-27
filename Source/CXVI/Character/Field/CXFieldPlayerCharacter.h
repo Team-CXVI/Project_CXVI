@@ -43,7 +43,7 @@ public:
 	void HideCable();
 
 	// 내 상태로 휴식을 시작 할 수 있는지 알려주는 함수.
-	bool CanStartRest() const;
+	bool CanStartFlag() const;
 
 	// 접근한 깃발을 사용 후보에 추가.
 	void RegisterNearByFlag(ACXExpeditionFlag* Flag);
@@ -91,10 +91,10 @@ protected:
 	// 뒤잡 실행.
 	void Assassination();
 
-	// 세이브 깃발 앉기.
-	void StartSave();
+	// 원정대 깃발 사용 시작.
+	void StartUseFlag();
 
-	void OnSaveMontageChanged(class UAnimMontage* Montage, FName SectionName, bool bLooped);
+	void OnFlagMontageChanged(class UAnimMontage* Montage, FName SectionName, bool bLooped);
 
 	// 플레이어 공격.
 	void Attack();
@@ -125,7 +125,7 @@ protected:
 	TObjectPtr<UInputAction> AssassinationAttackAction;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input)
-	TObjectPtr<UInputAction> SaveAction;
+	TObjectPtr<UInputAction> FlagAction;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input)
 	TObjectPtr<UInputAction> AttackAction;
@@ -179,10 +179,10 @@ protected:
 	FGameplayAbilitySpecHandle PreemptiveAttackHandle;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ExpeditionFlag")
-	TObjectPtr<class UAnimMontage> SaveMontage;
+	TObjectPtr<class UAnimMontage> FlagMontage;
 
-	// 앉기에서 추가한 이동 제한을 관리.
-	bool bSaveMovementBlocked = false;
+	// 플래그에서 추가한 이동 제한을 관리.
+	bool bFlagMovementBlocked = false;
 
 	// 플레이어 공격.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = GameplayAbilities)

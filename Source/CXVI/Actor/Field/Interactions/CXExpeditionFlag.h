@@ -17,10 +17,10 @@ public:
 	ACXExpeditionFlag();
 
 public:
-	// 이 플레이어에게 휴식을 제공할 수 있는지 물어보는 함수.
-	bool CanRest(const ACXFieldPlayerCharacter* Player)const;
+	// 이 플레이어에게 플래그를 사용할 수 있는지 물어보는 함수.
+	bool CanFlag(const ACXFieldPlayerCharacter* Player)const;
 
-	void CompleteRest();
+	void CompleteFlag();
 
 protected:
 	// Called when the game starts or when spawned
