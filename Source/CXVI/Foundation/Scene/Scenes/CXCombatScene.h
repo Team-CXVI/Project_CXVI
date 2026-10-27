@@ -4,8 +4,13 @@
 
 #include "CoreMinimal.h"
 #include "CXVI/Foundation/Scene/CXGameScene.h"
+#include "Foundation/GameplayMessage/CXGameplayMessageSubsystem.h"
 
 #include "CXCombatScene.generated.h"
+
+class ACXCombatCharacterBase;
+class UCXCombatManagerSubsystem;
+struct FCXCombatEndMessage;
 
 // TODO : 임시 구조체. 추후에 데이터가 정해지면 수정 필요
 // 필드 -> 전투 (FCXSceneContext::Payload)
@@ -18,6 +23,13 @@ struct CXVI_API FCXCombatEnterParams
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
 	FName EncounterId;
+
+	// TODO : 임시. 파티 정보 출처가 정해지면 EncounterId 조회 등으로 변경
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+	TArray<TSubclassOf<ACXCombatCharacterBase>> PlayerClasses;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+	TArray<TSubclassOf<ACXCombatCharacterBase>> EnemyClasses;
 };
 
 // TODO : 임시 구조체. 추후에 데이터가 정해지면 수정 필요
@@ -38,8 +50,10 @@ public:
 
 /**
  * 전투 Scene
- * - PlayerController는 교체하지 않음. ViewTarget만 전투 카메라로 교체
- * - 전투 플레이어 및 몬스터는 SpawnSceneActor로 스폰 -> Exit 시 자동 Destory
+ * - 커맨드 Pawn은 Definition의 PawnClass로 베이스가 찾아서 빙의 (전투 레벨에 배치)
+ * - Enter : Message.Combat.End 구독 + 전투 매니저에 Scene 전투 시작 요청
+ * - 종료 메시지를 받으면 Pop -> Exit에서 전투원 정리 (화면이 가려진 뒤)
+ * - 진입 전환이 끝나기 전에 종료되면(시작 실패 포함) 전환이 끝난 뒤 Pop
  */
 UCLASS()
 class CXVI_API UCXCombatScene : public UCXGameScene
@@ -59,4 +73,22 @@ private:
 	void SetupCombatCamera();
 
 	void SpawnCombatants(const FCXCombatEnterParams& InParams);
+
+private:
+	void HandleCombatEnded(const FGameplayTag& InChannel, const FCXCombatEndMessage& InMessage);
+
+	// 전환 중에 들어온 종료 요청을 전환이 끝난 뒤 처리
+	void HandleSceneChanged(UCXGameScene* InNewScene, UCXGameScene* InOldScene);
+
+	void UnbindSceneChanged();
+
+	UCXCombatManagerSubsystem* GetCombatManager() const;
+
+private:
+	FCXGameplayMessageListenerHandle CombatEndListener;
+
+	FDelegateHandle SceneChangedHandle;
+
+	FCXCombatResult PendingResult;
+
 };

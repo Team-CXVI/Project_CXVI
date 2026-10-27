@@ -170,7 +170,7 @@ private:
 	UPROPERTY()
 	TArray<TObjectPtr<AActor>> SpawnedActors;
 
-	// ScenePawn을 이 Scene이 생성했는지 (Scene에 의해 생성된 Pawn은 Scene의 Exit 때 파괴하지 않고 유지)
+	// ScenePawn을 이 Scene이 생성했는지 (생성한 Pawn은 Exit 때 Destroy, 레벨에 배치된 Pawn은 빙의만 해제)
 	bool bSpawnedScenePawn = false;
 
 	TArray<uint32> InputBindingHandles;

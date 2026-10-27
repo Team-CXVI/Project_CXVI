@@ -11,6 +11,9 @@
 
 class ACXTestCombatArena;
 
+class ACXCommandCharacter;
+class ULevel;
+
 /**
  * 
  */
@@ -68,4 +71,28 @@ private:
 	TObjectPtr<APawn> StoredFieldPawn;
 	UPROPERTY()
 	TObjectPtr<APlayerController> StoredPlayerController;
+
+public:
+	// TODO - Scene 구조로 변경
+	// Scene 전환용 전투 시작 (UCXCombatScene::OnEnter에서 호출)
+	// - 전투 레벨 로드/표시, 화면 페이드, 필드 Pawn 복귀는 Scene이 담당
+	// - 넘겨받은 전투 레벨에서 아레나 / 커맨드 Pawn 검색 -> 전투원 생성 -> 턴 시작 (동기)
+	// - 종료 시 Message.Combat.End 방송만 함. 정리는 CleanupSceneBattle (Scene Exit, 화면이 가려진 뒤)
+	bool StartSceneCombat(const FCXArenaSetupData& InSetupData, const TArray<ULevel*>& InCombatLevels, APlayerController* InPlayerController);
+
+	void CleanupSceneCombat();
+
+private:
+	void HandleSceneCombatEnded();
+
+	// 전투 레벨에서 아레나 / 커맨드 Pawn 검색 (각각 정확히 1개)
+	bool FindArenaActors(const TArray<ULevel*>& InCombatLevels, ACXTestCombatArena*& OutArena, ACXCommandCharacter*& OutCommandPawn) const;
+
+private:
+	// Scene 전환으로 시작한 전투 진행 중
+	// 기존 bBattleRequested와 분리해서 RequestEndBattle(기존 경로)이 반응하지 않도록 함
+	bool bSceneCombatActive = false;
+
+	// Scene 전투 종료 핸들러 (기존 RequestEndBattle 바인딩은 유지해야 하므로 핸들로 해제)
+	FDelegateHandle SceneCombatEndedHandle;
 };

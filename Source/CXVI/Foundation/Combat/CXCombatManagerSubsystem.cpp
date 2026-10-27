@@ -17,6 +17,9 @@
 #include "Engine/LatentActionManager.h"
 #include "Engine/LevelStreaming.h"
 
+#include "Tags/CXGameplayTags.h"
+#include "Foundation/GameplayMessage/CXGameplayMessageSubsystem.h"
+
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXCombatManagerSubsystem)
 
 UCXCombatManagerSubsystem::UCXCombatManagerSubsystem()
@@ -247,4 +250,132 @@ void UCXCombatManagerSubsystem::HandleArenaLevelReady()
 		UE_LOG(LogTemp, Warning, TEXT("전투원 생성 실패"));
 		RequestEndBattle();
 	}
+}
+
+bool UCXCombatManagerSubsystem::StartSceneCombat(const FCXArenaSetupData& InSetupData, const TArray<ULevel*>& InCombatLevels, APlayerController* InPlayerController)
+{
+	// 기존 경로 전투 중이거나 Scene 전투 중이면 재진입 방지
+	if (bBattleRequested ||
+		bSceneCombatActive ||
+		!IsValid(TurnManager) ||
+		!IsValid(ArenaManager) ||
+		!IsValid(InPlayerController))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Scene 전투를 시작할 수 없습니다. (전투 중이거나 PlayerController가 없음)"));
+		return false;
+	}
+
+	if (InSetupData.PlayerClasses.IsEmpty() || InSetupData.EnemyClasses.IsEmpty())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("전투 파티 정보가 비어 있습니다."));
+		return false;
+	}
+
+	ACXTestCombatArena* FoundArena = nullptr;
+	ACXCommandCharacter* FoundCommandPawn = nullptr;
+	if (!FindArenaActors(InCombatLevels, FoundArena, FoundCommandPawn))
+	{
+		return false;
+	}
+
+	bSceneCombatActive = true;
+	TestCombatArena = FoundArena;
+	WeakCommandCharacter = FoundCommandPawn;
+
+	// HandleArenaReady(기존)가 커맨드 Pawn 빙의에 사용. 필드 Pawn 복귀는 Scene이 하므로 보관하지 않음
+	StoredPlayerController = InPlayerController;
+	StoredFieldPawn = nullptr;
+
+	SceneCombatEndedHandle = TurnManager->OnBattleEnded.AddUObject(this, &UCXCombatManagerSubsystem::HandleSceneCombatEnded);
+
+	// 생성이 끝나면 OnArenaReady -> HandleArenaReady(기존)에서 파티 등록, 아레나 카메라, 턴 시작 (동기)
+	if (!ArenaManager->PrepareArena(InSetupData, FoundArena))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("전투원 생성 실패"));
+		CleanupSceneCombat();
+		return false;
+	}
+
+	return true;
+}
+
+void UCXCombatManagerSubsystem::CleanupSceneCombat()
+{
+	if (!bSceneCombatActive)
+	{
+		return;
+	}
+
+	// 캐릭터를 파괴하기 전에 턴 진행과 바인딩 정리
+	if (IsValid(TurnManager))
+	{
+		TurnManager->OnBattleEnded.Remove(SceneCombatEndedHandle);
+		TurnManager->StopBattle();
+	}
+
+	SceneCombatEndedHandle.Reset();
+
+	if (IsValid(ArenaManager))
+	{
+		ArenaManager->CleanupArena();
+	}
+
+	TestCombatArena.Reset();
+	WeakCommandCharacter.Reset();
+	StoredPlayerController = nullptr;
+
+	bSceneCombatActive = false;
+}
+
+void UCXCombatManagerSubsystem::HandleSceneCombatEnded()
+{
+	// 종료 알림만 방송. 필드 복귀와 정리 시점은 받는 쪽(Scene)이 결정
+	UCXGameplayMessageSubsystem::Get(this).BroadcastMessage(CXVIGameplayTags::Message_Combat_End, FCXCombatEndMessage());
+}
+
+bool UCXCombatManagerSubsystem::FindArenaActors(const TArray<ULevel*>& InCombatLevels, ACXTestCombatArena*& OutArena, ACXCommandCharacter*& OutCommandPawn) const
+{
+	OutArena = nullptr;
+	OutCommandPawn = nullptr;
+
+	for (const ULevel* Level : InCombatLevels)
+	{
+		for (AActor* Actor : Level->Actors)
+		{
+			if (!IsValid(Actor))
+			{
+				continue;
+			}
+
+			if (ACXTestCombatArena* Candidate = Cast<ACXTestCombatArena>(Actor))
+			{
+				if (OutArena)
+				{
+					UE_LOG(LogTemp, Warning, TEXT("아레나가 두 개 이상입니다."));
+					return false;
+				}
+
+				OutArena = Candidate;
+			}
+
+			if (ACXCommandCharacter* Candidate = Cast<ACXCommandCharacter>(Actor))
+			{
+				if (OutCommandPawn)
+				{
+					UE_LOG(LogTemp, Warning, TEXT("커맨드 Pawn이 두 개 이상입니다."));
+					return false;
+				}
+
+				OutCommandPawn = Candidate;
+			}
+		}
+	}
+
+	if (!IsValid(OutArena) || !IsValid(OutCommandPawn))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("전투 레벨에 아레나 또는 커맨드 Pawn이 없습니다."));
+		return false;
+	}
+
+	return true;
 }

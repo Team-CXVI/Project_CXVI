@@ -12,29 +12,42 @@
 #include "Level/CXLevelTransitionSubsystem.h"
 #include "Level/CXLevelDefinition.h"
 
+#include "Character/Combat/CXCharacterPartyData.h"
+#include "Foundation/Combat/CombatMessage/CXCombatMessageData.h"
+#include "Foundation/GameplayMessage/CXGameplayMessageSubsystem.h"
+#include "Tags/CXGameplayTags.h"
+
 namespace CXSceneDebug
 {
-	/** 에셋 이름(DA_Scene_...) 또는 전체 경로(/Game/...)로 씬 정의 검색 */
-	static UCXSceneDefinition* FindSceneDefinition(const FString& InNameOrPath)
+	/** 에셋 이름 또는 전체 경로(/Game/...)로 T 타입 에셋 검색 */
+	template <typename T>
+	static T* FindAssetByName(const FString& InNameOrPath)
 	{
 		if (InNameOrPath.StartsWith(TEXT("/")))
 		{
-			return LoadObject<UCXSceneDefinition>(nullptr, *InNameOrPath);
+			return LoadObject<T>(nullptr, *InNameOrPath);
 		}
 
 		IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry")).Get();
 
 		TArray<FAssetData> Assets;
-		AssetRegistry.GetAssetsByClass(UCXSceneDefinition::StaticClass()->GetClassPathName(), Assets, /*bSearchSubClasses*/ true);
+		AssetRegistry.GetAssetsByClass(T::StaticClass()->GetClassPathName(), Assets, /*bSearchSubClasses*/ true);
 
 		for (const FAssetData& Asset : Assets)
 		{
 			if (Asset.AssetName.ToString().Equals(InNameOrPath, ESearchCase::IgnoreCase))
 			{
-				return Cast<UCXSceneDefinition>(Asset.GetAsset());
+				return Cast<T>(Asset.GetAsset());
 			}
 		}
 		return nullptr;
+	}
+
+
+	/** 에셋 이름(DA_Scene_...) 또는 전체 경로(/Game/...)로 씬 정의 검색 */
+	static UCXSceneDefinition* FindSceneDefinition(const FString& InNameOrPath)
+	{
+		return FindAssetByName<UCXSceneDefinition>(InNameOrPath);
 	}
 
 	static UCXSceneSubsystem* GetSubsystem(UWorld* InWorld)
@@ -117,6 +130,41 @@ namespace CXSceneDebug
 	//				Subsystem->DumpDebugInfo();
 	//			}
 	//		}));
+
+	// CXVI.Combat.Start <CombatSceneDefinition> <PlayerPartyData> <EnemyPartyData>
+	static FAutoConsoleCommandWithWorldAndArgs CombatStartCommand(
+		TEXT("CXVI.Combat.Start"),
+		TEXT("필드에서 전투 씬으로 진입합니다. 사용법: CXVI.Combat.Start <전투 씬 정의> <플레이어 파티 데이터> <적 파티 데이터>"),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& InArgs, UWorld* InWorld)
+			{
+				if (InArgs.Num() < 3)
+				{
+					UE_LOG(LogCXScene, Warning, TEXT("사용법: CXVI.Combat.Start <전투 씬 정의> <플레이어 파티 데이터> <적 파티 데이터>"));
+					return;
+				}
+
+				UCXSceneSubsystem* Subsystem = GetSubsystem(InWorld);
+				if (!Subsystem)
+				{
+					return;
+				}
+
+				UCXSceneDefinition* Definition = FindSceneDefinition(InArgs[0]);
+				const UCXCharacterPartyData* PlayerParty = FindAssetByName<UCXCharacterPartyData>(InArgs[1]);
+				const UCXCharacterPartyData* EnemyParty = FindAssetByName<UCXCharacterPartyData>(InArgs[2]);
+				if (!Definition || !PlayerParty || !EnemyParty)
+				{
+					UE_LOG(LogCXScene, Warning, TEXT("씬 정의 또는 파티 데이터를 찾을 수 없습니다. (%s, %s, %s)"), *InArgs[0], *InArgs[1], *InArgs[2]);
+					return;
+				}
+
+				FCXCombatEnterParams Params;
+				Params.EncounterId = FName(TEXT("Debug"));
+				Params.PlayerClasses = PlayerParty->CharacterArray;
+				Params.EnemyClasses = EnemyParty->CharacterArray;
+
+				Subsystem->PushScene(Definition, FCXSceneContext::Make(Params));
+			}));
 }
 
 namespace CXLevelDebug
@@ -181,5 +229,33 @@ namespace CXLevelDebug
 			}));
 }
 
+namespace CXCombatDebug
+{
+	// CXVI.Combat.End [win|lose]
+	static FAutoConsoleCommandWithWorldAndArgs CombatEndCommand(
+		TEXT("CXVI.Combat.End"),
+		TEXT("전투 종료 메시지를 보내 결과와 함께 필드로 돌아갑니다. 사용법: CXVI.Combat.End [win|lose] (기본 win)"),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& InArgs, UWorld* InWorld)
+			{
+				UCXSceneSubsystem* Subsystem = CXSceneDebug::GetSubsystem(InWorld);
+				if (!Subsystem)
+				{
+					return;
+				}
+
+				// 받을 Scene이 없으면 메시지가 버려지므로 미리 확인
+				if (nullptr == Cast<UCXCombatScene>(Subsystem->GetCurrentScene()))
+				{
+					UE_LOG(LogCXScene, Warning, TEXT("CXVI.Combat.End 무시: 현재 Scene이 전투 Scene이 아닙니다."));
+					return;
+				}
+
+				// 실제 전투 종료와 같은 경로(메시지 -> CombatScene -> Pop -> 정리)로 진행
+				FCXCombatEndMessage Message;
+				Message.bVictory = !(InArgs.IsValidIndex(0) && InArgs[0].Equals(TEXT("lose"), ESearchCase::IgnoreCase));
+
+				UCXGameplayMessageSubsystem::Get(InWorld).BroadcastMessage(CXVIGameplayTags::Message_Combat_End, Message);
+			}));
+}
 
 #endif // !UE_BUILD_SHIPPING
