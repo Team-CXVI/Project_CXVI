@@ -10,6 +10,14 @@ class USceneComponent;
 class UBoxComponent;
 class UPrimitiveComponent;
 
+UENUM(BlueprintType)
+enum class ECXRopeTraversalDirection :uint8
+{
+	None,
+	Up,
+	Down
+};
+
 UCLASS()
 class CXVI_API ACXRopeTraversalActor : public AActor
 {
@@ -18,6 +26,10 @@ class CXVI_API ACXRopeTraversalActor : public AActor
 public:	
 	// Sets default values for this actor's properties
 	ACXRopeTraversalActor();
+
+public:
+	bool GetTraversalPoints(ECXRopeTraversalDirection Direction, FVector& OutEntry, FVector& OutDestination, FVector& OutExit) const;
+
 
 protected:
 	// Called when the game starts or when spawned

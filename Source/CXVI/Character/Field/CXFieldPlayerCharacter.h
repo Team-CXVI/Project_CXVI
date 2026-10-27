@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "CXFieldCharacterBase.h"
+#include "CXVI/Actor/Field/Interactions/CXRopeTraversalActor.h"
 
 #include "CXFieldPlayerCharacter.generated.h"
 
@@ -50,6 +51,19 @@ public:
 
 	// 벗어난 깃발을 사용 후보에서 제거.
 	void UnregisterNearByFlag(ACXExpeditionFlag* Flag);
+
+
+	// 로프 섹션.
+	ACXRopeTraversalActor* GetRopeTraversalTarget() const { return CurrentRopeTraversalTarget.Get(); }
+
+	ECXRopeTraversalDirection GetRopeTraversalDirection() const 
+	{ 
+		return CurrentRopeTraversalTarget.IsValid() ? CurrentRopeTraversalDirection : ECXRopeTraversalDirection::None;
+	}
+	 
+	void SetRopeTraversalTarget(ACXRopeTraversalActor* Rope, ECXRopeTraversalDirection Direction);
+
+	void ClearRopeTraversalTarget(ACXRopeTraversalActor* Rope, ECXRopeTraversalDirection Direction);
 
 protected:
 	void Move(const FInputActionValue& InValue);
@@ -199,4 +213,13 @@ protected:
 	// 이번 휴식을 시작할 깃발.
 	UPROPERTY(Transient)
 	TWeakObjectPtr<class ACXExpeditionFlag> ActiveExpeditionFlag;
+
+	// 지금 타겟한 로프.
+	UPROPERTY(Transient)
+	TWeakObjectPtr<ACXRopeTraversalActor> CurrentRopeTraversalTarget;
+
+	// 현재 로프 관련 상태.
+	UPROPERTY(Transient)
+	ECXRopeTraversalDirection CurrentRopeTraversalDirection = ECXRopeTraversalDirection::None;
 };
+

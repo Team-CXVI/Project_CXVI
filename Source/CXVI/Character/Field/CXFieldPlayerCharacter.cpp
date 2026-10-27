@@ -188,6 +188,30 @@ void ACXFieldPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerI
 
 }
 
+void ACXFieldPlayerCharacter::SetRopeTraversalTarget(ACXRopeTraversalActor* Rope, ECXRopeTraversalDirection Direction)
+{
+	if (!IsValid(Rope) || Direction == ECXRopeTraversalDirection::None)
+	{
+		return;
+	}
+
+	CurrentRopeTraversalTarget = Rope;
+	CurrentRopeTraversalDirection = Direction;
+	UE_LOG(LogTemp, Log, TEXT("[RopeTarget] 등록: %s / %s"), *GetNameSafe(Rope), Direction == ECXRopeTraversalDirection::Up ? TEXT("상승") : TEXT("하강"));
+}
+
+void ACXFieldPlayerCharacter::ClearRopeTraversalTarget(ACXRopeTraversalActor* Rope, ECXRopeTraversalDirection Direction)
+{
+	if (CurrentRopeTraversalTarget.Get() != Rope || CurrentRopeTraversalDirection != Direction)
+	{
+		return;
+	}
+
+	CurrentRopeTraversalTarget.Reset();
+	CurrentRopeTraversalDirection = ECXRopeTraversalDirection::None;
+	UE_LOG(LogTemp, Log, TEXT("[RopeTarget] 해제: %s"), *GetNameSafe(Rope));
+}
+
 void ACXFieldPlayerCharacter::Move(const FInputActionValue& InValue)
 {
 	if (!Controller || (ASC && ASC->HasMatchingGameplayTag(CXVIFieldTag::State_MovingBlock)))

@@ -53,6 +53,45 @@ ACXRopeTraversalActor::ACXRopeTraversalActor()
 	
 }
 
+bool ACXRopeTraversalActor::GetTraversalPoints(ECXRopeTraversalDirection Direction, FVector& OutEntry, FVector& OutDestination, FVector& OutExit) const
+{
+	OutEntry = FVector::ZeroVector;
+	OutDestination = FVector::ZeroVector;
+	OutExit = FVector::ZeroVector;
+
+	USceneComponent* Entry = nullptr;
+	USceneComponent* Destination = nullptr;
+	USceneComponent* Exit = nullptr;
+
+	if (Direction == ECXRopeTraversalDirection::Up)
+	{
+		Entry = BottomRopePoint;
+		Destination = TopRopePoint;
+		Exit = TopExitPoint;
+	}
+	else if (Direction == ECXRopeTraversalDirection::Down)
+	{
+		Entry = TopRopePoint;
+		Destination = BottomRopePoint;
+		Exit = BottomExitPoint;
+	}
+	else
+	{
+		return false;
+	}
+
+	if (!IsValid(Entry) || !IsValid(Destination) || !IsValid(Exit))
+	{
+		return false;
+	}
+
+	OutEntry = Entry->GetComponentLocation();
+	OutDestination = Destination->GetComponentLocation();
+	OutExit = Exit->GetComponentLocation();
+
+	return true;
+}
+
 // Called when the game starts or when spawned
 void ACXRopeTraversalActor::BeginPlay()
 {
@@ -79,9 +118,14 @@ void ACXRopeTraversalActor::HandleInteractionBeginOverlap(
 	{
 		return;
 	}
+
+	const ECXRopeTraversalDirection Direction = OverlappedComponent == BottomInteractionBox.Get() ? ECXRopeTraversalDirection::Up : ECXRopeTraversalDirection::Down;
+	Player->SetRopeTraversalTarget(this, Direction);
+
 	const TCHAR* Side = OverlappedComponent == BottomInteractionBox.Get() ? TEXT("하단") : TEXT("상단");
 
 	UE_LOG(LogTemp, Log, TEXT("[Rope] %s 진입: %s"), Side, *GetNameSafe(Player));
+
 }
 
 void ACXRopeTraversalActor::HandleInteractionEndOverlap(
@@ -96,6 +140,10 @@ void ACXRopeTraversalActor::HandleInteractionEndOverlap(
 	{
 		return;
 	}
+
+	const ECXRopeTraversalDirection Direction = OverlappedComponent == BottomInteractionBox.Get() ? ECXRopeTraversalDirection::Up : ECXRopeTraversalDirection::Down;
+	Player->ClearRopeTraversalTarget(this, Direction);
+
 	const TCHAR* Side = OverlappedComponent == BottomInteractionBox.Get() ? TEXT("하단") : TEXT("상단");
 
 	UE_LOG(LogTemp, Log, TEXT("[Rope] %s 이탈: %s"), Side, *GetNameSafe(Player));
