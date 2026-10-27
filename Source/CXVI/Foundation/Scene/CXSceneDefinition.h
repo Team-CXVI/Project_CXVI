@@ -9,6 +9,7 @@
 #include "CXSceneDefinition.generated.h"
 
 class UCXGameScene;
+class APawn;
 
 /**
  * 
@@ -29,6 +30,13 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Scene")
 	TSubclassOf<UCXGameScene> SceneClass;
 	
+	// 이 Scene이 활성일 때 조종할 Pawn
+	// - Sublevels에 같은 클래스 Pawn이 배치되어 있으면 그 Pawn을 빙의 (배치 Pawn은 Auto Possess Player = Disabled)
+	// - 없으면 PlayerStart 위치에 퍼시스턴트 레벨로 생성해서 빙의 (Exit 시 Destroy)
+	// - None이면 빙의를 바꾸지 않음 (아래 Scene의 Pawn 유지)
+	UPROPERTY(EditDefaultsOnly, Category = "Scene")
+	TSubclassOf<APawn> PawnClass;
+
 	// Persistant Level 창에 등록된 SubLevel (Streaming Method = Blueprint, 초기 언로드)
 	// [0]이 Primary Level (SpawnSceneActor의 Spawn 대상)
 	// 다른 Scene 정의와 공유해도 됨 (상태는 참조 기반으로 계산)

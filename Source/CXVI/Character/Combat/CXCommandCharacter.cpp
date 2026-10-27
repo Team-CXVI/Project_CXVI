@@ -17,6 +17,9 @@
 #include "InputAction.h"
 #include "UObject/ConstructorHelpers.h"
 
+#include "CXVI/Foundation/Combat/CXCombatManagerSubsystem_V2.h"
+#include "CXVI/Actor/Combat/CXCombatArena.h"
+
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXCommandCharacter)
 
@@ -592,9 +595,11 @@ void ACXCommandCharacter::OnAimModeInput()
 		return;
 	}
 
-	UCXCombatManagerSubsystem* CombatManager = World->GetSubsystem<UCXCombatManagerSubsystem>();
+	//UCXCombatManagerSubsystem* CombatManager = World->GetSubsystem<UCXCombatManagerSubsystem>();
+	UCXCombatManagerSubsystem_V2* CombatManager = World->GetSubsystem<UCXCombatManagerSubsystem_V2>();
 
-	ACXTestCombatArena* Arena = CombatManager ? CombatManager->GetCombatArena() : nullptr;
+	//ACXTestCombatArena* Arena = CombatManager ? CombatManager->GetCombatArena() : nullptr;
+	ACXCombatArena* Arena = CombatManager ? CombatManager->GetCombatArena() : nullptr;
 
 	if (!IsValid(Arena))
 	{

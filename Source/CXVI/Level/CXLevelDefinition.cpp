@@ -28,6 +28,12 @@ EDataValidationResult UCXLevelDefinition::IsDataValid(FDataValidationContext& Co
 		Result = EDataValidationResult::Invalid;
 	}
 
+	// 전투가 없는 InGame 레벨도 있을 수 있으므로 경고만
+	if (ECXLevelType::InGame == LevelType && nullptr == CombatScene)
+	{
+		Context.AddWarning(FText::FromString(TEXT("CombatScene이 없습니다. 이 레벨에서는 전투에 진입할 수 없습니다.")));
+	}
+
 	return Result;
 }
 #endif //WITH_EDITOR

@@ -17,6 +17,9 @@
 #include "Engine/LatentActionManager.h"
 #include "Engine/LevelStreaming.h"
 
+#include "Tags/CXGameplayTags.h"
+#include "Foundation/GameplayMessage/CXGameplayMessageSubsystem.h"
+
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXCombatManagerSubsystem)
 
 UCXCombatManagerSubsystem::UCXCombatManagerSubsystem()

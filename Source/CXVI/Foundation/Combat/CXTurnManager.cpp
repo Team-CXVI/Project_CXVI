@@ -423,6 +423,38 @@ void UCXTurnManager::EndBattle()
 	}*/
 }
 
+void UCXTurnManager::EndBattle_V2()
+{
+	// TODO : 전투 결과 조건 정립
+	// ResetBattle이 전투원 배열을 비우므로 그 전에 결과 판정
+	// 승리 = 살아 있는 플레이어가 있고 살아 있는 적이 없음 (도망은 적이 살아 있으므로 패배 처리)
+	bool bIsAlivePlayer = false;
+	for (const TObjectPtr<ACXCombatCharacterBase>& Player : PlayerCharacters)
+	{
+		if (IsValid(Player) && Player->GetIsCharacterAlive())
+		{
+			bIsAlivePlayer = true;
+			break;
+		}
+	}
+
+	bool bIsAliveEnemy = false;
+	for (const TObjectPtr<ACXCombatCharacterBase>& Enemy : EnemyCharacters)
+	{
+		if (IsValid(Enemy) && Enemy->GetIsCharacterAlive())
+		{
+			bIsAliveEnemy = true;
+			break;
+		}
+	}
+
+	const bool bVictory = bIsAlivePlayer && !bIsAliveEnemy;
+
+	ResetBattle();
+
+	OnBattleEnded_V2.Broadcast(bVictory);
+}
+
 void UCXTurnManager::NextTurnPhase(ECXCombatPhase& PreviousPhase)
 {
 	uint8 NextPhase = (static_cast<uint8>(PreviousPhase) + 1) % static_cast<uint8>(ECXCombatPhase::PhaseCount);

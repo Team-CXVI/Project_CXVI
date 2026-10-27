@@ -67,3 +67,15 @@ struct FCXActionSelection
 
 	void Clear() { Type = ECXActionType::None; SlotIndex = INDEX_NONE; TargetTeam = ECXTargetTeam::Enemy; }
 };
+
+/** Message.Combat.End 채널 메시지 (전투 -> 전투 종료를 기다리는 쪽) */
+USTRUCT(BlueprintType)
+struct CXVI_API FCXCombatEndMessage
+{
+	GENERATED_BODY()
+
+public:
+	// TODO : OnBattleEnded에 결과가 추가되면 채움 (현재 항상 false)
+	UPROPERTY(BlueprintReadOnly, Category = "Combat")
+	bool bVictory = false;
+};

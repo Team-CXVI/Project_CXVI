@@ -18,6 +18,8 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "DrawDebugHelpers.h"
 
+#include "Foundation/Combat/CXCombatManagerSubsystem_V2.h"
+
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXFieldEnemy)
 
@@ -234,7 +236,11 @@ void ACXFieldEnemy::NotifyAttackHit()
 		return;
 	}
 
-	//const bool bAccepted = FieldScene->RequestCombat(/*컴뱃 씬*/,/*EncounterId*/)
+	// TODO : 전투에 필요한 캐릭터 정리 (파티 정보 출처가 정해지기 전에는 레벨 정의의 테스트 파티로 진행)
+	if (UCXCombatManagerSubsystem_V2* Subsystem = UCXCombatManagerSubsystem_V2::TryGet(GetWorld()))
+	{
+		Subsystem->RequestStartBattle(GetEncounterId());
+	}
 }
 
 void ACXFieldEnemy::BeginPlay()

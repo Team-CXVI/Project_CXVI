@@ -45,6 +45,12 @@ void UCXSceneSubsystem::Deinitialize()
 	}
 
 	// 월드 종료 중에는 OnExit를 호출하지 않음 (이미 다른 곳에서 정리 중)
+	// 단, IMC는 월드 이동 후에도 남는 LocalPlayer에 등록되어 있으므로 활성 Scene의 IMC만 해제 (Suspend된 Scene은 이미 해제됨)
+	if (UCXGameScene* CurrentScene = GetCurrentScene())
+	{
+		CurrentScene->RemoveInputMappings();
+	}
+
 	Transition = FCXSceneTransition();
 	bIsTransitioning = false;
 	PendingLevels.Reset();
