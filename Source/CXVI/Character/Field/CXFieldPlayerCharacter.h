@@ -13,7 +13,9 @@ class UAnimInstance;
 class UAnimMontage;
 class UWidgetComponent;
 class UCableComponent;
+class ACXSaveFlag;
 struct FInputActionValue;
+
 
 
 UCLASS()
@@ -39,6 +41,16 @@ public:
 
 	void ShowCable(AActor* Target);
 	void HideCable();
+
+	// 내 상태로 휴식을 시작 할 수 있는지 알려주는 함수.
+	bool CanStartRest() const;
+
+	// 접근한 깃발을 사용 후보에 추가.
+	void RegisterNearByFlag(ACXSaveFlag* Flag);
+
+	// 벗어난 깃발을 사용 후보에서 제거.
+	void UnregisterNearByFlag(ACXSaveFlag* Flag);
+
 protected:
 	void Move(const FInputActionValue& InValue);
 	void Look(const FInputActionValue& InValue);
@@ -179,4 +191,12 @@ protected:
 	// 공격 스펙을 관리할 핸들.
 	FGameplayAbilitySpecHandle AttackAbilityHandle;
 
+	// 이번 휴식을 시작한 깃발.
+	// 현재 사용 범위 안에 있는 깃발.
+	UPROPERTY(Transient)
+	TWeakObjectPtr<class ACXSaveFlag> NearByActiveExpeditionFlag;
+
+	// 이번 휴식을 시작할 깃발.
+	UPROPERTY(Transient)
+	TWeakObjectPtr<class ACXSaveFlag> ActiveExpeditionFlag;
 };

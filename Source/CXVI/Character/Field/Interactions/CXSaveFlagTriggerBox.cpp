@@ -4,6 +4,7 @@
 #include "CXSaveFlagTriggerBox.h"
 #include "CXVI/Character/Field/CXFieldPlayerCharacter.h"
 #include "CXVI/Tags/CXFieldTags.h"
+#include "CXSaveFlag.h"
 
 #include "Components/ShapeComponent.h"
 #include "AbilitySystemComponent.h"
@@ -40,6 +41,13 @@ void ACXSaveFlagTriggerBox::HandleActorEndOverlap(AActor* OverlappedActor, AActo
 		ASC->RemoveLooseGameplayTag(CXVIFieldTag::State_CanUseExpeditionFlag);
 	}
 
+	ACXSaveFlag* Flag = Cast<ACXSaveFlag>(GetParentActor());
+	if (!IsValid(Flag))
+	{
+		return;
+	}
+
+	Player->UnregisterNearByFlag(Flag);
 }
 
 void ACXSaveFlagTriggerBox::HandleActorBeginOverlap(AActor* OverlappedActor, AActor* OtherActor)
@@ -58,5 +66,12 @@ void ACXSaveFlagTriggerBox::HandleActorBeginOverlap(AActor* OverlappedActor, AAc
 		ASC->AddLooseGameplayTag(CXVIFieldTag::State_CanUseExpeditionFlag);
 	}
 
-	
+	ACXSaveFlag* Flag = Cast<ACXSaveFlag>(GetParentActor());
+	if (!IsValid(Flag))
+	{
+		return;
+	}
+
+	Player->RegisterNearByFlag(Flag);
+
 }

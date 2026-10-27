@@ -3,9 +3,9 @@
 #include "CXFieldPlayerCharacter.h"
 #include "InputActionValue.h"
 #include "CXVI/Tags/CXFieldTags.h"
-#include "CXVI/Foundation/FieldEnemySpawning/CXFieldEnemySubsystem.h"
+#include "CXVI/Character/Field/Interactions/CXSaveFlag.h"
 
-#include "Engine/World.h"
+
 #include "Components/SkeletalMeshComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "EnhancedInputComponent.h"
@@ -262,6 +262,60 @@ void ACXFieldPlayerCharacter::HideCable()
 	}
 }
 
+bool ACXFieldPlayerCharacter::CanStartRest() const
+{
+	if (!IsValid(ASC) || !IsValid(SaveMontage))
+	{
+		return false;
+	}
+
+	// 이미 앉기 처리 중이거나, 다른 행동으로 이동이 제한된 상태.
+	if (bSaveMovementBlocked || ASC->HasMatchingGameplayTag(CXVIFieldTag::State_MovingBlock))
+	{
+		return false;
+	}
+
+	if (!ASC->HasMatchingGameplayTag(CXVIFieldTag::State_CanUseExpeditionFlag))
+	{
+		return false;
+	}
+
+	if (!IsValid(GetMesh()))
+	{
+		return false;
+	}
+
+	UAnimInstance* AnimInstace = GetMesh()->GetAnimInstance();
+	if (!IsValid(AnimInstace))
+	{
+		return false;
+	}
+
+	// SitIdle에서는 이동 제한이 풀리므로 몽타주 재생 여부도 확인.
+	return !AnimInstace->Montage_IsActive(SaveMontage);
+}
+
+void ACXFieldPlayerCharacter::RegisterNearByFlag(ACXSaveFlag* Flag)
+{
+	if (!IsValid(Flag))
+	{
+		return;
+	}
+
+	NearByActiveExpeditionFlag = Flag;
+	
+}
+
+void ACXFieldPlayerCharacter::UnregisterNearByFlag(ACXSaveFlag* Flag)
+{
+	// 현재 저장된 깃발에서 벗어났을 때만 제거.
+	if (NearByActiveExpeditionFlag.Get() != Flag)
+	{
+		return;
+	}
+	NearByActiveExpeditionFlag.Reset();
+}
+
 void ACXFieldPlayerCharacter::StartJumpOrParkour()
 {
 	if (bJumpOrParkourInputHeld)
@@ -376,11 +430,21 @@ void ACXFieldPlayerCharacter::Assassination()
 
 void ACXFieldPlayerCharacter::StartSave()
 {
-	if (!IsValid(ASC) || !IsValid(SaveMontage) || bSaveMovementBlocked || !ASC->HasMatchingGameplayTag(CXVIFieldTag::State_CanUseExpeditionFlag))
+	if (!CanStartRest())
+	{
+		return;
+	}
+	ACXSaveFlag* Flag = NearByActiveExpeditionFlag.Get();
+	if (!IsValid(Flag) || !Flag->CanRest(this))
 	{
 		return;
 	}
 
+	UE_LOG(
+		LogTemp,
+		Log,
+		TEXT("[깃발 휴식] 접근한 깃발: %s"),
+		*GetNameSafe(Flag));
 
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	if (!IsValid(AnimInstance))
@@ -388,17 +452,14 @@ void ACXFieldPlayerCharacter::StartSave()
 		return;
 	}
 
-	if (AnimInstance->Montage_IsActive(SaveMontage))
-	{
-		return;
-	}
-
-
 	// 재생 실패 시 이동 제한을 추가하지 않음.
 	if (PlayAnimMontage(SaveMontage, 1.0f) <= 0.0f)
 	{
 		return;
 	}
+
+	// 재생에 성공했으므로 이번 휴식을 시작한 깃발로 확정.
+	ActiveExpeditionFlag = Flag;
 
 	// 재생 후 해당 몽타주 인스턴스에 종료 콜백 연결.
 	FOnMontageSectionChanged SectionDelegate;
@@ -428,21 +489,16 @@ void ACXFieldPlayerCharacter::OnSaveMontageChanged(UAnimMontage* Montage, FName 
 
 	ASC->RemoveLooseGameplayTag(CXVIFieldTag::State_MovingBlock);
 
-
-	UWorld* World = GetWorld();
-	if (!IsValid(World))
+	// 원정대 깃발로 책임 이전.
+	if (ACXSaveFlag* Flag = ActiveExpeditionFlag.Get())
 	{
-		return;
+		UE_LOG(
+			LogTemp,
+			Log,
+			TEXT("[깃발 휴식] 완료 요청을 받은 깃발: %s"),
+			*GetNameSafe(Flag));
+		Flag->CompleteRest();
 	}
-
-	UCXFieldEnemySubsystem* EnemySubsystem = World->GetSubsystem<UCXFieldEnemySubsystem>();
-	if (!IsValid(EnemySubsystem))
-	{
-		return;
-	}
-	const int32 RespawnedCount = EnemySubsystem->RespawnDefeatedEnemies(NAME_None);
-	
-	UE_LOG(LogTemp, Log, TEXT("깃발 휴식: 필드 적 %d 마리 복원"), RespawnedCount);
 
 }
 

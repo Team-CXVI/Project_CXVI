@@ -6,6 +6,7 @@
 #include "GameFramework/Actor.h"
 #include "CXSaveFlag.generated.h"
 
+class ACXFieldPlayerCharacter;
 UCLASS()
 class CXVI_API ACXSaveFlag : public AActor
 {
@@ -14,6 +15,12 @@ class CXVI_API ACXSaveFlag : public AActor
 public:	
 	// Sets default values for this actor's properties
 	ACXSaveFlag();
+
+public:
+	// 이 플레이어에게 휴식을 제공할 수 있는지 물어보는 함수.
+	bool CanRest(const ACXFieldPlayerCharacter* Player)const;
+
+	void CompleteRest();
 
 protected:
 	// Called when the game starts or when spawned
