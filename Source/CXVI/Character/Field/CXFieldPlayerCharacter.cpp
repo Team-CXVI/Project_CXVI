@@ -3,7 +3,7 @@
 #include "CXFieldPlayerCharacter.h"
 #include "InputActionValue.h"
 #include "CXVI/Tags/CXFieldTags.h"
-#include "CXVI/Character/Field/Interactions/CXExpeditionFlag.h"
+#include "CXVI/Actor/Field/Interactions/CXExpeditionFlag.h"
 
 
 #include "Components/SkeletalMeshComponent.h"
