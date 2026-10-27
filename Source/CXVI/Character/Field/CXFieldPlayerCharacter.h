@@ -86,6 +86,11 @@ protected:
 	// 그래플링 태그가 들어왔을 때 새로고침 하기위한 함수.
 	void OnCanGrapplingHookChanged(const FGameplayTag, int32 NewCount);
 
+	// Inpue E.
+	void InteractiveE();
+
+	void StartUseRope();
+
 
 
 	// 파쿠르 샘플.
@@ -213,6 +218,14 @@ protected:
 	// 이번 휴식을 시작할 깃발.
 	UPROPERTY(Transient)
 	TWeakObjectPtr<class ACXExpeditionFlag> ActiveExpeditionFlag;
+
+
+	// 플레이어 로프 어빌리티.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = GameplayAbilities)
+	TSubclassOf<UGameplayAbility> RopeTraversalAbility;
+
+	// 로프 어빌리티 스펙을 관리할 핸들.
+	FGameplayAbilitySpecHandle RopeTraversalAbilityHandle;
 
 	// 지금 타겟한 로프.
 	UPROPERTY(Transient)

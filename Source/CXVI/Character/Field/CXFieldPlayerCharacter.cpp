@@ -109,6 +109,17 @@ void ACXFieldPlayerCharacter::BeginPlay()
 		);
 		AttackAbilityHandle = ASC->GiveAbility(AttackSpec);
 	}
+
+	if (IsValid(ASC) && RopeTraversalAbility)
+	{
+		FGameplayAbilitySpec RopeTraversalAbilitySpec(
+			RopeTraversalAbility,
+			1,
+			INDEX_NONE,
+			this
+		);
+		RopeTraversalAbilityHandle = ASC->GiveAbility(RopeTraversalAbilitySpec);
+	}
 }
 
 
@@ -177,7 +188,7 @@ void ACXFieldPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerI
 
 		if (FlagAction)
 		{
-			EnhancedInputComponent->BindAction(FlagAction, ETriggerEvent::Started, this, &ThisClass::StartUseFlag);
+			EnhancedInputComponent->BindAction(FlagAction, ETriggerEvent::Started, this, &ThisClass::InteractiveE);
 		}
 
 		if (AttackAction)
@@ -194,10 +205,19 @@ void ACXFieldPlayerCharacter::SetRopeTraversalTarget(ACXRopeTraversalActor* Rope
 	{
 		return;
 	}
-
+	
 	CurrentRopeTraversalTarget = Rope;
 	CurrentRopeTraversalDirection = Direction;
+
+	if (IsValid(ASC))
+	{
+		ASC->SetLooseGameplayTagCount(CXVIFieldTag::State_CanUseRope, 1);
+	}
+
 	UE_LOG(LogTemp, Log, TEXT("[RopeTarget] 등록: %s / %s"), *GetNameSafe(Rope), Direction == ECXRopeTraversalDirection::Up ? TEXT("상승") : TEXT("하강"));
+	UE_LOG(LogTemp, Log, TEXT("[RopeTarget] 사용 가능: %d"),
+		IsValid(ASC) &&
+		ASC->HasMatchingGameplayTag(CXVIFieldTag::State_CanUseRope));
 }
 
 void ACXFieldPlayerCharacter::ClearRopeTraversalTarget(ACXRopeTraversalActor* Rope, ECXRopeTraversalDirection Direction)
@@ -209,7 +229,16 @@ void ACXFieldPlayerCharacter::ClearRopeTraversalTarget(ACXRopeTraversalActor* Ro
 
 	CurrentRopeTraversalTarget.Reset();
 	CurrentRopeTraversalDirection = ECXRopeTraversalDirection::None;
+
+	if (IsValid(ASC))
+	{
+		ASC->SetLooseGameplayTagCount(CXVIFieldTag::State_CanUseRope,0);
+	}
+
 	UE_LOG(LogTemp, Log, TEXT("[RopeTarget] 해제: %s"), *GetNameSafe(Rope));
+	UE_LOG(LogTemp, Log, TEXT("[RopeTarget] 사용 가능: %d"),
+		IsValid(ASC) &&
+		ASC->HasMatchingGameplayTag(CXVIFieldTag::State_CanUseRope));
 }
 
 void ACXFieldPlayerCharacter::Move(const FInputActionValue& InValue)
@@ -252,6 +281,29 @@ void ACXFieldPlayerCharacter::Look(const FInputActionValue& InValue)
 void ACXFieldPlayerCharacter::OnCanGrapplingHookChanged(const FGameplayTag, int32 NewCount)
 {
 	RefreshGrapplingPrompt();
+}
+
+void ACXFieldPlayerCharacter::InteractiveE()
+{
+	if (IsValid(ASC))
+	{
+		if (ASC->HasMatchingGameplayTag(CXVIFieldTag::State_CanUseExpeditionFlag))
+		{
+			StartUseFlag();
+		}
+		else if (ASC->HasMatchingGameplayTag(CXVIFieldTag::State_CanUseRope))
+		{
+			StartUseRope();
+		}
+	}
+}
+
+void ACXFieldPlayerCharacter::StartUseRope()
+{
+	if (IsValid(ASC) && RopeTraversalAbilityHandle.IsValid())
+	{
+		ASC->TryActivateAbility(RopeTraversalAbilityHandle);
+	}
 }
 
 void ACXFieldPlayerCharacter::ShowCable(AActor* Target)
