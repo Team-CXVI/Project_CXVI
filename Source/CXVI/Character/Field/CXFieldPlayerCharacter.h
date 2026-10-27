@@ -13,7 +13,9 @@ class UAnimInstance;
 class UAnimMontage;
 class UWidgetComponent;
 class UCableComponent;
+class ACXExpeditionFlag;
 struct FInputActionValue;
+
 
 
 UCLASS()
@@ -39,6 +41,16 @@ public:
 
 	void ShowCable(AActor* Target);
 	void HideCable();
+
+	// 내 상태로 휴식을 시작 할 수 있는지 알려주는 함수.
+	bool CanStartFlag() const;
+
+	// 접근한 깃발을 사용 후보에 추가.
+	void RegisterNearByFlag(ACXExpeditionFlag* Flag);
+
+	// 벗어난 깃발을 사용 후보에서 제거.
+	void UnregisterNearByFlag(ACXExpeditionFlag* Flag);
+
 protected:
 	void Move(const FInputActionValue& InValue);
 	void Look(const FInputActionValue& InValue);
@@ -79,10 +91,10 @@ protected:
 	// 뒤잡 실행.
 	void Assassination();
 
-	// 세이브 깃발 앉기.
-	void StartSave();
+	// 원정대 깃발 사용 시작.
+	void StartUseFlag();
 
-	void OnSaveMontageChanged(class UAnimMontage* Montage, FName SectionName, bool bLooped);
+	void OnFlagMontageChanged(class UAnimMontage* Montage, FName SectionName, bool bLooped);
 
 	// 플레이어 공격.
 	void Attack();
@@ -113,7 +125,7 @@ protected:
 	TObjectPtr<UInputAction> AssassinationAttackAction;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input)
-	TObjectPtr<UInputAction> SaveAction;
+	TObjectPtr<UInputAction> FlagAction;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input)
 	TObjectPtr<UInputAction> AttackAction;
@@ -166,11 +178,11 @@ protected:
 	// 선제 공격 스펙을 관리할 핸들.
 	FGameplayAbilitySpecHandle PreemptiveAttackHandle;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SaveFlag")
-	TObjectPtr<class UAnimMontage> SaveMontage;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ExpeditionFlag")
+	TObjectPtr<class UAnimMontage> FlagMontage;
 
-	// 앉기에서 추가한 이동 제한을 관리.
-	bool bSaveMovementBlocked = false;
+	// 플래그에서 추가한 이동 제한을 관리.
+	bool bFlagMovementBlocked = false;
 
 	// 플레이어 공격.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = GameplayAbilities)
@@ -179,4 +191,12 @@ protected:
 	// 공격 스펙을 관리할 핸들.
 	FGameplayAbilitySpecHandle AttackAbilityHandle;
 
+	// 이번 휴식을 시작한 깃발.
+	// 현재 사용 범위 안에 있는 깃발.
+	UPROPERTY(Transient)
+	TWeakObjectPtr<class ACXExpeditionFlag> NearByActiveExpeditionFlag;
+
+	// 이번 휴식을 시작할 깃발.
+	UPROPERTY(Transient)
+	TWeakObjectPtr<class ACXExpeditionFlag> ActiveExpeditionFlag;
 };

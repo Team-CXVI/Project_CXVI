@@ -4,18 +4,18 @@
 
 #include "CoreMinimal.h"
 #include "Engine/TriggerBox.h"
-#include "CXSaveFlagTriggerBox.generated.h"
+#include "CXExpeditionFlagTriggerBox.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class CXVI_API ACXSaveFlagTriggerBox : public ATriggerBox
+class CXVI_API ACXExpeditionFlagTriggerBox : public ATriggerBox
 {
 	GENERATED_BODY()
 	
 public:
-	ACXSaveFlagTriggerBox(const FObjectInitializer& ObjectInitializer);
+	ACXExpeditionFlagTriggerBox(const FObjectInitializer& ObjectInitializer);
 
 protected:
 	UFUNCTION()
