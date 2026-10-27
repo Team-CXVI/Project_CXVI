@@ -5,7 +5,6 @@
 
 #include "CXVI/Character/Combat/CXCombatCharacterPlayer.h"
 #include "CXVI/Foundation/Combat/CXCombatManagerSubsystem.h"
-#include "CXVI/Actor/Combat/CXTestCombatArena.h"
 
 #include "Engine/LocalPlayer.h"
 #include "Engine/World.h"
@@ -17,7 +16,7 @@
 #include "InputAction.h"
 #include "UObject/ConstructorHelpers.h"
 
-#include "CXVI/Foundation/Combat/CXCombatManagerSubsystem_V2.h"
+#include "CXVI/Foundation/Combat/CXCombatManagerSubsystem.h"
 #include "CXVI/Actor/Combat/CXCombatArena.h"
 
 
@@ -492,12 +491,12 @@ void ACXCommandCharacter::HandleInputToggleAimMode()
 
 	UCXCombatManagerSubsystem* CombatManager = World->GetSubsystem<UCXCombatManagerSubsystem>();
 
-	ACXTestCombatArena* Arena = CombatManager ? CombatManager->GetCombatArena() : nullptr;
+	/*ACXTestCombatArena* Arena = CombatManager ? CombatManager->GetCombatArena() : nullptr;
 
 	if (!IsValid(Arena))
 	{
 		return;
-	}
+	}*/
 
 	if (CommandPlayer->ToggleAimMode())
 	{
@@ -506,7 +505,7 @@ void ACXCommandCharacter::HandleInputToggleAimMode()
 	}
 	else
 	{
-		PlayerController->SetViewTargetWithBlend(Arena, 0.25f);
+		//PlayerController->SetViewTargetWithBlend(Arena, 0.25f);
 		//AGASGameMode* GameMode = Cast<AGASGameMode>(GetWorld()->GetAuthGameMode());
 		//if (GameMode)
 		//{
@@ -577,7 +576,7 @@ void ACXCommandCharacter::OnAimModeInput()
 	}
 
 	//UCXCombatManagerSubsystem* CombatManager = World->GetSubsystem<UCXCombatManagerSubsystem>();
-	UCXCombatManagerSubsystem_V2* CombatManager = World->GetSubsystem<UCXCombatManagerSubsystem_V2>();
+	UCXCombatManagerSubsystem* CombatManager = World->GetSubsystem<UCXCombatManagerSubsystem>();
 
 	//ACXTestCombatArena* Arena = CombatManager ? CombatManager->GetCombatArena() : nullptr;
 	ACXCombatArena* Arena = CombatManager ? CombatManager->GetCombatArena() : nullptr;

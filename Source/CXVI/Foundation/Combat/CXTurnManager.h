@@ -10,8 +10,8 @@
 #include "CXTurnManager.generated.h"
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerInputEnabledChanged, ECXCombatInputMode);
-DECLARE_MULTICAST_DELEGATE(FCXOnBattleEnded);
-DECLARE_MULTICAST_DELEGATE_OneParam(FCXOnBattleEnded_V2, bool /*bVictory*/);
+//DECLARE_MULTICAST_DELEGATE(FCXOnBattleEnded);
+DECLARE_MULTICAST_DELEGATE_OneParam(FCXOnBattleEnded, bool /*bVictory*/);
 
 class ACXCombatCharacterBase;
 
@@ -49,7 +49,6 @@ public:
 	FOnPlayerInputEnabledChanged OnPlayerInputEnabledChanged;
 
 	FCXOnBattleEnded OnBattleEnded;
-	FCXOnBattleEnded_V2 OnBattleEnded_V2;
 
 	void StopBattle() { ResetBattle(); }
 
@@ -81,7 +80,6 @@ private:
 	bool ShouldEndBattle();
 	// 전투 종료
 	void EndBattle();
-	void EndBattle_V2();
 
 	// 페이즈 변경 함수
 	void NextTurnPhase(ECXCombatPhase& PreviousPhase);

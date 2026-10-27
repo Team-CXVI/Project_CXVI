@@ -4,7 +4,7 @@
 #include "CXCombatScene.h"
 
 #include "Foundation/Scene/CXSceneSubsystem.h"
-#include "Foundation/Combat/CXCombatManagerSubsystem_V2.h"
+#include "Foundation/Combat/CXCombatManagerSubsystem.h"
 #include "Foundation/Combat/CombatMessage/CXCombatMessageData.h"
 #include "Actor/Combat/CXCombatArena.h"
 #include "Character/Combat/CXCommandCharacter.h"
@@ -34,7 +34,7 @@ void UCXCombatScene::OnExit()
 	UnbindSceneChanged();
 
 	// 화면이 가려진 상태에서 정리. 턴 정지(바인딩 해제)가 전투원 Destroy보다 먼저
-	if (UCXCombatManagerSubsystem_V2* CombatManager = GetCombatManager())
+	if (UCXCombatManagerSubsystem* CombatManager = GetCombatManager())
 	{
 		CombatManager->EndBattle();
 	}
@@ -58,7 +58,7 @@ bool UCXCombatScene::StartBattle(const FCXSceneContext& InContext)
 		return false;
 	}
 
-	UCXCombatManagerSubsystem_V2* CombatManager = GetCombatManager();
+	UCXCombatManagerSubsystem* CombatManager = GetCombatManager();
 	if (nullptr == CombatManager)
 	{
 		return false;
@@ -146,7 +146,7 @@ void UCXCombatScene::UnbindSceneChanged()
 	}
 }
 
-UCXCombatManagerSubsystem_V2* UCXCombatScene::GetCombatManager() const
+UCXCombatManagerSubsystem* UCXCombatScene::GetCombatManager() const
 {
-	return UCXCombatManagerSubsystem_V2::TryGet(this);
+	return UCXCombatManagerSubsystem::TryGet(this);
 }

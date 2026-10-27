@@ -9,7 +9,7 @@
 #include "Engine/World.h"
 
 //TODO : Log 정의 따로 뺀 후에 교체(LogCXCombat 정의 때문에 들어가 있음)
-#include "CXVI/Foundation/Combat/CXCombatManagerSubsystem_V2.h"
+#include "CXVI/Foundation/Combat/CXCombatManagerSubsystem.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXCombatArena)
 

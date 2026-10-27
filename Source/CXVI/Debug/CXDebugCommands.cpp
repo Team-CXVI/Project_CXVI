@@ -14,7 +14,7 @@
 
 #include "Character/Combat/CXCharacterPartyData.h"
 #include "Foundation/Combat/CXCombatTypes.h"
-#include "Foundation/Combat/CXCombatManagerSubsystem_V2.h"
+#include "Foundation/Combat/CXCombatManagerSubsystem.h"
 #include "Foundation/Combat/CombatMessage/CXCombatMessageData.h"
 #include "Foundation/GameplayMessage/CXGameplayMessageSubsystem.h"
 #include "Tags/CXGameplayTags.h"
@@ -196,7 +196,7 @@ namespace CXCombatDebug
 					return;
 				}
 
-				UCXCombatManagerSubsystem_V2* CombatManager = UCXCombatManagerSubsystem_V2::TryGet(InWorld);
+				UCXCombatManagerSubsystem* CombatManager = UCXCombatManagerSubsystem::TryGet(InWorld);
 				if (!CombatManager)
 				{
 					UE_LOG(LogCXCombat, Warning, TEXT("전투 매니저가 없습니다. 게임 맵에서 실행하세요."));
