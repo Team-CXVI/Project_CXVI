@@ -26,7 +26,8 @@ public class CXVI : ModuleRules
 			"UMG",
 			"AIModule",
             "NavigationSystem",
-
+			"Slate",
+			"SlateCore",
 			// Field 기능을 위한 모듈
 			"Chooser",
 			"ProxyTable",
