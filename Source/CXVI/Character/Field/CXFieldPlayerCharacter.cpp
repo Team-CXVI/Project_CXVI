@@ -175,9 +175,9 @@ void ACXFieldPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerI
 			EnhancedInputComponent->BindAction(AssassinationAttackAction, ETriggerEvent::Started, this, &ThisClass::Assassination);
 		}
 
-		if (SaveAction)
+		if (FlagAction)
 		{
-			EnhancedInputComponent->BindAction(SaveAction, ETriggerEvent::Started, this, &ThisClass::StartSave);
+			EnhancedInputComponent->BindAction(FlagAction, ETriggerEvent::Started, this, &ThisClass::StartSave);
 		}
 
 		if (AttackAction)
