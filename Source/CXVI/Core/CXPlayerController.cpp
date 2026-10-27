@@ -4,9 +4,22 @@
 #include "Core/CXPlayerController.h"
 
 #include "UI/CXUIManagerSubsystem.h"
+#include "Level/CXLevelTransitionSubsystem.h"
 #include <Engine/LocalPlayer.h>
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXPlayerController)
+
+void ACXPlayerController::PostInitializeComponents()
+{
+	// 여기서 PlayerCameraManager가 생성됨
+	Super::PostInitializeComponents();
+
+	// 새 월드의 첫 프레임부터 화면을 가린 상태로 시작 (레벨 전환 중일 때만)
+	if (const UCXLevelTransitionSubsystem* LevelTransition = UCXLevelTransitionSubsystem::TryGet(this))
+	{
+		LevelTransition->ApplyScreenCover(PlayerCameraManager);
+	}
+}
 
 void ACXPlayerController::ReceivedPlayer()
 {

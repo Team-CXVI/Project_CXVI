@@ -12,7 +12,11 @@ class ULevelStreaming;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogCXScene, Log, All);
 
+// Scene의 OnEnter 직후, Fade In 전에 호출(레벨은 Visible인 상태)
+DECLARE_MULTICAST_DELEGATE_OneParam(FCXOnSceneEntered, UCXGameScene* /*EnteredScene*/);
+
 DECLARE_MULTICAST_DELEGATE_TwoParams(FCXOnSceneChanged, UCXGameScene* /*NewScene*/, UCXGameScene* /*OldScene*/);
+
 
 // 값이 클수록 우선 순위가 높음(Scene에 중복으로 걸친 Sublevel이 있고 그중 Visible인 Scene이 있다면 거길 따라감)
 enum class ECXSublevelTarget : uint8
@@ -89,9 +93,10 @@ public:
 	virtual void Deinitialize() override;
 
 public:
+	// bInUseFade = false : 화면 페이드 제어 없이 Push (레벨 전환 구간처럼 다른 쪽이 화면을 맡고 있을 때)
 	UFUNCTION(BlueprintCallable, Category = "CXVI|Scene")
-	bool PushScene(UCXSceneDefinition* InDefinition, const FCXSceneContext& InContext);
-
+	bool PushScene(UCXSceneDefinition* InDefinition, const FCXSceneContext& InContext, bool bInUseFade = true);
+	
 	UFUNCTION(BlueprintCallable, Category = "CXVI|Scene")
 	bool PopScene(const FCXSceneContext& InResultContext);
 
@@ -110,6 +115,9 @@ public:
 	bool IsTransitioning() const { return bIsTransitioning; }
 
 	ULevelStreaming* FindStreamingLevel(const TSoftObjectPtr<UWorld>& InLevel) const;
+
+	// Scene의 서브레벨을 동기로 로드(레벨 전이에 맞춰서 로딩)하고 Visible로 만듦
+	void LoadSceneLevelsImmediately(const UCXSceneDefinition* InDefinition);
 
 private:
 	bool CanStartTransition(const TCHAR* InRequestName) const;
@@ -140,6 +148,8 @@ private:
 	bool StartFade(bool bInFadeOut, float InDuration, const FLinearColor& InColor);
 
 public:
+	FCXOnSceneEntered OnSceneEntered;
+
 	FCXOnSceneChanged OnSceneChanged;
 
 private:

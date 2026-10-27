@@ -4,6 +4,7 @@
 #include "UI/CXPrimaryGameLayout.h"
 
 #include "CXUIManagerSubsystem.h"
+#include "Tags/CXGameplayTags.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXPrimaryGameLayout)
 
@@ -33,6 +34,29 @@ void UCXPrimaryGameLayout::FindAndRemoveWidgetFromLayer(UCommonActivatableWidget
 			Pair.Value->RemoveWidget(*InWidget);
 		}
 	}
+}
+
+UCommonActivatableWidget* UCXPrimaryGameLayout::GetTopActiveWidget() const
+{
+	// 윗 레이어 순
+	const FGameplayTag LayerOrder[] = { 
+		CXVIGameplayTags::UI_Layer_Modal, 
+		CXVIGameplayTags::UI_Layer_Menu, 
+		CXVIGameplayTags::UI_Layer_GameMenu, 
+		CXVIGameplayTags::UI_Layer_Game };
+
+	for (const FGameplayTag& LayerTag : LayerOrder)
+	{
+		if (const UCommonActivatableWidgetContainerBase* Layer = GetLayerWidget(LayerTag))
+		{
+			if (UCommonActivatableWidget* ActiveWidget = Layer->GetActiveWidget())
+			{
+				return ActiveWidget;
+			}
+		}
+	}
+
+	return nullptr;
 }
 
 void UCXPrimaryGameLayout::RegisterLayer(FGameplayTag InLayerTag, UCommonActivatableWidgetContainerBase* InLayerWidget)

@@ -13,10 +13,12 @@ namespace CXVIFieldTag
 
 	// Input
 	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Input_Field_Sprint);
+	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Input_Field_Attack);
 
 	// Evnet
 	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Field_EnterSlowMotion);
 	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Field_ShowCable);
 	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Field_StartGrapplingHook);
+	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Field_AttackHit);
 }
 

@@ -98,6 +98,17 @@ void ACXFieldPlayerCharacter::BeginPlay()
 			this);
 		PreemptiveAttackHandle = ASC->GiveAbility(PreemptiveAttackSpec);
 	}
+
+	if (IsValid(ASC) && AttackAbility)
+	{
+		FGameplayAbilitySpec AttackSpec(
+			AttackAbility,
+			1,
+			INDEX_NONE,
+			this
+		);
+		AttackAbilityHandle = ASC->GiveAbility(AttackSpec);
+	}
 }
 
 
@@ -167,6 +178,11 @@ void ACXFieldPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerI
 		if (SaveAction)
 		{
 			EnhancedInputComponent->BindAction(SaveAction, ETriggerEvent::Started, this, &ThisClass::StartSave);
+		}
+
+		if (AttackAction)
+		{
+			EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Started, this, &ThisClass::Attack);
 		}
 	}
 
@@ -428,6 +444,14 @@ void ACXFieldPlayerCharacter::OnSaveMontageChanged(UAnimMontage* Montage, FName 
 	
 	UE_LOG(LogTemp, Log, TEXT("깃발 휴식: 필드 적 %d 마리 복원"), RespawnedCount);
 
+}
+
+void ACXFieldPlayerCharacter::Attack()
+{
+	if (IsValid(ASC) && AttackAbilityHandle.IsValid())
+	{
+		ASC->TryActivateAbility(AttackAbilityHandle);
+	}
 }
 
 void ACXFieldPlayerCharacter::StartSprint()
