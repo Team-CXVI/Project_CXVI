@@ -259,7 +259,7 @@ void UCXPlayerGrapplingHookAbility::UpdateGrapplingFacing()
     UWorld* World = GetWorld();
     ACXFieldPlayerCharacter* Character = GrapplingCharacter.Get();
 
-    if (!World || !IsValid(Character) ||
+    if (!IsValid(World) || !IsValid(Character) ||
         !GrapplingTarget.IsValid() || !LandingSurface.IsValid())
     {
         OnGrapplingInterrupted();
