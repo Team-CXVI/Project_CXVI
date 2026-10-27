@@ -1,16 +1,17 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "CXSaveFlagTriggerBox.h"
+#include "CXExpeditionFlagTriggerBox.h"
 #include "CXVI/Character/Field/CXFieldPlayerCharacter.h"
 #include "CXVI/Tags/CXFieldTags.h"
+#include "CXExpeditionFlag.h"
 
 #include "Components/ShapeComponent.h"
 #include "AbilitySystemComponent.h"
 
-#include UE_INLINE_GENERATED_CPP_BY_NAME(CXSaveFlagTriggerBox)
+#include UE_INLINE_GENERATED_CPP_BY_NAME(CXExpeditionFlagTriggerBox)
 
-ACXSaveFlagTriggerBox::ACXSaveFlagTriggerBox(const FObjectInitializer& ObjectInitializer)
+ACXExpeditionFlagTriggerBox::ACXExpeditionFlagTriggerBox(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer)
 {
 	OnActorBeginOverlap.AddDynamic(this, &ThisClass::HandleActorBeginOverlap);
@@ -24,7 +25,7 @@ ACXSaveFlagTriggerBox::ACXSaveFlagTriggerBox(const FObjectInitializer& ObjectIni
 	}
 }
 
-void ACXSaveFlagTriggerBox::HandleActorEndOverlap(AActor* OverlappedActor, AActor* OtherActor)
+void ACXExpeditionFlagTriggerBox::HandleActorEndOverlap(AActor* OverlappedActor, AActor* OtherActor)
 {
 	ACXFieldPlayerCharacter* Player = Cast<ACXFieldPlayerCharacter>(OtherActor);
 
@@ -40,9 +41,16 @@ void ACXSaveFlagTriggerBox::HandleActorEndOverlap(AActor* OverlappedActor, AActo
 		ASC->RemoveLooseGameplayTag(CXVIFieldTag::State_CanUseExpeditionFlag);
 	}
 
+	ACXExpeditionFlag* Flag = Cast<ACXExpeditionFlag>(GetParentActor());
+	if (!IsValid(Flag))
+	{
+		return;
+	}
+
+	Player->UnregisterNearByFlag(Flag);
 }
 
-void ACXSaveFlagTriggerBox::HandleActorBeginOverlap(AActor* OverlappedActor, AActor* OtherActor)
+void ACXExpeditionFlagTriggerBox::HandleActorBeginOverlap(AActor* OverlappedActor, AActor* OtherActor)
 {
 	ACXFieldPlayerCharacter* Player = Cast<ACXFieldPlayerCharacter>(OtherActor);
 
@@ -58,5 +66,12 @@ void ACXSaveFlagTriggerBox::HandleActorBeginOverlap(AActor* OverlappedActor, AAc
 		ASC->AddLooseGameplayTag(CXVIFieldTag::State_CanUseExpeditionFlag);
 	}
 
-	
+	ACXExpeditionFlag* Flag = Cast<ACXExpeditionFlag>(GetParentActor());
+	if (!IsValid(Flag))
+	{
+		return;
+	}
+
+	Player->RegisterNearByFlag(Flag);
+
 }

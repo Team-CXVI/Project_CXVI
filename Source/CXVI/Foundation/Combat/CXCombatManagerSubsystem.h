@@ -12,6 +12,9 @@
 
 class ACXTestCombatArena;
 
+class ACXCommandCharacter;
+class ULevel;
+
 /**
  * 
  */

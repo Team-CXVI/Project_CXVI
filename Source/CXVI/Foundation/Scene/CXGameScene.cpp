@@ -14,6 +14,7 @@
 #include <EngineUtils.h>
 #include <GameFramework/PlayerController.h>
 #include <Kismet/GameplayStatics.h>
+#include <GameFramework/GameModeBase.h>
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXGameScene)
 
@@ -82,6 +83,10 @@ ULevel* UCXGameScene::GetPrimaryLevel() const
 
 void UCXGameScene::OnEnter(const FCXSceneContext& InContext)
 {
+	// OnEnter 처리가 컨트롤 Pawn이 준비된 상태에서 실행되도록 가장 먼저 처리
+	AcquireScenePawn();
+	PossessScenePawn();
+
 	ApplyInputMappings();
 	SetupSceneInput();
 	K2_OnEnter(InContext);
@@ -91,6 +96,7 @@ void UCXGameScene::OnExit()
 {
 	K2_OnExit();
 	ClearSceneInput();
+	ReleaseScenePawn();
 	DestroySpawnedActors();
 	RemoveInputMappings();
 }
@@ -99,16 +105,25 @@ void UCXGameScene::OnSuspend()
 {
 	K2_OnSuspend();
 	ClearSceneInput();
+	ReleasePossessionBeforeHide();
 	NotifySuspendables(true);
 	RemoveInputMappings();
 }
 
 void UCXGameScene::OnResume(const FCXSceneContext& InContext)
 {
-	ApplyInputMappings();
+	// 숨김/정지가 풀린 뒤에 빙의
 	NotifySuspendables(false);
+	PossessScenePawn();
+
+	ApplyInputMappings();
 	SetupSceneInput();
 	K2_OnResume(InContext);
+}
+
+APlayerController* UCXGameScene::GetPlayerController() const
+{
+	return UGameplayStatics::GetPlayerController(this, 0);
 }
 
 UEnhancedInputComponent* UCXGameScene::GetPlayerInputComponent() const
@@ -117,16 +132,37 @@ UEnhancedInputComponent* UCXGameScene::GetPlayerInputComponent() const
 	return PC ? Cast<UEnhancedInputComponent>(PC->InputComponent) : nullptr;
 }
 
+UEnhancedInputLocalPlayerSubsystem* UCXGameScene::GetInputSubsystem() const
+{
+	const UWorld* World = GetWorld();
+	if (nullptr == World)
+	{
+		return nullptr;
+	}
+
+	const UGameInstance* GameInstance = World->GetGameInstance();
+	if (nullptr == GameInstance)
+	{
+		return nullptr;
+	}
+
+	const ULocalPlayer* LocalPlayer = GameInstance->GetFirstGamePlayer();
+	if(nullptr == LocalPlayer)
+	{
+		return nullptr;
+	}
+
+	return LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>();
+}
+
 void UCXGameScene::ApplyInputMappings() const
 {
-	if(nullptr == Definition)
+	if (nullptr == Definition)
 	{
 		return;
 	}
 
-	const UWorld* World = GetWorld();
-	const ULocalPlayer* LocalPlayer = World ? World->GetFirstLocalPlayerFromController() : nullptr;
-	UEnhancedInputLocalPlayerSubsystem* InputSubsystem = LocalPlayer ? LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>() : nullptr;
+	UEnhancedInputLocalPlayerSubsystem* InputSubsystem = GetInputSubsystem();
 	if (nullptr == InputSubsystem)
 	{
 		return;
@@ -155,9 +191,7 @@ void UCXGameScene::RemoveInputMappings() const
 		return;
 	}
 
-	const UWorld* World = GetWorld();
-	const ULocalPlayer* LocalPlayer = World ? World->GetFirstLocalPlayerFromController() : nullptr;
-	UEnhancedInputLocalPlayerSubsystem* InputSubsystem = LocalPlayer ? LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>() : nullptr;
+	UEnhancedInputLocalPlayerSubsystem* InputSubsystem = GetInputSubsystem();
 	if (nullptr == InputSubsystem)
 	{
 		return;
@@ -193,29 +227,29 @@ void UCXGameScene::ClearSceneInput()
 
 void UCXGameScene::NotifySuspendables(bool bInSuspended) const
 {
-	UWorld* World = GetWorld();
-	if (!World)
-	{
-		return;
-	}
-
-	TSet<const ULevel*> TargetLevels;
-	TargetLevels.Emplace(World->PersistentLevel);
+	// 대상 = 이 Scene 레벨의 액터 + 이 Scene의 조종 Pawn
+	// 퍼시스턴트 레벨 전체를 대상으로 하면 다른 Scene의 Suspend/Resume에도 알림이 가므로 제외
+	// -> Suspend는 Hide 전에, Resume은 Show 후에 호출되도록 Subsystem의 단계 순서로 보장
+	TArray<AActor*> Targets;
 	for (const ULevel* Level : GetSceneLevels())
 	{
-		TargetLevels.Emplace(Level);
+		for (AActor* Actor : Level->Actors)
+		{
+			if (IsValid(Actor))
+			{
+				Targets.Emplace(Actor);
+			}
+		}
 	}
 
-	// TActorIterator는 기본적으로 Visible 레벨만 순회함
-	// -> Suspend는 Hide 전에, Resume은 Show 후에 호출되도록 Subsystem의 단계 순서로 보장
-	for (TActorIterator<AActor> It(World); It; ++It)
+	// 퍼시스턴트에 생성한 Pawn (서브레벨에 배치된 Pawn은 위에서 이미 포함)
+	if (IsValid(ScenePawn))
 	{
-		AActor* Actor = *It;
-		if (false == TargetLevels.Contains(Actor->GetLevel()))
-		{
-			continue;
-		}
+		Targets.AddUnique(ScenePawn);
+	}
 
+	for (AActor* Actor : Targets)
+	{
 		if (false == Actor->Implements<UCXSceneSuspendable>())
 		{
 			continue;
@@ -243,4 +277,126 @@ void UCXGameScene::DestroySpawnedActors()
 	}
 
 	SpawnedActors.Reset();
+}
+
+void UCXGameScene::AcquireScenePawn()
+{
+	if (nullptr == Definition || nullptr == Definition->PawnClass)
+	{
+		return;
+	}
+
+	if (APawn* FoundPawn = FindPawnInSceneLevels())
+	{
+		ScenePawn = FoundPawn;
+		bSpawnedScenePawn = false;
+		return;
+	}
+
+	ScenePawn = SpawnScenePawn();
+	bSpawnedScenePawn = (nullptr != ScenePawn);
+
+	if (nullptr == ScenePawn)
+	{
+		UE_LOG(LogCXScene, Error, TEXT("[%s] 조종 Pawn(%s)을 찾거나 생성하지 못했습니다."), *GetName(), *GetNameSafe(Definition->PawnClass));
+	}
+}
+
+APawn* UCXGameScene::FindPawnInSceneLevels() const
+{
+	TArray<APawn*> Pawns;
+	FindActorsInSceneLevels(Pawns);
+
+	Pawns.RemoveAll([this](const APawn* InPawn)
+		{
+			return false == InPawn->IsA(Definition->PawnClass);
+		});
+
+	if (Pawns.Num() > 1)
+	{
+		UE_LOG(LogCXScene, Warning, TEXT("[%s] Scene 레벨에 %s가 %d개 있습니다. 첫 번째를 사용합니다."), *GetName(), *GetNameSafe(Definition->PawnClass), Pawns.Num());
+	}
+
+	return Pawns.IsEmpty() ? nullptr : Pawns[0];
+}
+
+APawn* UCXGameScene::SpawnScenePawn() const
+{
+	UWorld* World = GetWorld();
+	if (nullptr == World )
+	{
+		return nullptr;
+	}
+
+	APlayerController* PC = GetPlayerController();
+	if (nullptr == PC)
+	{
+		return nullptr;
+	}
+	
+	AGameModeBase* GameMode = World ? World->GetAuthGameMode() : nullptr;
+	if (nullptr == GameMode)
+	{
+		return nullptr;
+	}
+
+	// 로그인 때 진입 태그로 고른 PlayerStart(StartSpot)를 그대로 사용
+	const AActor* StartSpot = GameMode->FindPlayerStart(PC);
+	if (nullptr == StartSpot)
+	{
+		UE_LOG(LogCXScene, Warning, TEXT("[%s] 조종 Pawn을 생성할 PlayerStart가 없습니다."), *GetName());
+		return nullptr;
+	}
+
+	// 퍼시스턴트 레벨에 Pawn 생성
+	// Scene 레벨이 Hidden 되어도 월드에서 빠지지 않음 (숨김 / 정지는 ICXSceneSuspendable에서 따로 처리가 필요)
+	FActorSpawnParameters Params;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+	return World->SpawnActor<APawn>(Definition->PawnClass, StartSpot->GetActorLocation(), StartSpot->GetActorRotation(), Params);
+}
+
+void UCXGameScene::PossessScenePawn()
+{
+	APlayerController* PC = GetPlayerController();
+	if (nullptr == PC || false == IsValid(ScenePawn) || PC->GetPawn() == ScenePawn)
+	{
+		return;
+	}
+
+	// Possess가 이전 Pawn 빙의 해제, 컨트롤 회전, 뷰 타깃 전환(bAutoManageActiveCameraTarget)까지 처리
+	PC->Possess(ScenePawn);
+}
+
+void UCXGameScene::ReleasePossessionBeforeHide()
+{
+	APlayerController* PC = GetPlayerController();
+	if (nullptr == PC || false == IsValid(ScenePawn) || PC->GetPawn() != ScenePawn)
+	{
+		return;
+	}
+
+	// 서브레벨 Pawn은 레벨이 Hidden 되면 월드에서 빠지므로 그 전에 PlayerController 해제
+	// 퍼시스턴트 Pawn은 유지 -> 위 Scene이 자기 Pawn을 빙의할 때 자동 해제되고, 메뉴처럼 Pawn이 없는 Scene에서는 카메라 유지
+	if (false == ScenePawn->GetLevel()->IsPersistentLevel())
+	{
+		PC->UnPossess();
+	}
+}
+
+void UCXGameScene::ReleaseScenePawn()
+{
+	APlayerController* PC = GetPlayerController();
+	if (PC && IsValid(ScenePawn) && PC->GetPawn() == ScenePawn)
+	{
+		PC->UnPossess();
+	}
+
+	if (bSpawnedScenePawn && IsValid(ScenePawn))
+	{
+		ScenePawn->Destroy();
+	}
+
+	ScenePawn = nullptr;
+	bSpawnedScenePawn = false;
 }
