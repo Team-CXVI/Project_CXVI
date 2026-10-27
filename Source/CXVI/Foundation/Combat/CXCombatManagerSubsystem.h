@@ -95,4 +95,5 @@ private:
 
 	// Scene 전투 종료 핸들러 (기존 RequestEndBattle 바인딩은 유지해야 하므로 핸들로 해제)
 	FDelegateHandle SceneCombatEndedHandle;
+	FDelegateHandle SceneCombatEndedHandle_V2;
 };

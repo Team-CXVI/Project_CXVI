@@ -138,6 +138,7 @@ void UCXCombatManagerSubsystem::PostInitialize()
 	ArenaManager->OnArenaReady.AddUObject(this, &UCXCombatManagerSubsystem::HandleArenaReady);
 	TurnManager->OnBattleEnded.AddUObject(this, &UCXCombatManagerSubsystem::RequestEndBattle);
 	TurnManager->OnPlayerInputEnabledChanged.AddUObject(this, &UCXCombatManagerSubsystem::HandlePlayerInputModeChanged);
+	TurnManager->OnBattleEnded_V2.AddUObject(this, &UCXCombatManagerSubsystem::RequestEndBattle);
 }
 
 void UCXCombatManagerSubsystem::HandlePlayerInputModeChanged(bool bAllowed)
@@ -287,6 +288,7 @@ bool UCXCombatManagerSubsystem::StartSceneCombat(const FCXArenaSetupData& InSetu
 	StoredFieldPawn = nullptr;
 
 	SceneCombatEndedHandle = TurnManager->OnBattleEnded.AddUObject(this, &UCXCombatManagerSubsystem::HandleSceneCombatEnded);
+	SceneCombatEndedHandle_V2 = TurnManager->OnBattleEnded_V2.AddUObject(this, &UCXCombatManagerSubsystem::HandleSceneCombatEnded);
 
 	// 생성이 끝나면 OnArenaReady -> HandleArenaReady(기존)에서 파티 등록, 아레나 카메라, 턴 시작 (동기)
 	if (!ArenaManager->PrepareArena(InSetupData, FoundArena))
