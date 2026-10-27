@@ -124,7 +124,7 @@ void UCXTurnManager::CompleteTurn()
 		return;
 	}
 
-	OnPlayerInputEnabledChanged.Broadcast(false);
+	OnPlayerInputEnabledChanged.Broadcast(ECXCombatInputMode::Disabled);
 
 	for (auto& TurnOrder : TurnOrderArray)
 	{
@@ -432,16 +432,25 @@ void UCXTurnManager::NextTurnPhase(ECXCombatPhase& PreviousPhase)
 
 void UCXTurnManager::SendPhaseRequest(const FCXCombatMessageData& OutMessage)
 {
-	const bool bSelecting =
-		OutMessage.Phase == ECXCombatPhase::SelectActionPhase ||
-		OutMessage.Phase == ECXCombatPhase::SelectTargetPhase;
+	ECXCombatInputMode InputMode = ECXCombatInputMode::Disabled;
 
-	const bool bAllowInput =
-		IsValid(CurrentTurnPlayer) &&
-		PlayerCharacters.Contains(CurrentTurnPlayer) &&
-		bSelecting;
+	if (IsValid(CurrentTurnPlayer))
+	{
+		const bool bSelecting =
+			OutMessage.Phase == ECXCombatPhase::SelectActionPhase ||
+			OutMessage.Phase == ECXCombatPhase::SelectTargetPhase;
 
-	OnPlayerInputEnabledChanged.Broadcast(bAllowInput);
+		if (PlayerCharacters.Contains(CurrentTurnPlayer) && bSelecting)
+		{
+			InputMode = ECXCombatInputMode::Command;
+		}
+		else if (EnemyCharacters.Contains(CurrentTurnPlayer) && OutMessage.Phase == ECXCombatPhase::ActionPhase)
+		{
+			InputMode = ECXCombatInputMode::Reaction;
+		}
+	}
+
+	OnPlayerInputEnabledChanged.Broadcast(InputMode);
 
 	if (IsValid(CurrentTurnPlayer))
 	{

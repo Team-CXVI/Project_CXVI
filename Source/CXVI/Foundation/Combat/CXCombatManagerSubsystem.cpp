@@ -137,7 +137,7 @@ void UCXCombatManagerSubsystem::PostInitialize()
 	TurnManager->OnPlayerInputEnabledChanged.AddUObject(this, &UCXCombatManagerSubsystem::HandlePlayerInputModeChanged);
 }
 
-void UCXCombatManagerSubsystem::HandlePlayerInputModeChanged(bool bAllowed)
+void UCXCombatManagerSubsystem::HandlePlayerInputModeChanged(ECXCombatInputMode NewInputMode)
 {
 	ACXCommandCharacter* CommandCharacter = WeakCommandCharacter.Get();
 
@@ -146,7 +146,7 @@ void UCXCombatManagerSubsystem::HandlePlayerInputModeChanged(bool bAllowed)
 		return;
 	}
 
-	CommandCharacter->SetCombatInputMode(bAllowed ? ECombatInputMode::Command : ECombatInputMode::Disabled);
+	CommandCharacter->SetCombatInputMode(NewInputMode);
 }
 
 void UCXCombatManagerSubsystem::HandleArenaReady(const TArray<TObjectPtr<class ACXCombatCharacterBase>>& Players, const TArray<TObjectPtr<class ACXCombatCharacterBase>>& Enemies)

@@ -44,7 +44,13 @@ enum class ECXTargetTeam : uint8
 	Player
 };
 
-
+UENUM()
+enum class ECXCombatInputMode : uint8
+{
+	Disabled,
+	Command,
+	Reaction
+};
 
 USTRUCT()
 struct FCXCombatMessageData

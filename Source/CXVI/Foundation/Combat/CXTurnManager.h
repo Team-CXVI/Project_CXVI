@@ -9,7 +9,7 @@
 
 #include "CXTurnManager.generated.h"
 
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerInputEnabledChanged, bool);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerInputEnabledChanged, ECXCombatInputMode);
 DECLARE_MULTICAST_DELEGATE(FCXOnBattleEnded);
 
 class ACXCombatCharacterBase;

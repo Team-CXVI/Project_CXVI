@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
 
+#include "CombatMessage/CXCombatMessageData.h"
 #include "CXVI/Foundation/Combat/CXArenaManager.h"
 
 #include "CXCombatManagerSubsystem.generated.h"
@@ -33,7 +34,7 @@ protected:
 	virtual void PostInitialize() override;
 
 private:
-	void HandlePlayerInputModeChanged(bool bAllowed);
+	void HandlePlayerInputModeChanged(ECXCombatInputMode NewInputMode);
 
 	void HandleArenaReady(const TArray<TObjectPtr<class ACXCombatCharacterBase>>& Players, const TArray<TObjectPtr<class ACXCombatCharacterBase>>& Enemies);
 
