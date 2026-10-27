@@ -50,6 +50,8 @@ public:
 	FORCEINLINE void SetOriginTransform(const FTransform& NewTransform) { OriginTransform = NewTransform; }
 	float GetCombatSpeed() const;
 
+	APawn* GetSelectedCombatTarget() const { return CurrentTargetPawn.Get(); }
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -65,6 +67,9 @@ protected:
 
 	UFUNCTION()
 	void OnOutOfHealthCpp(AActor* InInstigator);
+
+	UFUNCTION()
+	void HandleDamageApplied(AActor* InInstigator, float AppliedDamage);
 
 	void TeleportToAttackLocation();
 	void ReturnToOriginLocation();
@@ -91,6 +96,8 @@ protected:
 	const TArray<TWeakObjectPtr<APawn>>& GetTargetCandidates() const { return SavedMessage.Targets; }
 	const FCXActionSelection& GetPendingAction() const { return PendingAction; }
 
+private:
+	void TryGainBasicAttackMana();
 	
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "GAS")
@@ -108,6 +115,10 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Attribute")
 	TObjectPtr<class UCXCombatAttributeSet> CharacterAttributeSet;
+
+	// Gameplay Effect
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|Mana")
+	TSubclassOf<class UGameplayEffect> BasicAttackManaGainEffect;
 
 private:
 	// 페이즈 끝남 델리게이트
@@ -129,6 +140,9 @@ private:
 	bool bIsCharacterAlive = false;
 
 	bool bIsTurn = false;
+
+	// 마나 획득 플래그
+	bool bBasicAttackManaGranted = false;
 
 
 protected:

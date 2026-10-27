@@ -203,7 +203,7 @@ bool UCXTurnManager::ProcessTurnResponse(const FCXCombatMessageData& Response, F
 			// 요청자가 플레이어쪽임
 			for (int32 Index = 0; Index < EnemyCharacters.Num(); ++Index)
 			{
-				if (!EnemyCharacters[Index]->GetIsCharacterAlive())
+				if (!IsValid(EnemyCharacters[Index]) && !EnemyCharacters[Index]->GetIsCharacterAlive())
 				{
 					// 죽은객체는 안보냄
 					continue;

@@ -7,9 +7,13 @@
 #include "CXVI/Tags/CXGameplayTags.h"
 
 #include "CXVI/AbilitySystem/Abilities/Combat/CXAbilityData.h"
+#include "AbilitySystem/Attributes/Combat/CXCombatAttributeSet.h"
 
+#include "GameplayEffect.h"
 #include "AbilitySystemComponent.h"
+#include "AbilitySystemBlueprintLibrary.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
+#include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXGameplayAbilityCombatBase)
 
@@ -29,6 +33,16 @@ void UCXGameplayAbilityCombatBase::ActivateAbility(const FGameplayAbilitySpecHan
 
 	// 설정한 비용과 쿨다운 적용.
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
+	{
+		UE_LOG(LogTemp, Display, TEXT("%s: 스킬 사용 확정 실패. 비용 또는 쿨다운 확인 "), *GetName());
+
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
+
+	ProcessedHitIndices.Reset();
+
+	if (!RegisterHitEventTask())
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
@@ -61,6 +75,24 @@ void UCXGameplayAbilityCombatBase::EndAbility(const FGameplayAbilitySpecHandle H
 	}
 
 	Character->NotifyBattleAbilityEnded(Handle, bWasCancelled);
+}
+
+float UCXGameplayAbilityCombatBase::GetManaCost() const
+{
+	return AbilityData ? FMath::Max(0.f, AbilityData->ManaCost) : 0.f;
+}
+
+bool UCXGameplayAbilityCombatBase::CheckCost(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, FGameplayTagContainer* OptionalRelevantTags) const
+{
+	// 설정 누락을 비용 0인 스킬로 취급하지 않는다.
+	if (!IsValid(AbilityData) || !CostGameplayEffectClass)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("%s: 스킬 데이터 또는 비용 GE가 설정되지 않았습니다."), *GetName());
+		return false;
+	}
+	
+	// 실제 자원 검사는 공통 비용 GE를 사용하는 GAS기본 구현에 맡긴다.
+	return Super::CheckCost(Handle, ActorInfo, OptionalRelevantTags);
 }
 
 void UCXGameplayAbilityCombatBase::OnAttackCompleted()
@@ -98,4 +130,102 @@ void UCXGameplayAbilityCombatBase::RegisterMontageTask()
 
 	// 함수 연결 후 Task 실행
 	MontageTask->ReadyForActivation();
+}
+
+void UCXGameplayAbilityCombatBase::OnAttackEvent(FGameplayEventData Payload)  
+{
+	ACXCombatCharacterBase* Attacker = Cast<ACXCombatCharacterBase>(GetAvatarActorFromActorInfo());
+
+	UAbilitySystemComponent* SourceASC = GetAbilitySystemComponentFromActorInfo();
+
+	if (!IsValid(Attacker) || !Attacker->HasAuthority() ||
+		!IsValid(SourceASC) || !IsValid(AbilityData) || !SkillDamageEffect)
+	{
+		return;
+	}
+
+	// Notify 번호는 1부터 배열인덱스는 0부터
+	const int32 HitNumber = static_cast<int32>(Payload.EventMagnitude);
+
+	const int32 HitIndex = HitNumber - 1;
+
+	if (!AbilityData->HitDamageMultipilers.IsValidIndex(HitIndex))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("%s: %d에 대응하는 데미지 배율이 없습니다."), *GetName(), HitNumber);
+		return;
+	}
+
+	if (ProcessedHitIndices.Contains(HitIndex))
+	{
+		return;
+	}
+	ACXCombatCharacterBase* Target = Cast<ACXCombatCharacterBase>(Attacker->GetSelectedCombatTarget());
+
+	if (!IsValid(Target) || !Target->GetIsCharacterAlive())
+	{
+		return;
+	}
+
+	UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(Target);
+	
+	if (!IsValid(TargetASC))
+	{
+		return;
+	}
+
+	// 현재 공격력 : AttackRate
+
+	const float AttackPower = FMath::Max(0.f, SourceASC->GetNumericAttribute(UCXCombatAttributeSet::GetAttackRateAttribute()));
+
+	const float Multiplier = FMath::Max(0.f, AbilityData->HitDamageMultipilers[HitIndex]);
+
+	const float Damage = AttackPower * Multiplier;
+	if (Damage <= 0.f)
+	{
+		return;
+	}
+
+	// 타격마다 새로운 Spec을 만들어 이번데미지를 담는다.
+	FGameplayEffectSpecHandle Spec = MakeOutgoingGameplayEffectSpec(SkillDamageEffect, GetAbilityLevel());
+
+	if (!Spec.IsValid())
+	{
+		return;
+	}
+
+	Spec.Data->SetSetByCallerMagnitude(CXVIGameplayTags::Data_Damage, Damage);
+
+	// GE적용 중 콜백이 발생해도 중복 처리 되지 않도록 먼저 기록.
+	ProcessedHitIndices.Add(HitIndex);
+
+	SourceASC->ApplyGameplayEffectSpecToTarget(*Spec.Data.Get(), TargetASC);
+
+	UE_LOG(LogTemp, Display, TEXT("%s -> %s: %d타, 배율 %.2f, 요청 데미지: %.1f"), 
+		*Attacker->GetName(),
+		*Target->GetName(),
+		HitNumber,
+		Multiplier,
+		Damage);
+}
+
+bool UCXGameplayAbilityCombatBase::RegisterHitEventTask()
+{
+	UAbilityTask_WaitGameplayEvent* Task = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+		this,
+		CXVIGameplayTags::Event_Combat_AttackHit,
+		nullptr,
+		false,	// 모든 타격이벤트를 받음
+		true	// 정확히 일치하는 태그만 받음
+		);
+
+	if (!Task)
+	{
+		return false;
+	}
+
+	Task->EventReceived.AddDynamic(this, &UCXGameplayAbilityCombatBase::OnAttackEvent);
+
+	Task->ReadyForActivation();
+
+	return true;
 }
