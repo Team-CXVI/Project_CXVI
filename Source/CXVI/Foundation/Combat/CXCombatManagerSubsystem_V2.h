@@ -7,13 +7,13 @@
 
 #include "CXVI/Foundation/Combat/CXCombatTypes.h"
 
-#include "CXCombatManagerSubsystem.generated.h"
+#include "CXCombatManagerSubsystem_V2.generated.h"
 
 class ACXCombatArena;
 class ACXCommandCharacter;
 class ACXCombatCharacterBase;
 class UCXTurnManager;
-class UCXSceneDefinition;
+class UCXLevelDefinition;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogCXCombat, Log, All);
 
@@ -35,8 +35,11 @@ public:
 	static UCXCombatManagerSubsystem_V2* TryGet(const UObject* WorldContextObject);
 
 	// 전투 진입 요청. 조건이 맞으면 현재 레벨 정의의 전투 Scene을 Push (거절되면 false)
+	// - 파티를 넘기지 않으면(빈 배열) 현재 레벨 정의의 테스트 파티 사용
 	// TODO : 파티 정보 출처가 정해지면 InEncounterId만 받도록 변경
-	bool RequestStartBattle(FName InEncounterId, const TArray<TSubclassOf<ACXCombatCharacterBase>>& InPlayerClasses, const TArray<TSubclassOf<ACXCombatCharacterBase>>& InEnemyClasses);
+	bool RequestStartBattle(FName InEncounterId,
+		const TArray<TSubclassOf<ACXCombatCharacterBase>>& InPlayerClasses = TArray<TSubclassOf<ACXCombatCharacterBase>>(),
+		const TArray<TSubclassOf<ACXCombatCharacterBase>>& InEnemyClasses = TArray<TSubclassOf<ACXCombatCharacterBase>>());
 
 	// 전투 Scene이 준비를 마친 뒤 호출 (Entering -> InBattle)
 	bool BeginBattle(const FCXBattleSetup& InSetup);
@@ -53,10 +56,11 @@ protected:
 	virtual void PostInitialize() override;
 
 private:
-	bool CanStartBattle(FName InEncounterId, const TArray<TSubclassOf<ACXCombatCharacterBase>>& InPlayerClasses, const TArray<TSubclassOf<ACXCombatCharacterBase>>& InEnemyClasses) const;
+	bool CanStartBattle(const FCXCombatEnterParams& InParams) const;
 
-	// 현재 레벨 정의의 CombatScene (Scene 서브레벨은 현재 퍼시스턴트 레벨에 등록된 것만 로드 가능)
-	UCXSceneDefinition* GetCombatSceneDefinition() const;
+	// 현재 레벨 정의 (전투 Scene / 테스트 파티 출처)
+	// Scene 서브레벨은 현재 퍼시스턴트 레벨에 등록된 것만 로드 가능하므로 전투 Scene은 레벨 단위로 지정
+	const UCXLevelDefinition* GetCurrentLevelDefinition() const;
 
 	void HandleBattleEnded(bool bInVictory);
 

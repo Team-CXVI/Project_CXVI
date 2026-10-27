@@ -8,10 +8,15 @@
 #include "Camera/CameraComponent.h"
 #include "Engine/World.h"
 
+//TODO : Log 정의 따로 뺀 후에 교체(LogCXCombat 정의 때문에 들어가 있음)
+#include "CXVI/Foundation/Combat/CXCombatManagerSubsystem_V2.h"
+
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXCombatArena)
 
 ACXCombatArena::ACXCombatArena()
 {
+	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("RootComp"));
+
 	BattleCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("BattleCamera"));
 	BattleCamera->SetupAttachment(RootComponent);
 	BattleCamera->SetRelativeLocationAndRotation(FVector(-850.f, 0.f, 400.f), FRotator(-30.f, 0.f, 0.f));

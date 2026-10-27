@@ -3,6 +3,7 @@
 #include "CXVI/Foundation/Combat/CXCombatManagerSubsystem_V2.h"
 
 #include "CXVI/Actor/Combat/CXCombatArena.h"
+#include "CXVI/Character/Combat/CXCharacterPartyData.h"
 #include "CXVI/Character/Combat/CXCombatCharacterBase.h"
 #include "CXVI/Character/Combat/CXCombatCharacterPlayer.h"
 #include "CXVI/Character/Combat/CXCommandCharacter.h"
@@ -20,6 +21,21 @@
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXCombatManagerSubsystem_V2)
 
 DEFINE_LOG_CATEGORY(LogCXCombat);
+
+namespace CXCombatManager
+{
+	// TODO : 임시. 파티 정보 출처가 정해지면 제거
+	// 요청한 파티가 비어 있으면 테스트 파티 사용 (테스트 파티도 없으면 빈 배열 -> CanStartBattle에서 거절)
+	static TArray<TSubclassOf<ACXCombatCharacterBase>> ResolvePartyClasses(const TArray<TSubclassOf<ACXCombatCharacterBase>>& InRequested, const UCXCharacterPartyData* InTestParty)
+	{
+		if (!InRequested.IsEmpty())
+		{
+			return InRequested;
+		}
+
+		return InTestParty ? InTestParty->CharacterArray : TArray<TSubclassOf<ACXCombatCharacterBase>>();
+	}
+}
 
 UCXCombatManagerSubsystem_V2& UCXCombatManagerSubsystem_V2::Get(const UObject* WorldContextObject)
 {
@@ -46,22 +62,24 @@ void UCXCombatManagerSubsystem_V2::PostInitialize()
 
 bool UCXCombatManagerSubsystem_V2::RequestStartBattle(FName InEncounterId, const TArray<TSubclassOf<ACXCombatCharacterBase>>& InPlayerClasses, const TArray<TSubclassOf<ACXCombatCharacterBase>>& InEnemyClasses)
 {
-	if (!CanStartBattle(InEncounterId, InPlayerClasses, InEnemyClasses))
+	const UCXLevelDefinition* LevelDefinition = GetCurrentLevelDefinition();
+
+	FCXCombatEnterParams Params;
+	Params.EncounterId = InEncounterId;
+	Params.PlayerClasses = CXCombatManager::ResolvePartyClasses(InPlayerClasses, LevelDefinition ? LevelDefinition->TestPlayerParty.Get() : nullptr);
+	Params.EnemyClasses = CXCombatManager::ResolvePartyClasses(InEnemyClasses, LevelDefinition ? LevelDefinition->TestEnemyParty.Get() : nullptr);
+
+	if (!CanStartBattle(Params))
 	{
 		return false;
 	}
 
-	UCXSceneDefinition* CombatScene = GetCombatSceneDefinition();
+	UCXSceneDefinition* CombatScene = LevelDefinition ? LevelDefinition->CombatScene.Get() : nullptr;
 	if (nullptr == CombatScene)
 	{
 		UE_LOG(LogCXCombat, Warning, TEXT("전투 요청 거절 : 현재 레벨 정의에 CombatScene이 없습니다."));
 		return false;
 	}
-
-	FCXCombatEnterParams Params;
-	Params.EncounterId = InEncounterId;
-	Params.PlayerClasses = InPlayerClasses;
-	Params.EnemyClasses = InEnemyClasses;
 
 	// 전환 설정에 따라 Push 안에서 OnEnter -> BeginBattle이 바로 호출될 수 있으므로 Push 전에 상태 변경
 	// Push 이후 OnEnter 전까지 들어오는 재요청도 이 상태로 거절
@@ -141,7 +159,7 @@ void UCXCombatManagerSubsystem_V2::EndBattle()
 	CombatState = ECXCombatState::Idle;
 }
 
-bool UCXCombatManagerSubsystem_V2::CanStartBattle(FName InEncounterId, const TArray<TSubclassOf<ACXCombatCharacterBase>>& InPlayerClasses, const TArray<TSubclassOf<ACXCombatCharacterBase>>& InEnemyClasses) const
+bool UCXCombatManagerSubsystem_V2::CanStartBattle(const FCXCombatEnterParams& InParams) const
 {
 	if (ECXCombatState::Idle != CombatState)
 	{
@@ -155,15 +173,15 @@ bool UCXCombatManagerSubsystem_V2::CanStartBattle(FName InEncounterId, const TAr
 	}
 
 	// TODO : 인카운터 판단 기준이 정해지면 추가 (현재는 None 여부만 확인)
-	if (InEncounterId.IsNone())
+	if (InParams.EncounterId.IsNone())
 	{
 		UE_LOG(LogCXCombat, Warning, TEXT("전투 요청 거절 : EncounterId가 없습니다."));
 		return false;
 	}
 
-	if (InPlayerClasses.IsEmpty() || InEnemyClasses.IsEmpty())
+	if (InParams.PlayerClasses.IsEmpty() || InParams.EnemyClasses.IsEmpty())
 	{
-		UE_LOG(LogCXCombat, Warning, TEXT("전투 요청 거절 : 파티 정보가 비어 있습니다."));
+		UE_LOG(LogCXCombat, Warning, TEXT("전투 요청 거절 : 파티 정보가 비어 있습니다. (요청 파티 또는 레벨 정의의 TestPlayerParty / TestEnemyParty 확인)"));
 		return false;
 	}
 
@@ -177,11 +195,10 @@ bool UCXCombatManagerSubsystem_V2::CanStartBattle(FName InEncounterId, const TAr
 	return true;
 }
 
-UCXSceneDefinition* UCXCombatManagerSubsystem_V2::GetCombatSceneDefinition() const
+const UCXLevelDefinition* UCXCombatManagerSubsystem_V2::GetCurrentLevelDefinition() const
 {
 	const UCXLevelTransitionSubsystem* LevelTransition = UCXLevelTransitionSubsystem::TryGet(this);
-	const UCXLevelDefinition* LevelDefinition = LevelTransition ? LevelTransition->GetCurrentLevelDefinition() : nullptr;
-	return LevelDefinition ? LevelDefinition->CombatScene.Get() : nullptr;
+	return LevelTransition ? LevelTransition->GetCurrentLevelDefinition() : nullptr;
 }
 
 void UCXCombatManagerSubsystem_V2::HandleBattleEnded(bool bInVictory)

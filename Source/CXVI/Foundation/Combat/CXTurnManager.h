@@ -81,6 +81,7 @@ private:
 	bool ShouldEndBattle();
 	// 전투 종료
 	void EndBattle();
+	void EndBattle_V2();
 
 	// 페이즈 변경 함수
 	void NextTurnPhase(ECXCombatPhase& PreviousPhase);
