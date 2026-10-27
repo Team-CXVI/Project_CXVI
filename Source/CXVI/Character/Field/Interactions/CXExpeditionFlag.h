@@ -4,17 +4,17 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "CXSaveFlag.generated.h"
+#include "CXExpeditionFlag.generated.h"
 
 class ACXFieldPlayerCharacter;
 UCLASS()
-class CXVI_API ACXSaveFlag : public AActor
+class CXVI_API ACXExpeditionFlag : public AActor
 {
 	GENERATED_BODY()
 	
 public:	
 	// Sets default values for this actor's properties
-	ACXSaveFlag();
+	ACXExpeditionFlag();
 
 public:
 	// 이 플레이어에게 휴식을 제공할 수 있는지 물어보는 함수.
@@ -28,12 +28,12 @@ protected:
 
 protected:
 
-	// 세이브 깃발 메시.
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SaveFlag")
+	// 원정대 깃발 메시.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ExpeditionFlag")
 	TObjectPtr<UStaticMeshComponent> ExpeditionFlag;
 
 	// 상호작용 가능하게 할 트리거 박스.
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SaveFlag")
-	TObjectPtr<class UChildActorComponent> SaveFlagTrigger;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ExpeditionFlag")
+	TObjectPtr<class UChildActorComponent> ExpeditionFlagTrigger;
 	
 };

@@ -1,8 +1,8 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "CXSaveFlag.h"
-#include "CXSaveFlagTriggerBox.h"
+#include "CXExpeditionFlag.h"
+#include "CXExpeditionFlagTriggerBox.h"
 #include "CXVI/Foundation/FieldEnemySpawning/CXFieldEnemySubsystem.h"
 #include "CXVI/Character/Field/CXFieldPlayerCharacter.h"
 
@@ -12,10 +12,10 @@
 #include "Components/ChildActorComponent.h"
 
 
-#include UE_INLINE_GENERATED_CPP_BY_NAME(CXSaveFlag)
+#include UE_INLINE_GENERATED_CPP_BY_NAME(CXExpeditionFlag)
 
 // Sets default values
-ACXSaveFlag::ACXSaveFlag()
+ACXExpeditionFlag::ACXExpeditionFlag()
 {
     USceneComponent* SceneRoot =
         CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
@@ -27,23 +27,24 @@ ACXSaveFlag::ACXSaveFlag()
             TEXT("ExpeditionFlag"));
     ExpeditionFlag->SetupAttachment(SceneRoot);
 
-    SaveFlagTrigger =
+    // Keep the serialized subobject name so existing Blueprint overrides remain valid.
+    ExpeditionFlagTrigger =
         CreateDefaultSubobject<UChildActorComponent>(
             TEXT("SaveFlagTrigger"));
-    SaveFlagTrigger->SetupAttachment(SceneRoot);
-    SaveFlagTrigger->SetChildActorClass(
-        ACXSaveFlagTriggerBox::StaticClass());
-    SaveFlagTrigger->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
+    ExpeditionFlagTrigger->SetupAttachment(SceneRoot);
+    ExpeditionFlagTrigger->SetChildActorClass(
+        ACXExpeditionFlagTriggerBox::StaticClass());
+    ExpeditionFlagTrigger->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
 }
 
-bool ACXSaveFlag::CanRest(const ACXFieldPlayerCharacter* Player) const
+bool ACXExpeditionFlag::CanRest(const ACXFieldPlayerCharacter* Player) const
 {
-    if (!IsValid(Player) || !IsValid(SaveFlagTrigger))
+    if (!IsValid(Player) || !IsValid(ExpeditionFlagTrigger))
     {
         return false;
     }
 
-    const AActor* Trigger = SaveFlagTrigger->GetChildActor();
+    const AActor* Trigger = ExpeditionFlagTrigger->GetChildActor();
     if (!IsValid(Trigger))
     {
         return false;
@@ -52,7 +53,7 @@ bool ACXSaveFlag::CanRest(const ACXFieldPlayerCharacter* Player) const
     return Trigger->IsOverlappingActor(Player);
 }
 
-void ACXSaveFlag::CompleteRest()
+void ACXExpeditionFlag::CompleteRest()
 {
     UWorld* World = GetWorld();
     if (!IsValid(World))
@@ -71,7 +72,7 @@ void ACXSaveFlag::CompleteRest()
 }
 
 // Called when the game starts or when spawned
-void ACXSaveFlag::BeginPlay()
+void ACXExpeditionFlag::BeginPlay()
 {
 	Super::BeginPlay();
 	

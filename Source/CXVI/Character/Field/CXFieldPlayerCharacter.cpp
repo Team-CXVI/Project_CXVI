@@ -3,7 +3,7 @@
 #include "CXFieldPlayerCharacter.h"
 #include "InputActionValue.h"
 #include "CXVI/Tags/CXFieldTags.h"
-#include "CXVI/Character/Field/Interactions/CXSaveFlag.h"
+#include "CXVI/Character/Field/Interactions/CXExpeditionFlag.h"
 
 
 #include "Components/SkeletalMeshComponent.h"
@@ -295,7 +295,7 @@ bool ACXFieldPlayerCharacter::CanStartRest() const
 	return !AnimInstace->Montage_IsActive(SaveMontage);
 }
 
-void ACXFieldPlayerCharacter::RegisterNearByFlag(ACXSaveFlag* Flag)
+void ACXFieldPlayerCharacter::RegisterNearByFlag(ACXExpeditionFlag* Flag)
 {
 	if (!IsValid(Flag))
 	{
@@ -306,7 +306,7 @@ void ACXFieldPlayerCharacter::RegisterNearByFlag(ACXSaveFlag* Flag)
 	
 }
 
-void ACXFieldPlayerCharacter::UnregisterNearByFlag(ACXSaveFlag* Flag)
+void ACXFieldPlayerCharacter::UnregisterNearByFlag(ACXExpeditionFlag* Flag)
 {
 	// 현재 저장된 깃발에서 벗어났을 때만 제거.
 	if (NearByActiveExpeditionFlag.Get() != Flag)
@@ -434,7 +434,7 @@ void ACXFieldPlayerCharacter::StartSave()
 	{
 		return;
 	}
-	ACXSaveFlag* Flag = NearByActiveExpeditionFlag.Get();
+	ACXExpeditionFlag* Flag = NearByActiveExpeditionFlag.Get();
 	if (!IsValid(Flag) || !Flag->CanRest(this))
 	{
 		return;
@@ -490,7 +490,7 @@ void ACXFieldPlayerCharacter::OnSaveMontageChanged(UAnimMontage* Montage, FName 
 	ASC->RemoveLooseGameplayTag(CXVIFieldTag::State_MovingBlock);
 
 	// 원정대 깃발로 책임 이전.
-	if (ACXSaveFlag* Flag = ActiveExpeditionFlag.Get())
+	if (ACXExpeditionFlag* Flag = ActiveExpeditionFlag.Get())
 	{
 		UE_LOG(
 			LogTemp,

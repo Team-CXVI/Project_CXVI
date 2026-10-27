@@ -13,7 +13,7 @@ class UAnimInstance;
 class UAnimMontage;
 class UWidgetComponent;
 class UCableComponent;
-class ACXSaveFlag;
+class ACXExpeditionFlag;
 struct FInputActionValue;
 
 
@@ -46,10 +46,10 @@ public:
 	bool CanStartRest() const;
 
 	// 접근한 깃발을 사용 후보에 추가.
-	void RegisterNearByFlag(ACXSaveFlag* Flag);
+	void RegisterNearByFlag(ACXExpeditionFlag* Flag);
 
 	// 벗어난 깃발을 사용 후보에서 제거.
-	void UnregisterNearByFlag(ACXSaveFlag* Flag);
+	void UnregisterNearByFlag(ACXExpeditionFlag* Flag);
 
 protected:
 	void Move(const FInputActionValue& InValue);
@@ -178,7 +178,7 @@ protected:
 	// 선제 공격 스펙을 관리할 핸들.
 	FGameplayAbilitySpecHandle PreemptiveAttackHandle;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SaveFlag")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ExpeditionFlag")
 	TObjectPtr<class UAnimMontage> SaveMontage;
 
 	// 앉기에서 추가한 이동 제한을 관리.
@@ -194,9 +194,9 @@ protected:
 	// 이번 휴식을 시작한 깃발.
 	// 현재 사용 범위 안에 있는 깃발.
 	UPROPERTY(Transient)
-	TWeakObjectPtr<class ACXSaveFlag> NearByActiveExpeditionFlag;
+	TWeakObjectPtr<class ACXExpeditionFlag> NearByActiveExpeditionFlag;
 
 	// 이번 휴식을 시작할 깃발.
 	UPROPERTY(Transient)
-	TWeakObjectPtr<class ACXSaveFlag> ActiveExpeditionFlag;
+	TWeakObjectPtr<class ACXExpeditionFlag> ActiveExpeditionFlag;
 };
