@@ -27,6 +27,8 @@ public:
 	ATTRIBUTE_ACCESSORS_BASIC(ThisClass, MaxHealth);
 	ATTRIBUTE_ACCESSORS_BASIC(ThisClass, Health);
 	ATTRIBUTE_ACCESSORS_BASIC(ThisClass, Damage);
+	ATTRIBUTE_ACCESSORS_BASIC(ThisClass, Mana);
+	ATTRIBUTE_ACCESSORS_BASIC(ThisClass, MaxMana);
 	ATTRIBUTE_ACCESSORS_BASIC(ThisClass, CombatSpeed);
 	ATTRIBUTE_ACCESSORS_BASIC(ThisClass, AttackRange);
 	ATTRIBUTE_ACCESSORS_BASIC(ThisClass, AttackRadius);
@@ -36,6 +38,7 @@ protected:
 	virtual void PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue) override;
 	virtual void PostAttributeChange(const FGameplayAttribute& Attribute, float OldValue, float NewValue) override;
 
+	virtual void PreAttributeBaseChange(const FGameplayAttribute& Attribute, float& NewValue) const override;
 	virtual void PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data) override;
 
 public:
@@ -63,6 +66,12 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, Category = "Attributes")
 	FGameplayAttributeData Damage;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attirbutes")
+	FGameplayAttributeData Mana;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attirbutes")
+	FGameplayAttributeData MaxMana;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attirbutes")
 	FGameplayAttributeData CombatSpeed;

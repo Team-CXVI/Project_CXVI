@@ -417,12 +417,20 @@ void ACXCommandCharacter::HandleTargetSelectInput(ECommandKey Key)
 	{
 		ACXCombatCharacterPlayer* Player = CommandCharacter.Get();
 
-		if (IsValid(Player) && TargetCandidates.IsValidIndex(SelectedTargetIndex))
+		if (!IsValid(Player) || !TargetCandidates.IsValidIndex(SelectedTargetIndex))
 		{
-			Player->SubmitTarget(TargetCandidates[SelectedTargetIndex].Get());
+			return;
 		}
 
-		return;
+		// 대상 선택중 마나나 사용중 조건이 바뀔수도 있으니 재검사.
+
+		if (SavedSelection.Type == ECXActionType::Skill &&
+			!Player->CanActivateSelectSkill(SavedSelection.SlotIndex))
+		{
+			return;
+		}
+
+		Player->SubmitTarget(TargetCandidates[SelectedTargetIndex].Get());
 	}
 	case ECommandKey::ESC:
 		CancelTargetSelection();
@@ -436,6 +444,13 @@ void ACXCommandCharacter::SubmitActionToPlayer(const FCXActionSelection& Selecti
 {
 	ACXCombatCharacterPlayer* Player = CommandCharacter.Get();
 	if (!Player)
+	{
+		return;
+	}
+
+	// 부족하면 캐릭터에 행동 제출하지 않음.
+	// 메뉴와 턴페이즈를 그대로 유지.
+	if (Selection.Type == ECXActionType::Skill && !Player->CanActivateSelectSkill(Selection.SlotIndex))
 	{
 		return;
 	}
@@ -476,8 +491,7 @@ void ACXCommandCharacter::HandleInputAction(const FInputActionInstance& Instance
 	}
 }
 
-void ACXCommandCharacter::HandleInputCommand(const FInputActionValue& Value,
-	ECXInputCommand Command)
+void ACXCommandCharacter::HandleInputCommand(const FInputActionValue& Value, ECXInputCommand Command)
 {
 	if (CombatInputMode != ECombatInputMode::Command)
 	{
@@ -522,8 +536,7 @@ void ACXCommandCharacter::HandleInputCommand(const FInputActionValue& Value,
 	case ECXInputCommand::NextTarget:
 		if (MenuState == ECommandMenuState::TargetSelect)
 		{
-			HandleTargetSelectInput(Command == ECXInputCommand::PreviousTarget ?
-				ECommandKey::A : ECommandKey::D);
+			HandleTargetSelectInput(Command == ECXInputCommand::PreviousTarget ? ECommandKey::A : ECommandKey::D);
 		}
 		break;
 
