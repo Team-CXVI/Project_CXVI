@@ -58,6 +58,17 @@ protected:
 	UPROPERTY(Transient)
 	FVector EntryMoveGoal = FVector::ZeroVector;
 
+	void StartMoveToDestination();
+
+	UFUNCTION()
+	void OnDestinationFinished();
+
+	UPROPERTY(EditDefaultsOnly, Category = "Rope")
+	float TraversalSpeed = 600.0f;
+
+	UPROPERTY(Transient)
+	FVector DestinationMoveGoal = FVector::ZeroVector;
+
 protected:
 	UPROPERTY(Transient)
 	TWeakObjectPtr<ACXFieldPlayerCharacter> TraversalCharacter;
