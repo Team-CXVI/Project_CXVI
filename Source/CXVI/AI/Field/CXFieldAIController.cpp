@@ -10,6 +10,7 @@
 #include "BehaviorTree/BlackboardComponent.h"
 #include "NavigationPath.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(CXFieldAIController)
 
 ACXFieldAIController::ACXFieldAIController()
 {
