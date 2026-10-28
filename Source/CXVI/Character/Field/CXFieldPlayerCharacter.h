@@ -95,10 +95,6 @@ protected:
 	// 태그가 있고/없을 때 UI의 상태 변경을 위한 함수.
 	void RefreshGrapplingPrompt();
 
-	// 기존 블루프린트 이벤트 참조를 유지한다. UI 표시 제거 후에는 호출하지 않는다.
-	UFUNCTION(BlueprintImplementableEvent, Category = "Grappling")
-	void OnGrapplingPromptShown();
-
 	// 그래플링 태그가 들어왔을 때 새로고침 하기위한 함수.
 	void OnCanGrapplingHookChanged(const FGameplayTag, int32 NewCount);
 

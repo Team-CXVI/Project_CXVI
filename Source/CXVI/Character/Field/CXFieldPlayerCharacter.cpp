@@ -4,7 +4,7 @@
 #include "InputActionValue.h"
 #include "CXVI/Tags/CXFieldTags.h"
 #include "CXVI/Actor/Field/Interactions/CXExpeditionFlag.h"
-
+#include "CXVI/UI/Field/CXFieldGrapplingUIInterface.h"
 
 #include "Components/SkeletalMeshComponent.h"
 #include "EnhancedInputSubsystems.h"
@@ -34,7 +34,7 @@ ACXFieldPlayerCharacter::ACXFieldPlayerCharacter()
 	GrapplingPrompt->SetWidgetSpace(EWidgetSpace::Screen);
 	GrapplingPrompt->SetDrawSize(FVector2D(100.0f, 40.0f));
 	GrapplingPrompt->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	GrapplingPrompt->SetVisibility(false);
+	GrapplingPrompt->SetVisibility(true);
 
 	GrapplingCable = CreateDefaultSubobject<UCableComponent>(TEXT("GrapplingCable"));
 	GrapplingCable->SetupAttachment(GetMesh());
@@ -653,50 +653,47 @@ void ACXFieldPlayerCharacter::GrapplingHook()
 void ACXFieldPlayerCharacter::RefreshGrapplingPrompt()
 {
 	// 그래플링 프롬프트 리프레시 설정 -> 태그가 들어올때마다 UI 표시 위해.
-	if (!GrapplingPrompt)
+	if (!IsValid(GrapplingPrompt))
 	{
 		return;
 	}
-
-	// 그래플링 할 타겟.
-	AActor* Target = CurrentGrapplingTarget.Get();
-	USceneComponent* TargetComponent = IsValid(Target) ? Target->GetRootComponent() : nullptr;
 
 	APlayerController* PC = Cast<APlayerController>(GetController());
 
-	const bool bShow =
-		ASC &&
-		ASC->HasMatchingGameplayTag(CXVIFieldTag::State_CanGrapplingHook) &&
-		Target &&
-		IsValid(TargetComponent) &&
-		PC &&
-		PC->GetLocalPlayer();
-
-	if (!bShow)
+	if (IsValid(PC) && PC->GetLocalPlayer())
 	{
-		GrapplingPrompt->SetVisibility(false);
+		GrapplingPrompt->SetOwnerPlayer(PC->GetLocalPlayer());
+	}
+
+	GrapplingPrompt->InitWidget();
+
+	UUserWidget* Widget = GrapplingPrompt->GetUserWidgetObject();
+	if (!IsValid(Widget) || !Widget->GetClass()->ImplementsInterface(UCXFieldGrapplingUIInterface::StaticClass()))
+	{
 		return;
 	}
 
-	// 이 플레이어에게만 표시.
-	GrapplingPrompt->SetOwnerPlayer(PC->GetLocalPlayer());
+	AActor* Target = CurrentGrapplingTarget.Get();
+	USceneComponent* TargetComponent = IsValid(Target) ? Target->GetRootComponent() : nullptr;
 
-	// UI 위치를 타겟 액터에 붙이기.
-	if (GrapplingPrompt->GetAttachParent() != TargetComponent)
+	const bool bCanInteract =
+		IsValid(ASC) &&
+		ASC->HasMatchingGameplayTag(CXVIFieldTag::State_CanGrapplingHook) &&
+		IsValid(TargetComponent) &&
+		IsValid(PC) &&
+		PC->GetLocalPlayer() != nullptr;
+
+	if (bCanInteract)
 	{
-		GrapplingPrompt->AttachToComponent(TargetComponent, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+		if (GrapplingPrompt->GetAttachParent() != TargetComponent)
+		{
+			GrapplingPrompt->AttachToComponent(TargetComponent, FAttachmentTransformRules::SnapToTargetIncludingScale);
+		}
+		GrapplingPrompt->SetRelativeLocation(
+			FVector(0.0f, 0.0f, 100.0f));
 	}
 
-	GrapplingPrompt->SetRelativeLocation(FVector(0.0f, 0.0f, 100.0f));
-
-	const bool bWasVisible = GrapplingPrompt->IsVisible();
-
-	GrapplingPrompt->SetVisibility(true);
-
-	// 숨겨져 있다가 나타는 순간 BP 호출.
-	if (!bWasVisible)
-	{
-		OnGrapplingPromptShown();
-	}
+	// 표시 숨김은 위젯의 인터페이스 구현에서 처리합니다.
+	ICXFieldGrapplingUIInterface::Execute_UpdateInteractionUI(Widget, bCanInteract, bCanInteract ? Target : nullptr);
 
 }
