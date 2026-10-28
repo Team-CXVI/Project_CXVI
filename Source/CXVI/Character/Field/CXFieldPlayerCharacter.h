@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "CXFieldCharacterBase.h"
-#include "CXVI/Actor/Field/Interactions/CXRopeTraversalActor.h"
+#include "CXVI/Foundation/Scene/CXSceneSuspendable.h"
 
 #include "CXFieldPlayerCharacter.generated.h"
 
@@ -20,7 +20,7 @@ struct FInputActionValue;
 
 
 UCLASS()
-class CXVI_API ACXFieldPlayerCharacter : public ACXFieldCharacterBase
+class CXVI_API ACXFieldPlayerCharacter : public ACXFieldCharacterBase, public ICXSceneSuspendable
 {
 	GENERATED_BODY()
 
@@ -52,6 +52,19 @@ public:
 	// 벗어난 깃발을 사용 후보에서 제거.
 	void UnregisterNearByFlag(ACXExpeditionFlag* Flag);
 
+	// 필드 씬 인터페이스 섹션.
+public:
+	void OnSceneSuspended_Implementation();
+
+	void OnSceneResumed_Implementation();
+
+	// 키 바인드할 때 기능을 나눠 줄 함수.
+protected:
+	// 상호 작용 키.
+	void Interactive();
+
+	// 공격 키.
+	void AttackFunc();
 
 	// 로프 섹션.
 	ACXRopeTraversalActor* GetRopeTraversalTarget() const { return CurrentRopeTraversalTarget.Get(); }
@@ -121,10 +134,6 @@ protected:
 	
 
 protected:
-	// Input.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input)
-	TObjectPtr<UInputMappingContext> InputMappingContext;
-
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input)
 	TObjectPtr<UInputAction> MoveAction;
 
@@ -135,19 +144,13 @@ protected:
 	TObjectPtr<UInputAction> JumpAction;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input)
-	TObjectPtr<UInputAction> GrapplingAction;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input)
 	TObjectPtr<UInputAction> SprintAction;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input)
-	TObjectPtr<UInputAction> AssassinationAttackAction;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input)
-	TObjectPtr<UInputAction> FlagAction;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input)
 	TObjectPtr<UInputAction> AttackAction;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input)
+	TObjectPtr<UInputAction> InteractiveAction;
 
 	// 게임플레이 어빌리티 - 스프린트
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = GameplayAbilities)
