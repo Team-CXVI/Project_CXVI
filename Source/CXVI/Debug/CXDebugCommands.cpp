@@ -3,6 +3,7 @@
 #if !UE_BUILD_SHIPPING
 #include <HAL/IConsoleManager.h>
 #include <AssetRegistry/AssetRegistryModule.h>
+#include <EnhancedInputSubsystems.h>
 
 #include "Foundation/Scene/CXSceneSubsystem.h"
 #include "Foundation/Scene/CXSceneDefinition.h"
@@ -17,6 +18,7 @@
 #include "Foundation/Combat/CXCombatManagerSubsystem_V2.h"
 #include "Foundation/Combat/CombatMessage/CXCombatMessageData.h"
 #include "Foundation/GameplayMessage/CXGameplayMessageSubsystem.h"
+#include "Subsystems/CXInputControlSubsystem.h"
 #include "Tags/CXGameplayTags.h"
 
 namespace CXSceneDebug
@@ -243,5 +245,122 @@ namespace CXCombatDebug
 				UCXGameplayMessageSubsystem::Get(InWorld).BroadcastMessage(CXVIGameplayTags::Message_Combat_End, Message);
 			}));
 }
+
+namespace CXInputDebug
+{
+	// 콘솔에서 받은 핸들 (태그별로 쌓고 나중 것부터 반납)
+	// 월드가 바뀌면 서브시스템이 요청을 폐기하므로 남은 핸들은 무효 (반납해도 무시됨)
+	static TMap<FGameplayTag, TArray<FCXInputModeHandle>> DebugHandles;
+
+	static UCXInputControlSubsystem* GetSubsystem(UWorld* InWorld)
+	{
+		UCXInputControlSubsystem* Subsystem = UCXInputControlSubsystem::TryGet(InWorld);
+		if (nullptr == Subsystem)
+		{
+			UE_LOG(LogCXInput, Warning, TEXT("Input Control Subsystem이 없습니다. 게임 맵에서 실행하세요."));
+		}
+		return Subsystem;
+	}
+
+	static FGameplayTag ParseTag(const FString& InTagName)
+	{
+		const FGameplayTag Tag = FGameplayTag::RequestGameplayTag(FName(*InTagName), /*ErrorIfNotFound*/ false);
+		if (!Tag.IsValid())
+		{
+			UE_LOG(LogCXInput, Warning, TEXT("등록되지 않은 태그입니다: %s"), *InTagName);
+		}
+		return Tag;
+	}
+
+	// CXVI.Input.AddTag <Tag> [Reason]
+	static FAutoConsoleCommandWithWorldAndArgs AddTagCommand(
+		TEXT("CXVI.Input.AddTag"),
+		TEXT("입력 모드에 태그를 추가합니다. 사용법: CXVI.Input.AddTag <태그> [사유] (예: CXVI.Input.AddTag InputMode.Block.All)"),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& InArgs, UWorld* InWorld)
+			{
+				if (InArgs.IsEmpty())
+				{
+					UE_LOG(LogCXInput, Warning, TEXT("사용법: CXVI.Input.AddTag <태그> [사유]"));
+					return;
+				}
+
+				UCXInputControlSubsystem* Subsystem = GetSubsystem(InWorld);
+				const FGameplayTag Tag = ParseTag(InArgs[0]);
+				if (nullptr == Subsystem || !Tag.IsValid())
+				{
+					return;
+				}
+
+				const FName Reason = InArgs.IsValidIndex(1) ? FName(*InArgs[1]) : FName(TEXT("Debug"));
+
+				// 거부 사유(예약 태그, PlayerInput 없음)는 서브시스템이 로그로 남김
+				const FCXInputModeHandle Handle = Subsystem->AddInputModeTag(Tag, Reason);
+				if (Handle.IsValid())
+				{
+					DebugHandles.FindOrAdd(Tag).Add(Handle);
+				}
+			}));
+
+	// CXVI.Input.RemoveTag <Tag>
+	static FAutoConsoleCommandWithWorldAndArgs RemoveTagCommand(
+		TEXT("CXVI.Input.RemoveTag"),
+		TEXT("CXVI.Input.AddTag로 추가한 태그 요청을 하나 반납합니다. 사용법: CXVI.Input.RemoveTag <태그>"),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& InArgs, UWorld* InWorld)
+			{
+				if (InArgs.IsEmpty())
+				{
+					UE_LOG(LogCXInput, Warning, TEXT("사용법: CXVI.Input.RemoveTag <태그>"));
+					return;
+				}
+
+				UCXInputControlSubsystem* Subsystem = GetSubsystem(InWorld);
+				const FGameplayTag Tag = ParseTag(InArgs[0]);
+				if (nullptr == Subsystem || !Tag.IsValid())
+				{
+					return;
+				}
+
+				TArray<FCXInputModeHandle>* Handles = DebugHandles.Find(Tag);
+				if (nullptr == Handles || Handles->IsEmpty())
+				{
+					UE_LOG(LogCXInput, Warning, TEXT("디버그로 추가한 요청이 없습니다: %s"), *Tag.ToString());
+					return;
+				}
+
+				FCXInputModeHandle Handle = Handles->Pop();
+				Subsystem->RemoveInputModeTag(Handle);
+
+				if (Handles->IsEmpty())
+				{
+					DebugHandles.Remove(Tag);
+				}
+			}));
+
+	// CXVI.Input.Status
+	static FAutoConsoleCommandWithWorldAndArgs StatusCommand(
+		TEXT("CXVI.Input.Status"),
+		TEXT("현재 Enhanced Input 입력 모드와 디버그로 추가한 태그 요청 수를 출력합니다."),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& InArgs, UWorld* InWorld)
+			{
+				const ULocalPlayer* LocalPlayer = InWorld ? InWorld->GetFirstLocalPlayerFromController() : nullptr;
+				const UEnhancedInputLocalPlayerSubsystem* InputSubsystem = LocalPlayer ? LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>() : nullptr;
+				if (nullptr == InputSubsystem)
+				{
+					UE_LOG(LogCXInput, Warning, TEXT("Enhanced Input Subsystem이 없습니다. 게임 맵에서 실행하세요."));
+					return;
+				}
+
+				// CommonUI(InputMode.Game / Menu)와 시작 입력 모드 태그까지 포함한 실제 입력 모드
+				UE_LOG(LogCXInput, Display, TEXT("Current input mode: %s"), *InputSubsystem->GetInputMode().ToStringSimple());
+
+				const UCXInputControlSubsystem* Subsystem = UCXInputControlSubsystem::TryGet(InWorld);
+				for (const TPair<FGameplayTag, TArray<FCXInputModeHandle>>& Pair : DebugHandles)
+				{
+					const bool bActive = Subsystem && Subsystem->HasInputModeTag(Pair.Key);
+					UE_LOG(LogCXInput, Display, TEXT("  Debug request: %s x%d (active: %s)"), *Pair.Key.ToString(), Pair.Value.Num(), bActive ? TEXT("true") : TEXT("false"));
+				}
+			}));
+}
+
 
 #endif // !UE_BUILD_SHIPPING
