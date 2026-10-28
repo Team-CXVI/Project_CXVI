@@ -77,6 +77,3 @@ void ACXExpeditionFlag::BeginPlay()
 	Super::BeginPlay();
 	
 }
-
-
-
