@@ -8,6 +8,8 @@
 #include "CXVI/Tags/CXGameplayTags.h"
 #include "CXVI/Foundation/Combat/CombatMessage/CXCombatMessageData.h"
 #include "CXVI/Character/Combat/Data/CXCombatInputData.h"
+#include "Subsystems/CXInputControlSubsystem.h"
+
 #include <InputActionValue.h>
 
 #include "CXCommandCharacter.generated.h"
@@ -144,5 +146,9 @@ private:
 
 	TArray<TWeakObjectPtr<APawn>> TargetCandidates;
 	int32 SelectedTargetIndex = INDEX_NONE;
+
+	// 인풋 핸들
+	//FCXInputModeHandle ActionModeHandle;
+	FCXInputModeHandle ReactionModeHandle;
 
 };

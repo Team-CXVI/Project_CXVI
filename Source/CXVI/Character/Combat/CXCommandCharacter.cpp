@@ -16,8 +16,8 @@
 #include "InputAction.h"
 #include "UObject/ConstructorHelpers.h"
 
-#include "CXVI/Foundation/Combat/CXCombatManagerSubsystem.h"
 #include "CXVI/Actor/Combat/CXCombatArena.h"
+
 
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXCommandCharacter)
@@ -68,41 +68,52 @@ void ACXCommandCharacter::SetCombatInputMode(ECXCombatInputMode NewMode)
 
 
 	// 태그 부여로 다른 입력 차단
-	UEnhancedInputLocalPlayerSubsystem* Subsystem = InputSubsystem.Get();
+	//UEnhancedInputLocalPlayerSubsystem* Subsystem = InputSubsystem.Get();
+	UCXInputControlSubsystem* ControlSystem = UCXInputControlSubsystem::TryGet(GetWorld());
 
-	if (!Subsystem)
+	if (!ControlSystem)
 	{
 		return;
 	}
 
-	// 기존 UI 기본 모드 태그는 유지
-	FGameplayTagContainer Modes = Subsystem->GetInputMode();
-
-	Modes.RemoveTag(CXVIGameplayTags::InputMode_Combat_Command);
-	Modes.RemoveTag(CXVIGameplayTags::InputMode_Combat_Reaction);
-
-	switch (NewMode)
+	if (ReactionModeHandle.IsValid())
 	{
-	case ECXCombatInputMode::Command:
-		Modes.AddTag(CXVIGameplayTags::InputMode_Combat_Command);
-		break;
-
-	case ECXCombatInputMode::Reaction:
-		Modes.AddTag(CXVIGameplayTags::InputMode_Combat_Reaction);
-		break;
-
-	default:
-		// disabled에서는 둘다 태그 없음
-		break;
+		ControlSystem->RemoveInputModeTag(ReactionModeHandle);
 	}
 
-	if (Modes != Subsystem->GetInputMode())
+	if (NewMode == ECXCombatInputMode::Reaction)
+	{
+		ReactionModeHandle = ControlSystem->AddInputModeTag(CXVIGameplayTags::InputMode_Combat_Reaction, "ReactionMode");
+	}
+	else
+	{
+		ControlSystem->RemoveInputModeTag(ReactionModeHandle);
+	}
+
+	//switch (NewMode)
+	//{
+	//case ECXCombatInputMode::Command:
+	//	/*Modes.AddTag(CXVIGameplayTags::InputMode_Combat_Command);*/
+	//	ActionModeHandle = ControlSystem->AddInputModeTag(CXVIGameplayTags::InputMode_Combat_Command, "CombatMode");
+	//	break;
+
+	//case ECXCombatInputMode::Reaction:
+	//	//Modes.AddTag(CXVIGameplayTags::InputMode_Combat_Reaction);
+	//	ReactionModeHandle = ControlSystem->AddInputModeTag(CXVIGameplayTags::InputMode_Combat_Reaction, "ReactionMode");
+	//	break;
+
+	//default:
+	//	// disabled에서는 둘다 태그 없음
+	//	break;
+	//}
+
+	/*if (Modes != Subsystem->GetInputMode())
 	{
 		FModifyContextOptions Options;
 		Options.bIgnoreAllPressedKeysUntilRelease = true;
 
 		Subsystem->SetInputMode(Modes, Options);
-	}
+	}*/
 }
 
 void ACXCommandCharacter::SetMenuState(ECommandMenuState NewState)
@@ -151,7 +162,7 @@ void ACXCommandCharacter::PossessedBy(AController* NewController)
 				Options.bIgnoreAllPressedKeysUntilRelease = true;
 
 				InputSubsystem->AddMappingContext(ActionMappingContext, 0, Options);
-				InputSubsystem->AddMappingContext(ReactionMappingContext, 0, Options);
+				InputSubsystem->AddMappingContext(ReactionMappingContext, 1, Options);
 			}
 		}
 	}
