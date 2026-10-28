@@ -44,6 +44,8 @@ protected:
 
 	// 플레이어 로프 이동.
 protected:
+
+	// 진입점.
 	void StartMoveToEntry();
 
 	UFUNCTION()
@@ -58,6 +60,7 @@ protected:
 	UPROPERTY(Transient)
 	FVector EntryMoveGoal = FVector::ZeroVector;
 
+	// 이동 경로.
 	void StartMoveToDestination();
 
 	UFUNCTION()
@@ -68,6 +71,27 @@ protected:
 
 	UPROPERTY(Transient)
 	FVector DestinationMoveGoal = FVector::ZeroVector;
+
+	// 탈출점.
+	void StartMoveToExit();
+
+	UFUNCTION()
+	void OnExitMoveFinished();
+
+	UPROPERTY(EditDefaultsOnly, Category = "Rope")
+	float ExitMoveDuration = 0.3f;
+
+	UPROPERTY(Transient)
+	FVector ExitMoveGoal = FVector::ZeroVector;
+
+	// 착지.
+	UFUNCTION()
+	void HandleTraversalLanded(const FHitResult& Hit);
+
+	bool bWaitingForLanding = false;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Rope")
+	float LandingTimeOut = 3.0f;
 
 protected:
 	UPROPERTY(Transient)

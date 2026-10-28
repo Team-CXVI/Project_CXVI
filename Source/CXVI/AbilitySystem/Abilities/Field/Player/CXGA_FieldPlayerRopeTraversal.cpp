@@ -7,6 +7,7 @@
 #include "CXVI/Tags/CXFieldTags.h"
 
 #include "Abilities/Tasks/AbilityTask_ApplyRootMotionMoveToForce.h"
+#include "Abilities/Tasks/AbilityTask_WaitDelay.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/RootMotionSource.h"
@@ -108,6 +109,12 @@ void UCXGA_FieldPlayerRopeTraversal::EndAbility(const FGameplayAbilitySpecHandle
 				bWasCancelled));
 		return;
 	}
+	
+	bWaitingForLanding = false;
+	if (ACXFieldPlayerCharacter* Player = TraversalCharacter.Get())
+	{
+		Player->LandedDelegate.RemoveDynamic(this, &ThisClass::HandleTraversalLanded);
+	}
 
 	// 실행 중인 이동 제어를 종료 합니다.
 	if (IsValid(TraversalMoveTask))
@@ -140,6 +147,7 @@ void UCXGA_FieldPlayerRopeTraversal::EndAbility(const FGameplayAbilitySpecHandle
 	TraversalExit = FVector::ZeroVector;
 	EntryMoveGoal = FVector::ZeroVector;
 	DestinationMoveGoal = FVector::ZeroVector;
+	ExitMoveGoal = FVector::ZeroVector;
 
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 
@@ -321,5 +329,145 @@ void UCXGA_FieldPlayerRopeTraversal::OnDestinationFinished()
 
 	UE_LOG(LogTemp, Log, TEXT("[RopeAbility] 밧줄 반대쪽 끝 도착"));
 
-	EndAbility(CurrentSpecHandle, GetCurrentActorInfo(),CurrentActivationInfo, true, false);
+	StartMoveToExit();
+}
+
+void UCXGA_FieldPlayerRopeTraversal::StartMoveToExit()
+{
+	if (!IsActive())
+	{
+		return;
+	}
+
+	ACXFieldPlayerCharacter* Player = TraversalCharacter.Get();
+	UCharacterMovementComponent* Movement = IsValid(Player) ? Player->GetCharacterMovement() : nullptr;
+
+	if (!IsValid(Movement) || !TraversalRope.IsValid())
+	{
+		OnTraversalInterrupted();
+		return;
+	}
+
+	if (IsValid(TraversalMoveTask))
+	{
+		TraversalMoveTask->EndTask();
+		TraversalMoveTask = nullptr;
+	}
+
+	const float HalfHeight = Player->GetCapsuleComponent()-> GetScaledCapsuleHalfHeight();
+
+	ExitMoveGoal = TraversalExit + FVector::UpVector * (HalfHeight + 2.0f);
+
+	Movement->StopMovementImmediately();
+	bControlsTraversalMovement = true;
+	Movement->SetMovementMode(MOVE_Flying);
+
+	TraversalMoveTask =
+		UAbilityTask_ApplyRootMotionMoveToForce::ApplyRootMotionMoveToForce(
+			this,
+			FName(TEXT("RopeExit")),
+			ExitMoveGoal,
+			FMath::Max(ExitMoveDuration, 0.05f),
+			false,
+			MOVE_Flying,
+			true,
+			nullptr,
+			ERootMotionFinishVelocityMode::SetVelocity,
+			FVector::ZeroVector,
+			0.0f
+		);
+
+	if (!IsValid(TraversalMoveTask))
+	{
+		OnTraversalInterrupted();
+		return;
+	}
+
+	TraversalMoveTask->OnTimedOutAndDestinationReached.AddDynamic(this, &ThisClass::OnExitMoveFinished);
+	TraversalMoveTask->OnTimedOut.AddDynamic(this, &ThisClass::OnTraversalInterrupted);
+
+	TraversalMoveTask->ReadyForActivation();
+}
+
+void UCXGA_FieldPlayerRopeTraversal::OnExitMoveFinished()
+{
+	if (!IsActive())
+	{
+		return;
+	}
+
+	ACXFieldPlayerCharacter* Player = TraversalCharacter.Get();
+
+	if (!IsValid(Player) || !TraversalRope.IsValid())
+	{
+		OnTraversalInterrupted();
+		return;
+	}
+
+	if (FVector::DistSquared(Player->GetActorLocation(), ExitMoveGoal) > FMath::Square(10.0f))
+	{
+		OnTraversalInterrupted();
+		return;
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("[RopeAbility] Exit 도착"));
+
+	UCharacterMovementComponent* Movement = Player->GetCharacterMovement();
+	if (!IsValid(Movement))
+	{
+		OnTraversalInterrupted();
+		return;
+	}
+
+	if (IsValid(TraversalMoveTask))
+	{
+		TraversalMoveTask->EndTask();
+		TraversalMoveTask = nullptr;
+	}
+
+	Movement->StopMovementImmediately();
+
+	bWaitingForLanding = true;
+	Player->LandedDelegate.AddUniqueDynamic(this, &ThisClass::HandleTraversalLanded);
+
+	auto* TimeoutTask = UAbilityTask_WaitDelay::WaitDelay(this, FMath::Max(LandingTimeOut, 0.1f));
+
+	TimeoutTask->OnFinish.AddDynamic(this, &ThisClass::OnTraversalInterrupted);
+	TimeoutTask->ReadyForActivation();
+
+	Movement->SetMovementMode(MOVE_Falling);
+
+}
+
+void UCXGA_FieldPlayerRopeTraversal::HandleTraversalLanded(const FHitResult& Hit)
+{
+	if (!IsActive() || !bWaitingForLanding)
+	{
+		return;
+	}
+
+	ACXFieldPlayerCharacter* Player = TraversalCharacter.Get();
+	UCharacterMovementComponent* Movement = IsValid(Player) ? Player->GetCharacterMovement() : nullptr;
+	if (!IsValid(Movement)||!TraversalRope.IsValid()||!Movement->IsWalkable(Hit))
+	{
+		OnTraversalInterrupted();
+		return;
+	}
+
+	const float HalfHeight = Player->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+
+	const FVector FeetLocation = Player->GetActorLocation() - FVector::UpVector * HalfHeight;
+
+	if (FVector::DistSquared(FeetLocation, TraversalExit)>FMath::Square(50.0f))
+	{
+		OnTraversalInterrupted();
+		return;
+	}
+
+	bWaitingForLanding = false;
+
+	UE_LOG(LogTemp, Log, TEXT("[RopeAbility] Exit 착지 완료"));
+
+	EndAbility(CurrentSpecHandle, GetCurrentActorInfo(), CurrentActivationInfo, true, false);
+
 }
