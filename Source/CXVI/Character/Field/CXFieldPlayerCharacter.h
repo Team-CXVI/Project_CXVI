@@ -28,6 +28,8 @@ public:
 	ACXFieldPlayerCharacter();
 	
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	virtual void OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode = 0) override;
 	
 
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
@@ -217,5 +219,14 @@ protected:
 	// 현재 로프 관련 상태.
 	UPROPERTY(Transient)
 	ECXRopeTraversalDirection CurrentRopeTraversalDirection = ECXRopeTraversalDirection::None;
+
+private:
+	void RefreshAirborneTag();
+	void HandleInteractionUIAbilityActivated(UGameplayAbility* Ability);
+	void HandleInteractionUIAbilityEnded(UGameplayAbility* Ability);
+
+	int32 ActiveInteractionUIAbilityCount = 0;
+	FDelegateHandle InteractionUIAbilityActivatedHandle;
+	FDelegateHandle InteractionUIAbilityEndedHandle;
 };
 

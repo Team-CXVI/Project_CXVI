@@ -4,7 +4,6 @@
 #include "InputActionValue.h"
 #include "CXVI/Tags/CXFieldTags.h"
 #include "CXVI/Actor/Field/Interactions/CXExpeditionFlag.h"
-#include "CXVI/UI/Field/CXFieldGrapplingUIInterface.h"
 
 #include "Components/SkeletalMeshComponent.h"
 #include "EnhancedInputSubsystems.h"
@@ -49,6 +48,22 @@ ACXFieldPlayerCharacter::ACXFieldPlayerCharacter()
 void ACXFieldPlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (IsValid(ASC))
+	{
+		// 기존 활성 어빌리티도 포함하고, 이후 시작/종료는 이벤트로 추적합니다.
+		for (const FGameplayAbilitySpec& Spec : ASC->GetActivatableAbilities())
+		{
+			ActiveInteractionUIAbilityCount += Spec.ActiveCount;
+		}
+		InteractionUIAbilityActivatedHandle = ASC->AbilityActivatedCallbacks.AddUObject(
+			this, &ThisClass::HandleInteractionUIAbilityActivated);
+		InteractionUIAbilityEndedHandle = ASC->AbilityEndedCallbacks.AddUObject(
+			this, &ThisClass::HandleInteractionUIAbilityEnded);
+		ASC->SetLooseGameplayTagCount(CXVIFieldTag::State_BlockInteractionUI,
+			ActiveInteractionUIAbilityCount > 0 ? 1 : 0);
+		RefreshAirborneTag();
+	}
 
 
 
@@ -107,6 +122,51 @@ void ACXFieldPlayerCharacter::BeginPlay()
 	}
 }
 
+
+void ACXFieldPlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (IsValid(ASC))
+	{
+		ASC->AbilityActivatedCallbacks.Remove(InteractionUIAbilityActivatedHandle);
+		ASC->AbilityEndedCallbacks.Remove(InteractionUIAbilityEndedHandle);
+	}
+	Super::EndPlay(EndPlayReason);
+}
+
+void ACXFieldPlayerCharacter::OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode)
+{
+	Super::OnMovementModeChanged(PrevMovementMode, PreviousCustomMode);
+	RefreshAirborneTag();
+}
+
+void ACXFieldPlayerCharacter::RefreshAirborneTag()
+{
+	const UCharacterMovementComponent* Movement = GetCharacterMovement();
+	if (IsValid(ASC) && IsValid(Movement))
+	{
+		ASC->SetLooseGameplayTagCount(CXVIFieldTag::State_Airborne,
+			Movement->IsMovingOnGround() ? 0 : 1);
+	}
+}
+
+void ACXFieldPlayerCharacter::HandleInteractionUIAbilityActivated(UGameplayAbility* Ability)
+{
+	++ActiveInteractionUIAbilityCount;
+	if (IsValid(ASC))
+	{
+		ASC->SetLooseGameplayTagCount(CXVIFieldTag::State_BlockInteractionUI, 1);
+	}
+}
+
+void ACXFieldPlayerCharacter::HandleInteractionUIAbilityEnded(UGameplayAbility* Ability)
+{
+	ActiveInteractionUIAbilityCount = FMath::Max(ActiveInteractionUIAbilityCount - 1, 0);
+	if (IsValid(ASC))
+	{
+		ASC->SetLooseGameplayTagCount(CXVIFieldTag::State_BlockInteractionUI,
+			ActiveInteractionUIAbilityCount > 0 ? 1 : 0);
+	}
+}
 
 void ACXFieldPlayerCharacter::SetGrapplingTarget(AActor* TargetActor, AActor* LandingActor)
 {
