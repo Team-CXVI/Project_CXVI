@@ -16,6 +16,10 @@ class CXVI_API ACXGrapplingHookTriggerBox : public ATriggerBox
 
 public:
 	ACXGrapplingHookTriggerBox(const FObjectInitializer& ObjectInitializer);
+
+protected:
+	virtual void BeginPlay() override;
+
 protected:
 	UFUNCTION()
 	void HandleActorEndOverlap(
@@ -35,5 +39,7 @@ protected:
 
 	UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category = "Grappling")
 	TObjectPtr<AActor> LandingSurface;
-	
+	// 이 그래플링 기믹이 소유하는 UI
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Grappling|UI")
+	TObjectPtr<class UWidgetComponent> GrapplingUI;
 };
