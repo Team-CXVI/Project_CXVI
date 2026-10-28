@@ -119,4 +119,7 @@ protected:
 private:
 
 	float BaseActionCost = 100.f;
+
+	// 현재 패링동작중인 객체 수
+	int32 PendingReactionCount = 0;
 };

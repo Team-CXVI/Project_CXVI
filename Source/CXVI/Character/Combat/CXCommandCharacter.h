@@ -69,6 +69,9 @@ private:
 	void HandleInputToggleAimMode();
 	void HandleInputLook(const FInputActionValue& Value);
 
+	void HandleInputRunaway();
+	void HandleInputSkipTurn();
+
 	void SubmitActionToPlayer(const FCXActionSelection& Selection);
 
 	void OnAimModeInput();
@@ -129,6 +132,12 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Input|MyTurn")
 	TObjectPtr<class UInputAction> LookAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input|MyTurn")
+	TObjectPtr<class UInputAction> SkipTurnAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input|MyTurn")
+	TObjectPtr<class UInputAction> RunawayAction;
 
 	TWeakObjectPtr<class UEnhancedInputLocalPlayerSubsystem> InputSubsystem;
 private:

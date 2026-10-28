@@ -38,6 +38,8 @@ public:
 
 	bool CanActivateSelectSkill(int32 SlotIndex) const;
 
+	void SkipTurn();
+
 protected:
 	virtual void PostInitializeComponents() override;
 

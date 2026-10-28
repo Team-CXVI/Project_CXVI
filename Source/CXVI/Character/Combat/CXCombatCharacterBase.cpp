@@ -424,7 +424,7 @@ void ACXCombatCharacterBase::ProcessMessage(const ECXCombatPhase& CurPhase)
 	case ECXCombatPhase::SelectActionPhase:SelectActionPhase(); break;
 	case ECXCombatPhase::SelectTargetPhase:SelectTargetPhase(); break;
 	case ECXCombatPhase::ActionPhase:ActionPhase(); break;
-	case ECXCombatPhase::ReactionPhase:ReactionPhase(); break;
+	case ECXCombatPhase::ReturnPhase:ReturnPhase(); break;
 	case ECXCombatPhase::EndPhase:EndTurnPhase(); break;
 	}
 }
@@ -464,26 +464,7 @@ void ACXCombatCharacterBase::SelectActionPhase()
 
 void ACXCombatCharacterBase::SelectTargetPhase()
 {
-	// 이전 페이즈에서 누군가를 선택해야하는 선택지를 골랐을경우
-
-	// 적이나 아군중에 선택을 해야함
-	for (auto& WeakTarget : SavedMessage.Targets)
-	{
-		if (ACXCombatCharacterBase* Target = Cast<ACXCombatCharacterBase>(WeakTarget.Get()))
-		{
-			if (Target->GetIsCharacterAlive())
-			{
-				CurrentTargetPawn = Target;
-			}
-		}
-	}
-
-
-	// 선택을 하지않고 취소를 할경우 이전 페이즈로 돌아간다.
-
-	SavedMessage.Character = this;
-	SavedMessage.MessageType = ECXCombatMessageType::None;
-	CombatMessageResponse(SavedMessage);
+	
 }
 
 void ACXCombatCharacterBase::ActionPhase()
@@ -521,12 +502,12 @@ void ACXCombatCharacterBase::ActionPhase()
 	}
 }
 
-void ACXCombatCharacterBase::ReactionPhase()
+void ACXCombatCharacterBase::ReturnPhase()
 {
 	// 적의 턴일때 패링이나 회피 리액션을 취할 수 있다
 	// 아직 패링회피 구현안되어서 이페이즈가 오면 바로 스킵
 	SavedMessage.Character = this;
-	SavedMessage.Phase = ECXCombatPhase::ReactionPhase;
+	SavedMessage.Phase = ECXCombatPhase::ReturnPhase;
 	SavedMessage.MessageType = ECXCombatMessageType::None;
 
 	CombatMessageResponse(SavedMessage);

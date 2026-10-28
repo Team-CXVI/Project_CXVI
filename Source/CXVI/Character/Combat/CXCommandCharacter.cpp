@@ -217,6 +217,10 @@ void ACXCommandCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 	EnhancedInput->BindAction(ToggleAimModeAction, ETriggerEvent::Started, this, &ACXCommandCharacter::HandleInputToggleAimMode);
 	EnhancedInput->BindAction(FireAction, ETriggerEvent::Started, this, &ACXCommandCharacter::HandleInputFire);
 	EnhancedInput->BindAction(LookAction, ETriggerEvent::Triggered, this, &ACXCommandCharacter::HandleInputLook);
+	
+	EnhancedInput->BindAction(RunawayAction, ETriggerEvent::Started, this, &ACXCommandCharacter::HandleInputRunaway);
+	EnhancedInput->BindAction(SkipTurnAction, ETriggerEvent::Started, this, &ACXCommandCharacter::HandleInputSkipTurn);
+
 }
 
 void ACXCommandCharacter::UpdateCommandCharacter()
@@ -541,6 +545,36 @@ void ACXCommandCharacter::HandleInputLook(const FInputActionValue& Value )
 	}
 
 	CommandPlayer->Look(Value);
+}
+
+void ACXCommandCharacter::HandleInputRunaway()
+{
+	if (CombatInputMode != ECXCombatInputMode::Command
+		|| MenuState != ECommandMenuState::ActionMenu)
+	{
+		return;
+	}
+
+
+}
+
+void ACXCommandCharacter::HandleInputSkipTurn()
+{
+	UE_LOG(LogTemp, Display, TEXT("스킵시도"));
+
+	if (CombatInputMode != ECXCombatInputMode::Command
+		|| MenuState != ECommandMenuState::ActionMenu)
+	{
+		return;
+	}
+
+	ACXCombatCharacterPlayer* CommandPlayer = CommandCharacter.Get();
+	if (!IsValid(CommandPlayer))
+	{
+		return;
+	} 
+
+	CommandPlayer->SkipTurn();
 }
 
 

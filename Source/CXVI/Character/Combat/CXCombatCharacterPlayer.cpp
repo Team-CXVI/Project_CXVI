@@ -215,6 +215,11 @@ bool ACXCombatCharacterPlayer::CanActivateSelectSkill(int32 SlotIndex) const
 	return true;
 }
 
+void ACXCombatCharacterPlayer::SkipTurn()
+{
+	EndTurnPhase();
+}
+
 void ACXCombatCharacterPlayer::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();

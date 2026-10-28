@@ -155,6 +155,8 @@ void UCXTurnManager::HandleTurnResponse(const FCXCombatMessageData& Response)
 	if (Sender != CurrentTurnPlayer)
 	{
 		// 메시지가 왔는데 현재 턴플레이어가 아닌데 오는경우는 플레이어가 반격을 하는 상태
+
+		return;
 	}
 
 	SavedMessage.Character = Sender;
@@ -318,7 +320,9 @@ bool UCXTurnManager::ProcessTurnResponse(const FCXCombatMessageData& Response, F
 			return false;
 		}
 
-		// 리액션 페이즈로 이동
+		// 여기서 복귀페이즈로 가도되나 계속 검사
+
+		// 복귀 페이즈로 이동
 		NextTurnPhase(CurrentPhase);
 		OutNextPhaseRequest.Phase = CurrentPhase;
 		break;
@@ -408,20 +412,7 @@ bool UCXTurnManager::ShouldEndBattle()
 	}
 
 	return !bIsAlivePlayer || !bIsAliveEnemy;
-}
-//
-//void UCXTurnManager::EndBattle()
-//{
-//	ResetBattle();
-//
-//	OnBattleEnded.Broadcast();
-//	// 다시 필드로 돌아가야함
-//	// 배틀 매니저에게 요청
-//	/*if (AGASGameMode* GameMode = GetWorld()->GetAuthGameMode<AGASGameMode>())
-//	{
-//		GameMode->RequestEndBattle();
-//	}*/
-//}
+}                                                                                        
 
 void UCXTurnManager::EndBattle()
 {

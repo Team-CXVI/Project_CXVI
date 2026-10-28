@@ -48,6 +48,8 @@ public:
 	FORCEINLINE const bool GetIsCharacterAlive() const { return bIsCharacterAlive; }
 	FORCEINLINE const bool GetIsTurn() const { return bIsTurn; }
 	FORCEINLINE void SetOriginTransform(const FTransform& NewTransform) { OriginTransform = NewTransform; }
+	FORCEINLINE const bool GetDoingAction() const { return bDoingAction; }
+	FORCEINLINE void SetDoingAction(bool NewDoingAction) { bDoingAction = NewDoingAction; }
 	float GetCombatSpeed() const;
 
 	APawn* GetSelectedCombatTarget() const { return CurrentTargetPawn.Get(); }
@@ -74,6 +76,8 @@ protected:
 	void TeleportToAttackLocation();
 	void ReturnToOriginLocation();
 
+
+
 	bool TryStartCombatAbility(FGameplayAbilitySpecHandle Handle);
 
 	virtual bool ShouldApproachTarget() const
@@ -90,7 +94,7 @@ protected:
 	virtual void SelectActionPhase();
 	virtual void SelectTargetPhase();
 	virtual void ActionPhase();
-	void ReactionPhase();
+	void ReturnPhase();
 	void EndTurnPhase();
 
 	const TArray<TWeakObjectPtr<APawn>>& GetTargetCandidates() const { return SavedMessage.Targets; }
@@ -120,7 +124,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Combat|Mana")
 	TSubclassOf<class UGameplayEffect> BasicAttackManaGainEffect;
 
-private:
+protected:
 	// 페이즈 끝남 델리게이트
 	FOnTurnPhaseFinished PhaseFinishedEvent;
 
@@ -137,13 +141,16 @@ private:
 	// 어빌리티 초기화 플래그
 	bool bIsInitializedAbility = false;
 
+	// 생존 플래그
 	bool bIsCharacterAlive = false;
 
+	// 현재 자기 턴인지
 	bool bIsTurn = false;
 
 	// 마나 획득 플래그
 	bool bBasicAttackManaGranted = false;
 
+	bool bDoingAction = false;
 
 protected:
 	/*UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Attribute")

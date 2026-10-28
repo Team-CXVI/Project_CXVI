@@ -11,7 +11,7 @@ enum class ECXCombatPhase : uint8
 	SelectActionPhase,		// 선택지
 	SelectTargetPhase,		// 추가 선택지가 있다면
 	ActionPhase,			// 행동
-	ReactionPhase,			// 리액션
+	ReturnPhase,			// 리액션
 	EndPhase,				// 턴 끝
 	PhaseCount
 };
