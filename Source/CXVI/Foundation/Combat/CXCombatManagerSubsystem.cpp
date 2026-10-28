@@ -1,131 +1,53 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "CXVI/Foundation/Combat/CXCombatManagerSubsystem.h"
 
-#include "CXVI/Character/Combat/CXCombatCharacterPlayer.h"
-#include "CXVI/Character/Combat/CXCombatCharacterEnemy.h"
+#include "CXVI/Actor/Combat/CXCombatArena.h"
+#include "CXVI/Character/Combat/CXCharacterPartyData.h"
 #include "CXVI/Character/Combat/CXCombatCharacterBase.h"
+#include "CXVI/Character/Combat/CXCombatCharacterPlayer.h"
 #include "CXVI/Character/Combat/CXCommandCharacter.h"
-#include "CXVI/Actor/Combat/CXTestCombatArena.h"
-
 #include "CXVI/Foundation/Combat/CXTurnManager.h"
-#include "CXVI/Foundation/Combat/CXArenaManager.h"
+#include "CXVI/Foundation/Combat/CombatMessage/CXCombatMessageData.h"
 
-#include "Kismet/GameplayStatics.h"
-#include "Engine/Level.h"
-#include "Engine/LatentActionManager.h"
-#include "Engine/LevelStreaming.h"
-
-#include "Tags/CXGameplayTags.h"
 #include "Foundation/GameplayMessage/CXGameplayMessageSubsystem.h"
+#include "Foundation/Scene/CXSceneSubsystem.h"
+#include "Level/CXLevelTransitionSubsystem.h"
+#include "Level/CXLevelDefinition.h"
+#include "Tags/CXGameplayTags.h"
+
+#include "GameFramework/PlayerController.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXCombatManagerSubsystem)
 
-UCXCombatManagerSubsystem::UCXCombatManagerSubsystem()
+DEFINE_LOG_CATEGORY(LogCXCombat);
+
+namespace CXCombatManager
 {
-	
+	// TODO : 임시. 파티 정보 출처가 정해지면 제거
+	// 요청한 파티가 비어 있으면 테스트 파티 사용 (테스트 파티도 없으면 빈 배열 -> CanStartBattle에서 거절)
+	static TArray<TSubclassOf<ACXCombatCharacterBase>> ResolvePartyClasses(const TArray<TSubclassOf<ACXCombatCharacterBase>>& InRequested, const UCXCharacterPartyData* InTestParty)
+	{
+		if (!InRequested.IsEmpty())
+		{
+			return InRequested;
+		}
+
+		return InTestParty ? InTestParty->CharacterArray : TArray<TSubclassOf<ACXCombatCharacterBase>>();
+	}
 }
 
-void UCXCombatManagerSubsystem::RequestStartBattle(TArray<TSubclassOf<class ACXCombatCharacterBase>> Players, TArray<TSubclassOf<class ACXCombatCharacterBase>> Enemies, APlayerController* PlayerController)
+UCXCombatManagerSubsystem& UCXCombatManagerSubsystem::Get(const UObject* WorldContextObject)
 {
-	// 로드 중 또는 전투 중 재진입 방지.
-	if (bBattleRequested ||
-		!IsValid(TurnManager) ||
-		!IsValid(ArenaManager) ||
-		!IsValid(PlayerController))
-	{
-		return;
-	}
-
-	if (Players.IsEmpty() || Enemies.IsEmpty())
-	{
-		return;
-	}
-
-	ULevelStreaming* Streaming =
-		UGameplayStatics::GetStreamingLevel(this, CombatLevelName);
-
-	if (!Streaming)
-	{
-		UE_LOG(LogTemp, Warning,
-			TEXT("전투 서브레벨이 등록되어 있지 않습니다."));
-		return;
-	}
-
-	StoredFieldPawn = PlayerController->GetPawn();
-	StoredPlayerController = PlayerController;
-
-	PendingSetupData.PlayerClasses = MoveTemp(Players);
-	PendingSetupData.EnemyClasses = MoveTemp(Enemies);
-
-	TestCombatArena.Reset();
-
-	bBattleRequested = true;
-	bLoadingCombat = true;
-
-	FLatentActionInfo LatentInfo;
-	LatentInfo.CallbackTarget = this;
-	LatentInfo.ExecutionFunction =
-		GET_FUNCTION_NAME_CHECKED(
-			UCXCombatManagerSubsystem,
-			HandleArenaLevelReady
-		);
-	LatentInfo.Linkage = 0;
-	LatentInfo.UUID = 1;
-
-	UGameplayStatics::LoadStreamLevel(
-		this,
-		CombatLevelName,
-		true,
-		false,
-		LatentInfo
-	);
-
-
-
+	UCXCombatManagerSubsystem* Subsystem = TryGet(WorldContextObject);
+	check(Subsystem);
+	return *Subsystem;
 }
 
-void UCXCombatManagerSubsystem::RequestEndBattle()
+UCXCombatManagerSubsystem* UCXCombatManagerSubsystem::TryGet(const UObject* WorldContextObject)
 {
-	// 이 예시는 로드 중 취소는 처리하지 않음.
-	if (!bBattleRequested || bLoadingCombat)
-	{
-		return;
-	}
-
-	// 캐릭터를 파괴하기 전에 턴 진행과 바인딩 정리.
-	if (IsValid(TurnManager))
-	{
-		TurnManager->StopBattle();
-	}
-
-	if (IsValid(StoredPlayerController) &&
-		IsValid(StoredFieldPawn))
-	{
-		StoredPlayerController->Possess(StoredFieldPawn);
-		StoredPlayerController->SetViewTargetWithBlend(
-			StoredFieldPawn.Get(), 0.3f);
-	}
-
-	if (IsValid(ArenaManager))
-	{
-		ArenaManager->CleanupArena();
-	}
-
-	if (ULevelStreaming* Streaming =
-		UGameplayStatics::GetStreamingLevel(this, CombatLevelName))
-	{
-		Streaming->SetShouldBeVisible(false);
-	}
-
-	TestCombatArena.Reset();
-	PendingSetupData = FCXArenaSetupData();
-
-	StoredFieldPawn = nullptr;
-	StoredPlayerController = nullptr;
-
-	bBattleRequested = false;
+	const UWorld* World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::ReturnNull);
+	return World ? World->GetSubsystem<UCXCombatManagerSubsystem>() : nullptr;
 }
 
 void UCXCombatManagerSubsystem::PostInitialize()
@@ -133,121 +55,174 @@ void UCXCombatManagerSubsystem::PostInitialize()
 	Super::PostInitialize();
 
 	TurnManager = NewObject<UCXTurnManager>(this);
-	ArenaManager = NewObject<UCXArenaManager>(this);
 
-	ArenaManager->OnArenaReady.AddUObject(this, &UCXCombatManagerSubsystem::HandleArenaReady);
-	TurnManager->OnBattleEnded.AddUObject(this, &UCXCombatManagerSubsystem::RequestEndBattle);
-	TurnManager->OnPlayerInputEnabledChanged.AddUObject(this, &UCXCombatManagerSubsystem::HandlePlayerInputModeChanged);
+	TurnManager->OnBattleEnded.AddUObject(this, &ThisClass::HandleBattleEnded);
+	TurnManager->OnPlayerInputEnabledChanged.AddUObject(this, &ThisClass::HandlePlayerInputModeChanged);
+}
+
+bool UCXCombatManagerSubsystem::RequestStartBattle(FName InEncounterId, const TArray<TSubclassOf<ACXCombatCharacterBase>>& InPlayerClasses, const TArray<TSubclassOf<ACXCombatCharacterBase>>& InEnemyClasses)
+{
+	const UCXLevelDefinition* LevelDefinition = GetCurrentLevelDefinition();
+
+	FCXCombatEnterParams Params;
+	Params.EncounterId = InEncounterId;
+	Params.PlayerClasses = CXCombatManager::ResolvePartyClasses(InPlayerClasses, LevelDefinition ? LevelDefinition->TestPlayerParty.Get() : nullptr);
+	Params.EnemyClasses = CXCombatManager::ResolvePartyClasses(InEnemyClasses, LevelDefinition ? LevelDefinition->TestEnemyParty.Get() : nullptr);
+
+	if (!CanStartBattle(Params))
+	{
+		return false;
+	}
+
+	UCXSceneDefinition* CombatScene = LevelDefinition ? LevelDefinition->CombatScene.Get() : nullptr;
+	if (nullptr == CombatScene)
+	{
+		UE_LOG(LogCXCombat, Warning, TEXT("전투 요청 거절 : 현재 레벨 정의에 CombatScene이 없습니다."));
+		return false;
+	}
+
+	// 전환 설정에 따라 Push 안에서 OnEnter -> BeginBattle이 바로 호출될 수 있으므로 Push 전에 상태 변경
+	// Push 이후 OnEnter 전까지 들어오는 재요청도 이 상태로 거절
+	CombatState = ECXCombatState::Entering;
+
+	// 전환 중이면 PushScene이 거부함
+	if (!UCXSceneSubsystem::Get(this).PushScene(CombatScene, FCXSceneContext::Make(Params)))
+	{
+		CombatState = ECXCombatState::Idle;
+		return false;
+	}
+
+	UE_LOG(LogCXCombat, Log, TEXT("전투 진입 요청 : %s"), *InEncounterId.ToString());
+	return true;
+}
+
+bool UCXCombatManagerSubsystem::BeginBattle(const FCXBattleSetup& InSetup)
+{
+	// RequestStartBattle을 거치지 않은 진입(디버그 Scene Push 등)은 시작하지 않음
+	if (ECXCombatState::Entering != CombatState)
+	{
+		UE_LOG(LogCXCombat, Warning, TEXT("BeginBattle 무시 : 진입 요청 상태가 아닙니다."));
+		return false;
+	}
+
+	ACXCommandCharacter* CommandPawn = InSetup.CommandPawn;
+	APlayerController* PlayerController = IsValid(CommandPawn) ? Cast<APlayerController>(CommandPawn->GetController()) : nullptr;
+	if (!IsValid(TurnManager) || !IsValid(InSetup.Arena) || nullptr == PlayerController)
+	{
+		UE_LOG(LogCXCombat, Warning, TEXT("BeginBattle 실패 : 아레나 또는 빙의된 커맨드 Pawn이 없습니다."));
+		return false;
+	}
+
+	if (InSetup.Players.IsEmpty() || InSetup.Enemies.IsEmpty())
+	{
+		UE_LOG(LogCXCombat, Warning, TEXT("BeginBattle 실패 : 전투원이 없습니다."));
+		return false;
+	}
+
+	CombatArena = InSetup.Arena;
+	WeakCommandCharacter = CommandPawn;
+
+	// 빙의는 전투 Scene(UCXGameScene::OnEnter)이 먼저 처리함 -> 파티 등록만
+	for (ACXCombatCharacterBase* Character : InSetup.Players)
+	{
+		if (ACXCombatCharacterPlayer* Player = Cast<ACXCombatCharacterPlayer>(Character))
+		{
+			CommandPawn->AddCommandCharacter(Player);
+		}
+	}
+
+	PlayerController->SetViewTargetWithBlend(InSetup.Arena.Get(), 0.f);
+
+	// StartBattle 안에서 입력 모드 변경 / 종료가 바로 일어날 수 있으므로 먼저 상태 변경
+	CombatState = ECXCombatState::InBattle;
+	TurnManager->StartBattle(InSetup.Players, InSetup.Enemies);
+
+	return true;
+}
+
+void UCXCombatManagerSubsystem::EndBattle()
+{
+	if (ECXCombatState::Idle == CombatState)
+	{
+		return;
+	}
+
+	// 전투원을 파괴하기 전에 턴 진행과 바인딩 정리 (전투원 정리는 전투 Scene이 아레나에 요청)
+	if (IsValid(TurnManager))
+	{
+		TurnManager->StopBattle();
+	}
+
+	CombatArena.Reset();
+	WeakCommandCharacter.Reset();
+
+	CombatState = ECXCombatState::Idle;
+}
+
+bool UCXCombatManagerSubsystem::CanStartBattle(const FCXCombatEnterParams& InParams) const
+{
+	if (ECXCombatState::Idle != CombatState)
+	{
+		UE_LOG(LogCXCombat, Warning, TEXT("전투 요청 거절 : 이미 전투 중입니다."));
+		return false;
+	}
+
+	if (!IsValid(TurnManager))
+	{
+		return false;
+	}
+
+	// TODO : 인카운터 판단 기준이 정해지면 추가 (현재는 None 여부만 확인)
+	if (InParams.EncounterId.IsNone())
+	{
+		UE_LOG(LogCXCombat, Warning, TEXT("전투 요청 거절 : EncounterId가 없습니다."));
+		return false;
+	}
+
+	if (InParams.PlayerClasses.IsEmpty() || InParams.EnemyClasses.IsEmpty())
+	{
+		UE_LOG(LogCXCombat, Warning, TEXT("전투 요청 거절 : 파티 정보가 비어 있습니다. (요청 파티 또는 레벨 정의의 TestPlayerParty / TestEnemyParty 확인)"));
+		return false;
+	}
+
+	const UCXSceneSubsystem* SceneSubsystem = UCXSceneSubsystem::TryGet(this);
+	if (nullptr == SceneSubsystem || SceneSubsystem->IsTransitioning())
+	{
+		UE_LOG(LogCXCombat, Warning, TEXT("전투 요청 거절 : Scene 전환 중이거나 Scene Subsystem이 없습니다."));
+		return false;
+	}
+
+	return true;
+}
+
+const UCXLevelDefinition* UCXCombatManagerSubsystem::GetCurrentLevelDefinition() const
+{
+	const UCXLevelTransitionSubsystem* LevelTransition = UCXLevelTransitionSubsystem::TryGet(this);
+	return LevelTransition ? LevelTransition->GetCurrentLevelDefinition() : nullptr;
+}
+
+void UCXCombatManagerSubsystem::HandleBattleEnded(bool bInVictory)
+{
+	if (ECXCombatState::InBattle != CombatState)
+	{
+		return;
+	}
+
+	// 종료 알림만 방송. 필드 복귀와 정리 시점은 받는 쪽(전투 Scene)이 결정
+	FCXCombatEndMessage Message;
+	Message.bVictory = bInVictory;
+
+	UCXGameplayMessageSubsystem::Get(this).BroadcastMessage(CXVIGameplayTags::Message_Combat_End, Message);
 }
 
 void UCXCombatManagerSubsystem::HandlePlayerInputModeChanged(ECXCombatInputMode NewInputMode)
 {
 	ACXCommandCharacter* CommandCharacter = WeakCommandCharacter.Get();
-
 	if (!IsValid(CommandCharacter))
 	{
 		return;
 	}
 
 	CommandCharacter->SetCombatInputMode(NewInputMode);
-}
-
-void UCXCombatManagerSubsystem::HandleArenaReady(const TArray<TObjectPtr<class ACXCombatCharacterBase>>& Players, const TArray<TObjectPtr<class ACXCombatCharacterBase>>& Enemies)
-{
-	ACXCommandCharacter* CommandPawn = WeakCommandCharacter.Get();
-	if (!IsValid(TurnManager) || !IsValid(StoredPlayerController) || !IsValid(CommandPawn))
-	{
-		return;
-	}
-
-	// 기존 AI 빙의 해제 시 커맨드폰의 파티 목록이 초기화될 수 있어 먼저 빙의한다.
-	StoredPlayerController->Possess(CommandPawn);
-
-	for (const auto& Character : Players)
-	{
-		if (ACXCombatCharacterPlayer* Player = Cast<ACXCombatCharacterPlayer>(Character.Get()))
-		{
-			CommandPawn->AddCommandCharacter(Player);
-		}
-	}
-	
-	StoredPlayerController->SetViewTargetWithBlend(TestCombatArena.Get(), 0.f);
-
-	TurnManager->StartBattle(Players, Enemies);
-	
-}
-
-void UCXCombatManagerSubsystem::HandleArenaLevelReady()
-{
-	if (!bBattleRequested || !bLoadingCombat)
-	{
-		return;
-	}
-
-	bLoadingCombat = false;
-
-	ULevelStreaming* Streaming = UGameplayStatics::GetStreamingLevel(this, CombatLevelName);
-
-	ULevel* LoadedLevel = Streaming ? Streaming->GetLoadedLevel() : nullptr;
-
-	if (!Streaming ||!Streaming->IsLevelVisible() || !LoadedLevel 
-		|| !IsValid(ArenaManager) || !IsValid(StoredPlayerController))
-	{
-		UE_LOG(LogTemp, Warning, TEXT("전투 레벨 준비 실패"));
-		RequestEndBattle();
-		return;
-	}
-
-	// 로드한 전투 레벨 안에서만 아레나를 검색.
-	ACXTestCombatArena* FoundArena = nullptr;
-	ACXCommandCharacter* FoundCommandPawn = nullptr;
-
-	for (AActor* Actor : LoadedLevel->Actors)
-	{
-		if (!IsValid(Actor))
-		{
-			continue;
-		}
-
-		if (ACXTestCombatArena* Candidate = Cast<ACXTestCombatArena>(Actor))
-		{
-			if (FoundArena)
-			{
-				UE_LOG(LogTemp, Warning, TEXT("아레나가 두 개 이상입니다."));
-				RequestEndBattle();
-				return;
-			}
-
-			FoundArena = Candidate;
-		}
-
-		if (ACXCommandCharacter* Candidate = Cast<ACXCommandCharacter>(Actor))
-		{
-			if (FoundCommandPawn)
-			{
-				UE_LOG(LogTemp, Warning, TEXT("커맨드 Pawn이 두 개 이상입니다."));
-				RequestEndBattle();
-				return;
-			}
-
-			FoundCommandPawn = Candidate;
-		}
-	}
-
-	if (!IsValid(FoundArena) || !IsValid(FoundCommandPawn))
-	{
-		UE_LOG(LogTemp, Warning, TEXT("아레나 또는 커맨드 Pawn이 없습니다."));
-		RequestEndBattle();
-		return;
-	}
-
-	TestCombatArena = FoundArena;
-	WeakCommandCharacter = FoundCommandPawn;
-
-	// 레벨 표시와 아레나 검색이 끝난 뒤 생성 요청.
-	if (!ArenaManager->PrepareArena(PendingSetupData, TestCombatArena.Get()))
-	{
-		UE_LOG(LogTemp, Warning, TEXT("전투원 생성 실패"));
-		RequestEndBattle();
-	}
+	//CommandCharacter->SetCombatInputMode(bAllowed ? ECombatInputMode::Command : ECombatInputMode::Disabled);
 }

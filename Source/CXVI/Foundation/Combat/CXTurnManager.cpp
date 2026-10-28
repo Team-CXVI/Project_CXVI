@@ -409,21 +409,21 @@ bool UCXTurnManager::ShouldEndBattle()
 
 	return !bIsAlivePlayer || !bIsAliveEnemy;
 }
+//
+//void UCXTurnManager::EndBattle()
+//{
+//	ResetBattle();
+//
+//	OnBattleEnded.Broadcast();
+//	// 다시 필드로 돌아가야함
+//	// 배틀 매니저에게 요청
+//	/*if (AGASGameMode* GameMode = GetWorld()->GetAuthGameMode<AGASGameMode>())
+//	{
+//		GameMode->RequestEndBattle();
+//	}*/
+//}
 
 void UCXTurnManager::EndBattle()
-{
-	ResetBattle();
-
-	OnBattleEnded.Broadcast();
-	// 다시 필드로 돌아가야함
-	// 배틀 매니저에게 요청
-	/*if (AGASGameMode* GameMode = GetWorld()->GetAuthGameMode<AGASGameMode>())
-	{
-		GameMode->RequestEndBattle();
-	}*/
-}
-
-void UCXTurnManager::EndBattle_V2()
 {
 	// TODO : 전투 결과 조건 정립
 	// ResetBattle이 전투원 배열을 비우므로 그 전에 결과 판정
@@ -452,7 +452,7 @@ void UCXTurnManager::EndBattle_V2()
 
 	ResetBattle();
 
-	OnBattleEnded_V2.Broadcast(bVictory);
+	OnBattleEnded.Broadcast(bVictory);
 }
 
 void UCXTurnManager::NextTurnPhase(ECXCombatPhase& PreviousPhase)

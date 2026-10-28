@@ -10,7 +10,7 @@
 #include "CXCombatScene.generated.h"
 
 class ACXCombatArena;
-class UCXCombatManagerSubsystem_V2;
+class UCXCombatManagerSubsystem;
 struct FCXCombatEndMessage;
 
 /**
@@ -46,7 +46,7 @@ private:
 
 	void UnbindSceneChanged();
 
-	UCXCombatManagerSubsystem_V2* GetCombatManager() const;
+	UCXCombatManagerSubsystem* GetCombatManager() const;
 
 private:
 	FCXGameplayMessageListenerHandle CombatEndListener;
