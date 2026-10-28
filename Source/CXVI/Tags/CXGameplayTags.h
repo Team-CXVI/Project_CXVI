@@ -14,6 +14,10 @@ namespace CXVIGameplayTags
 	// CombatInputMode
 	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputMode_Combat_Command);
 	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputMode_Combat_Reaction);
+	// Input Mode (Enhanced Input 입력 모드에 넣는 태그. IMC의 Input Mode Query가 검사)
+	// InputMode.Block.*   : IMC 쿼리에 "없음" 조건 -> 태그가 있으면 IMC 제외
+	// InputMode.Context.* : IMC 쿼리에 "있음" 조건 -> 태그가 있으면 IMC 적용
+	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputMode_Block_All);
 
 	// Status
 	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Status_Stunned);

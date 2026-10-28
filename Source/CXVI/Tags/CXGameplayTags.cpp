@@ -9,8 +9,11 @@ namespace CXVIGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Input_Combat_Parry, "Input.Combat.Parry", "적 공격 패링 입력");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Input_Combat_Dodge, "Input.Combat.Dodge", "적 공격 회피 입력");
 
+
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(InputMode_Combat_Command, "InputMode.Combat.Command", "플레이어 차례 입력모드");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(InputMode_Combat_Reaction, "InputMode.Combat.Reaction", "적 차례 입력모드");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(InputMode_Block_All, "InputMode.Block.All", "플레이어 게임 입력 전체 차단 (프로젝트 기본 Input Mode Query를 쓰는 IMC 제외)");
+
 
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Status_Stunned, "Status.Stunned", "행동 불가 상태");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Status_Dead, "Status.Dead", "사망 상태");
