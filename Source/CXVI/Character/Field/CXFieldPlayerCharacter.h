@@ -13,7 +13,6 @@ class UInputMappingContext;
 class UInputAction;
 class UAnimInstance;
 class UAnimMontage;
-class UWidgetComponent;
 class UCableComponent;
 class ACXExpeditionFlag;
 struct FInputActionValue;
@@ -92,12 +91,6 @@ protected:
 	// 그래플링 어빌리티.
 	void GrapplingHook();
 
-	// 태그가 있고/없을 때 UI의 상태 변경을 위한 함수.
-	void RefreshGrapplingPrompt();
-
-	// 그래플링 태그가 들어왔을 때 새로고침 하기위한 함수.
-	void OnCanGrapplingHookChanged(const FGameplayTag, int32 NewCount);
-
 	void StartUseRope();
 
 	// 파쿠르 샘플.
@@ -167,13 +160,6 @@ protected:
 
 	// 그래플링 훅 스펙을 관리할 핸들.
 	FGameplayAbilitySpecHandle GrapplingHookHandle;
-
-	// 태그가 달리고 없어졌을때 델리게이트 함수를 저장할 변수.
-	FDelegateHandle GrapplingTagDelegateHandle;
-
-	// 그래플링 UI
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Grappling")
-	TObjectPtr<UWidgetComponent> GrapplingPrompt;
 
 	// 그래플링 훅 케이블.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Grappling")

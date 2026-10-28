@@ -2,10 +2,14 @@
 #include "CXGrapplingHookTriggerBox.h"
 #include "CXVI/Character/Field/CXFieldPlayerCharacter.h"
 #include "CXVI/Tags/CXFieldTags.h"
+#include "CXVI/UI/Field/CXFieldGrapplingUIInterface.h"
 
 #include "AbilitySystemComponent.h"
 #include "Components/ShapeComponent.h"
 #include "Components/WidgetComponent.h"
+#include "Blueprint/UserWidget.h"
+#include "GameFramework/PlayerController.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXGrapplingHookTriggerBox) 
 
@@ -20,6 +24,9 @@ ACXGrapplingHookTriggerBox::ACXGrapplingHookTriggerBox(const FObjectInitializer&
 	{
 		Collision->SetCollisionProfileName(TEXT("Trigger"));
 		Collision->SetGenerateOverlapEvents(true);
+
+		// 박스만 숨기기.
+		Collision->SetHiddenInGame(true, false);
 	}
 
 	GrapplingUI =
@@ -70,6 +77,7 @@ void ACXGrapplingHookTriggerBox::HandleActorEndOverlap(AActor* OverlappedActor, 
 		return;
 	}
 
+	UpdateGrapplingUI(PlayerCharacter, false);
 
 	if (UAbilitySystemComponent* ASC = PlayerCharacter->GetAbilitySystemComponent())
 	{
@@ -100,5 +108,53 @@ void ACXGrapplingHookTriggerBox::HandleActorBeginOverlap(AActor* OverlappedActor
 		PlayerCharacter->SetGrapplingTarget(GrapplingTarget.Get(), LandingSurface.Get());
 
 		ASC->AddLooseGameplayTag(CXVIFieldTag::State_CanGrapplingHook);
+
+		UpdateGrapplingUI(PlayerCharacter, true);
 	}
+}
+
+void ACXGrapplingHookTriggerBox::UpdateGrapplingUI(ACXFieldPlayerCharacter* Player, bool bCanInteract)
+{
+	if (!IsValid(Player) || !IsValid(GrapplingUI))
+	{
+		return;
+	}
+
+	APlayerController* PC =
+		Cast<APlayerController>(Player->GetController());
+
+	if (!IsValid(PC) || !PC->GetLocalPlayer())
+	{
+		return;
+	}
+
+	GrapplingUI->SetOwnerPlayer(PC->GetLocalPlayer());
+	GrapplingUI->InitWidget();
+
+	UUserWidget* Widget = GrapplingUI->GetUserWidgetObject();
+
+	if (!IsValid(Widget) ||
+		!Widget->GetClass()->ImplementsInterface(
+			UCXFieldGrapplingUIInterface::StaticClass()))
+	{
+		return;
+	}
+	
+	UCharacterMovementComponent* Movement = Player->GetCharacterMovement();
+
+	const bool bShow =
+		bCanInteract &&
+		IsValid(GrapplingTarget) &&
+		IsValid(LandingSurface)&&
+		Movement->IsMovingOnGround();
+
+	// 컴포넌트는 켜두고, 내부 위젯이 표시/숨김을 처리합니다.
+	GrapplingUI->SetVisibility(true);
+
+	ICXFieldGrapplingUIInterface::Execute_UpdateInteractionUI(
+		Widget,
+		bShow,
+		bShow ? GrapplingTarget.Get() : nullptr);
+
+
 }

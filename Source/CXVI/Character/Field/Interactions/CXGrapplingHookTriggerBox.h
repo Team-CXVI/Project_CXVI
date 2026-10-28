@@ -9,6 +9,8 @@
 /**
  * 
  */
+class ACXFieldPlayerCharacter;
+
 UCLASS()
 class CXVI_API ACXGrapplingHookTriggerBox : public ATriggerBox
 {
@@ -31,6 +33,9 @@ protected:
 		AActor* OverlappedActor,
 		AActor* OtherActor
 	);
+
+protected:
+	void UpdateGrapplingUI(ACXFieldPlayerCharacter* Player, bool bCanInteract);
 
 protected:
 	// 레벨에 배치한 트리거의 Details에서 타겟/착지 액터를 지정한다.
