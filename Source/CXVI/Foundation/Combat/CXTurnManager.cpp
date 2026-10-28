@@ -313,6 +313,12 @@ bool UCXTurnManager::ProcessTurnResponse(const FCXCombatMessageData& Response, F
 
 	case ECXCombatMessageType::Action:
 	{
+		// 행동 종료 통지는 액션 진행중에만 전환 판단에 사용
+		if (CurrentPhase != ECXCombatPhase::ActionPhase)
+		{
+			return false;
+		}
+
 		if (ShouldEndBattle())
 		{
 			EndBattle();
@@ -325,8 +331,11 @@ bool UCXTurnManager::ProcessTurnResponse(const FCXCombatMessageData& Response, F
 			return false;
 		}
 
+		// 공격받는 상태 초기화
+		ResetDefenseTargets();
+
 		// 복귀 페이즈로 이동
-		NextTurnPhase(CurrentPhase);
+		CurrentPhase = ECXCombatPhase::ReturnPhase;
 		OutNextPhaseRequest.Phase = CurrentPhase;
 		break;
 	}
@@ -483,6 +492,25 @@ bool UCXTurnManager::CheckAllActionEnded()
 	return true;
 }
 
+void UCXTurnManager::ResetDefenseTargets()
+{
+	for (int32 Index = 0; Index < PlayerCharacters.Num(); ++Index)
+	{
+		if (IsValid(PlayerCharacters[Index]) && PlayerCharacters[Index]->GetIsDefenseTarget())
+		{
+			PlayerCharacters[Index]->SetIsDefenseTarget(false);
+		}
+	}
+
+	for (int32 Index = 0; Index < EnemyCharacters.Num(); ++Index)
+	{
+		if (IsValid(EnemyCharacters[Index]) && EnemyCharacters[Index]->GetIsDefenseTarget())
+		{
+			EnemyCharacters[Index]->SetIsDefenseTarget(false);
+		}
+	}
+}
+
 void UCXTurnManager::NextTurnPhase(ECXCombatPhase& PreviousPhase)
 {
 	uint8 NextPhase = (static_cast<uint8>(PreviousPhase) + 1) % static_cast<uint8>(ECXCombatPhase::PhaseCount);
@@ -506,6 +534,17 @@ void UCXTurnManager::SendPhaseRequest(const FCXCombatMessageData& OutMessage)
 		}
 		else if (EnemyCharacters.Contains(CurrentTurnPlayer) && OutMessage.Phase == ECXCombatPhase::ActionPhase)
 		{
+			ResetDefenseTargets();
+
+			ACXCombatCharacterBase* Target = Cast<ACXCombatCharacterBase>(CurrentTurnPlayer->GetSelectedCombatTarget());
+
+			if (IsValid(Target) && Target->GetIsCharacterAlive() && PlayerCharacters.Contains(Target))
+			{
+				Target->SetIsDefenseTarget(true);
+
+				UE_LOG(LogTemp, Display, TEXT("방어 대상 지정 : %s"), *Target->GetName());
+			}
+
 			InputMode = ECXCombatInputMode::Reaction;
 		}
 	}

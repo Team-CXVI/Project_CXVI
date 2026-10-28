@@ -129,7 +129,10 @@ void ACXCombatCharacterBase::NotifyBattleAbilityEnded(FGameplayAbilitySpecHandle
 	UE_LOG(LogTemp, Display, TEXT("행동 종료"));
 
 	// BT에 공격 종료 알림
-	OnCombatAbilityFinished.Broadcast(bWasCancelled);
+	if(bIsTurn)
+	{ 
+		OnCombatAbilityFinished.Broadcast(bWasCancelled);
+	}
 
 	// 턴매니저에게도 공격 종료 알림
 	FinishAction();
@@ -137,10 +140,10 @@ void ACXCombatCharacterBase::NotifyBattleAbilityEnded(FGameplayAbilitySpecHandle
 
 void ACXCombatCharacterBase::FinishAction()
 {
-	if (!bIsTurn || SavedMessage.Phase != ECXCombatPhase::ActionPhase)
+	/*if ( SavedMessage.Phase != ECXCombatPhase::ActionPhase)
 	{
 		return;
-	}
+	}*/
 	
 	FCXCombatMessageData Response = SavedMessage;
 	Response.Character = this;
@@ -362,6 +365,64 @@ bool ACXCombatCharacterBase::BasicAttackAbility()
 	return false;
 }
 
+bool ACXCombatCharacterBase::DodgeAbility()
+{
+	if (!IsValid(ASC) || !bIsCharacterAlive)
+	{
+		return false;
+	}
+
+	FScopedAbilityListLock AbilityListLock(*ASC);
+
+	FGameplayTagContainer DodgeTag;
+	DodgeTag.AddTag(CXVIGameplayTags::Ability_Dodge);
+
+	TArray<FGameplayAbilitySpec*> MatchingAbilities;
+
+	ASC->GetActivatableGameplayAbilitySpecsByAllMatchingTags(
+		DodgeTag,
+		MatchingAbilities,
+		false
+	);
+
+	for (FGameplayAbilitySpec* Spec : MatchingAbilities)
+	{
+		if (!Spec || !Spec->Ability)
+		{
+			continue;
+		}
+
+		if (Spec->IsActive())
+		{
+			return false;
+		}
+
+		// 캐릭터당 하나의 행동만 실행.
+		if (ExecutingCombatAbility.IsValid())
+		{
+			return false;
+		}
+
+		const FGameplayAbilitySpecHandle Handle = Spec->Handle;
+
+		ExecutingCombatAbility = Handle;
+		CurrentActivatingHandles.AddUnique(Handle);
+		bDoingAction = true;
+
+		if (!ASC->TryActivateAbility(Handle))
+		{
+			CurrentActivatingHandles.Remove(Handle);
+			ExecutingCombatAbility = FGameplayAbilitySpecHandle();
+			bDoingAction = false;
+
+			return false;
+		}
+	}
+
+	// 사용할 회피 어빌리티가 없음.
+	return false;
+}
+
 void ACXCombatCharacterBase::TeleportToAttackLocation()
 {
 	APawn* Target = CurrentTargetPawn.Get();
@@ -450,6 +511,8 @@ void ACXCombatCharacterBase::BeginTurnPhase()
 {
 	bIsTurn = true;
 
+	UE_LOG(LogTemp, Display, TEXT("%s: 턴시작"), *GetName());
+
 	// 턴시작 처리
 	SavedMessage.Character = this;
 
@@ -513,8 +576,13 @@ void ACXCombatCharacterBase::ActionPhase()
 
 	const FVector AttackLocation = Target->GetActorLocation() + Target->GetActorForwardVector() * Distance;
 
+	// 접근 이동부터 공격 종료 까지 행동 중으로 취급
+	bDoingAction = true;
+
 	if (!AIController->RequestCombatAction(Target, AttackLocation, OriginTransform.GetLocation(), ShouldApproachTarget()))
 	{
+
+		bDoingAction = false;
 		FinishAction();
 	}
 }
@@ -543,6 +611,8 @@ void ACXCombatCharacterBase::ReturnPhase()
 
 void ACXCombatCharacterBase::EndTurnPhase()
 {
+	UE_LOG(LogTemp, Display, TEXT("%s: 턴종료"), *GetName());
+
 	// 턴 끝났음
 	bIsTurn = false;
 

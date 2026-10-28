@@ -52,7 +52,7 @@ void ACXCombatCharacterEnemy::SelectTargetPhase()
 
 	const int32 MaxTargetNum = SavedMessage.Targets.Num();
 
-	const int32 RandTargetIndex = FMath::RandRange(0, MaxTargetNum);
+	const int32 RandTargetIndex = FMath::RandRange(0, MaxTargetNum - 1);
 
 	for (int32 Index = 0; Index < MaxTargetNum; ++Index)
 	{

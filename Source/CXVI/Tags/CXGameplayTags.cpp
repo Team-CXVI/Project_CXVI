@@ -15,8 +15,8 @@ namespace CXVIGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(InputMode_Block_All, "InputMode.Block.All", "플레이어 게임 입력 전체 차단 (프로젝트 기본 Input Mode Query를 쓰는 IMC 제외)");
 
 
-	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Status_Stunned, "Status.Stunned", "행동 불가 상태");
-	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Status_Dead, "Status.Dead", "사망 상태");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Combat_Dodging, "State.Combat.Dodging", "회피 상태");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Combat_Parrying, "State.Combat.Parrying", "패리 상태");
 
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Event_Combat_ParrySucceeded, "Event.Combat.ParrySucceeded", "패링 성공 시 GAS 이벤트");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Event_Combat_AttackHit, "Event.Combat.AttackHit", "공격 타격시 GAS 이벤트");
@@ -32,4 +32,6 @@ namespace CXVIGameplayTags
 	
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Basic_Attack, "Character.Ability.BasicAttack", "캐릭터 기본 공격");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Fire, "Character.Ability.Fire", "캐릭터 레이 발사");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Dodge, "Character.Ability.Dodge", "캐릭터 회피 스킬");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Parry, "Character.Ability.Parry", "캐릭터 패리 스킬");
 }

@@ -27,6 +27,7 @@ public:
 	void InitializeGAS();
 
 	bool BasicAttackAbility();
+	bool DodgeAbility();
 
 	// 어빌리티 끝났다고 알리는 함수
 	void NotifyBattleAbilityEnded(FGameplayAbilitySpecHandle Handle, bool bWasCancelled);
@@ -47,11 +48,14 @@ public:
 	void CancelCombatAbility();
 
 	// Getter / Setter
-	FORCEINLINE const bool GetIsCharacterAlive() const { return bIsCharacterAlive; }
-	FORCEINLINE const bool GetIsTurn() const { return bIsTurn; }
+	FORCEINLINE bool GetIsCharacterAlive() const { return bIsCharacterAlive; }
+	FORCEINLINE bool GetIsTurn() const { return bIsTurn; }
 	FORCEINLINE void SetOriginTransform(const FTransform& NewTransform) { OriginTransform = NewTransform; }
-	FORCEINLINE const bool GetDoingAction() const { return bDoingAction; }
+	FORCEINLINE bool GetDoingAction() const { return bDoingAction; }
 	FORCEINLINE void SetDoingAction(bool NewDoingAction) { bDoingAction = NewDoingAction; }
+	FORCEINLINE bool GetIsDefenseTarget() const { return bIsDefenseTarget; }
+	FORCEINLINE void SetIsDefenseTarget(bool bNewValue) { bIsDefenseTarget = bNewValue; }
+
 	float GetCombatSpeed() const;
 
 	APawn* GetSelectedCombatTarget() const { return CurrentTargetPawn.Get(); }
@@ -153,6 +157,9 @@ protected:
 	bool bBasicAttackManaGranted = false;
 
 	bool bDoingAction = false;
+
+	// 현재 공격받고있는 상태인지
+	bool bIsDefenseTarget = false;
 
 protected:
 	/*UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Attribute")

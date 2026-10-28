@@ -153,6 +153,7 @@ private:
 
 	TArray<TWeakObjectPtr<class ACXCombatCharacterPlayer>> CommandCharacters;
 
+
 	TArray<TWeakObjectPtr<APawn>> TargetCandidates;
 	int32 SelectedTargetIndex = INDEX_NONE;
 

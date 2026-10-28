@@ -35,7 +35,7 @@ enum class ECXActionType : uint8
 	None,
 	BasicAttack,
 	Skill,
-	Item
+	Item,
 };
 
 enum class ECXTargetTeam : uint8

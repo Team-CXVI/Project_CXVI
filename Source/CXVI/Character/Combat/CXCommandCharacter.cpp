@@ -468,6 +468,22 @@ void ACXCommandCharacter::HandleInputDodge()
 	}
 
 	UE_LOG(LogTemp, Display, TEXT("회피 키 누름 "));
+
+	for (int32 Index = 0; Index < CommandCharacters.Num(); ++Index)
+	{
+		ACXCombatCharacterPlayer* CommandPlayer = CommandCharacters[Index].Get();
+		if (!IsValid(CommandPlayer))
+		{
+			return;
+		}
+
+		if (CommandPlayer->GetIsDefenseTarget())
+		{
+			CommandPlayer->DodgeAbility();
+		}
+	}
+
+
 }
 
 void ACXCommandCharacter::HandleInputFire()
