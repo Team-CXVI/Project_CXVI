@@ -58,6 +58,13 @@ public:
 
 	void OnSceneResumed_Implementation();
 
+	// 키 바인드할 때 기능을 나눠 줄 함수.
+protected:
+	// 상호 작용 키.
+	void Interactive();
+
+	// 공격 키.
+	void AttackFunc();
 protected:
 	void Move(const FInputActionValue& InValue);
 	void Look(const FInputActionValue& InValue);
@@ -119,19 +126,13 @@ protected:
 	TObjectPtr<UInputAction> JumpAction;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input)
-	TObjectPtr<UInputAction> GrapplingAction;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input)
 	TObjectPtr<UInputAction> SprintAction;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input)
-	TObjectPtr<UInputAction> AssassinationAttackAction;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input)
-	TObjectPtr<UInputAction> FlagAction;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input)
 	TObjectPtr<UInputAction> AttackAction;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input)
+	TObjectPtr<UInputAction> InteractiveAction;
 
 	// 게임플레이 어빌리티 - 스프린트
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = GameplayAbilities)

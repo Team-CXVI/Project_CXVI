@@ -150,15 +150,16 @@ void ACXFieldPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerI
 			EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ThisClass::Look);
 		}
 
+		if (InteractiveAction)
+		{
+			EnhancedInputComponent->BindAction(InteractiveAction, ETriggerEvent::Started, this, &ThisClass::Interactive);
+		}
+
 		if (JumpAction)
 		{
 			EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ThisClass::StartJumpOrParkour);
 			EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ThisClass::ReleaseJumpOrParkour);
 			EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Canceled, this, &ThisClass::ReleaseJumpOrParkour);
-		}
-		if (GrapplingAction)
-		{
-			EnhancedInputComponent->BindAction(GrapplingAction, ETriggerEvent::Started, this, &ThisClass::GrapplingHook);
 		}
 
 		if (SprintAction)
@@ -170,19 +171,9 @@ void ACXFieldPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerI
 			EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Canceled, this, &ThisClass::StopSprint);
 		}
 
-		if (AssassinationAttackAction)
-		{
-			EnhancedInputComponent->BindAction(AssassinationAttackAction, ETriggerEvent::Started, this, &ThisClass::Assassination);
-		}
-
-		if (FlagAction)
-		{
-			EnhancedInputComponent->BindAction(FlagAction, ETriggerEvent::Started, this, &ThisClass::StartUseFlag);
-		}
-
 		if (AttackAction)
 		{
-			EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Started, this, &ThisClass::Attack);
+			EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Started, this, &ThisClass::AttackFunc);
 		}
 	}
 
@@ -326,6 +317,49 @@ void ACXFieldPlayerCharacter::OnSceneResumed_Implementation()
 {
 	SetActorHiddenInGame(false);
 	GetCharacterMovement()->SetDefaultMovementMode();
+}
+
+void ACXFieldPlayerCharacter::Interactive()
+{
+	// GrapplingHook StartUseFlag
+
+	if (!IsValid(ASC))
+	{
+		return;
+	}
+
+	if (ASC->HasMatchingGameplayTag(CXVIFieldTag::State_CanUseExpeditionFlag))
+	{
+		StartUseFlag();
+	}
+	else if (ASC->HasMatchingGameplayTag(CXVIFieldTag::State_CanGrapplingHook))
+	{
+		GrapplingHook();
+	}
+	else
+	{
+		return;
+	}
+
+}
+
+void ACXFieldPlayerCharacter::AttackFunc()
+{
+	if (!IsValid(ASC))
+	{
+		return;
+	}
+	
+	if (ASC->HasMatchingGameplayTag(CXVIFieldTag::State_CanAssassination))
+	{
+		Assassination();
+	}
+	else
+	{
+		Attack();
+		return;
+	}
+
 }
 
 void ACXFieldPlayerCharacter::StartJumpOrParkour()
