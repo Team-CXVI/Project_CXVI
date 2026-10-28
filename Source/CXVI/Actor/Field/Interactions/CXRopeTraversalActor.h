@@ -30,6 +30,7 @@ public:
 public:
 	bool GetTraversalPoints(ECXRopeTraversalDirection Direction, FVector& OutEntry, FVector& OutDestination, FVector& OutExit) const;
 
+	bool GetApproachPoint(ECXRopeTraversalDirection Direction, FVector& OutApproach)const;
 
 protected:
 	// Called when the game starts or when spawned

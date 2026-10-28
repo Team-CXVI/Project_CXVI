@@ -92,6 +92,32 @@ bool ACXRopeTraversalActor::GetTraversalPoints(ECXRopeTraversalDirection Directi
 	return true;
 }
 
+bool ACXRopeTraversalActor::GetApproachPoint(ECXRopeTraversalDirection Direction, FVector& OutApproach) const
+{
+	USceneComponent* ApproachPoint = nullptr;
+	
+	if (Direction == ECXRopeTraversalDirection::Up)
+	{
+		ApproachPoint = BottomExitPoint.Get();
+	}
+	else if (Direction == ECXRopeTraversalDirection::Down)
+	{
+		ApproachPoint = TopExitPoint.Get();
+	}
+	else
+	{
+		return false;
+	}
+	
+	if (!IsValid(ApproachPoint))
+	{
+		return false;
+	}
+
+	OutApproach = ApproachPoint->GetComponentLocation();
+	return true;
+}
+
 // Called when the game starts or when spawned
 void ACXRopeTraversalActor::BeginPlay()
 {

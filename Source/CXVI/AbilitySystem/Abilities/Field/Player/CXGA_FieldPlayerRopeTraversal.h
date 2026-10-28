@@ -93,6 +93,19 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Rope")
 	float LandingTimeOut = 3.0f;
 
+	// 발판 위 접근점에서 로프에 붙는 이동.
+	void StartMoveToRopeAttachment();
+
+	UFUNCTION()
+	void OnRopeAttachmentFinished();
+
+	UPROPERTY(Transient)
+	FVector AttachmentMoveGoal = FVector::ZeroVector;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Rope")
+	float AttachmentMoveDuration = 0.3f;
+
+
 protected:
 	UPROPERTY(Transient)
 	TWeakObjectPtr<ACXFieldPlayerCharacter> TraversalCharacter;
@@ -107,6 +120,9 @@ protected:
 	FVector TraversalEntry = FVector::ZeroVector;
 
 	UPROPERTY(Transient)
+	FVector TraversalApproach = FVector::ZeroVector;
+
+	UPROPERTY(Transient)
 	FVector TraversalDestination = FVector::ZeroVector;
 
 	UPROPERTY(Transient)
@@ -116,4 +132,6 @@ protected:
 	TObjectPtr<UAbilityTask_ApplyRootMotionMoveToForce> TraversalMoveTask;
 
 	bool bControlsTraversalMovement = false;
+
+
 };
