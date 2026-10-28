@@ -123,17 +123,17 @@ void ACXFieldPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerI
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
-	if (InputMappingContext)
-	{
-		if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
-		{
-			
-			if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
-			{
-				Subsystem->AddMappingContext(InputMappingContext, 0);
-			}
-		}
-	}
+	//if (InputMappingContext)
+	//{
+	//	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
+	//	{
+	//		
+	//		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
+	//		{
+	//			Subsystem->AddMappingContext(InputMappingContext, 0);
+	//		}
+	//	}
+	//}
 
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
 	{
@@ -314,6 +314,18 @@ void ACXFieldPlayerCharacter::UnregisterNearByFlag(ACXExpeditionFlag* Flag)
 		return;
 	}
 	NearByActiveExpeditionFlag.Reset();
+}
+
+void ACXFieldPlayerCharacter::OnSceneSuspended_Implementation()
+{
+	SetActorHiddenInGame(true);
+	GetCharacterMovement()->DisableMovement();
+}
+
+void ACXFieldPlayerCharacter::OnSceneResumed_Implementation()
+{
+	SetActorHiddenInGame(false);
+	GetCharacterMovement()->SetDefaultMovementMode();
 }
 
 void ACXFieldPlayerCharacter::StartJumpOrParkour()

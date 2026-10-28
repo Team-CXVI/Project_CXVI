@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "CXFieldCharacterBase.h"
+#include "CXVI/Foundation/Scene/CXSceneSuspendable.h"
 
 #include "CXFieldPlayerCharacter.generated.h"
 
@@ -19,7 +20,7 @@ struct FInputActionValue;
 
 
 UCLASS()
-class CXVI_API ACXFieldPlayerCharacter : public ACXFieldCharacterBase
+class CXVI_API ACXFieldPlayerCharacter : public ACXFieldCharacterBase, public ICXSceneSuspendable
 {
 	GENERATED_BODY()
 
@@ -50,6 +51,12 @@ public:
 
 	// 벗어난 깃발을 사용 후보에서 제거.
 	void UnregisterNearByFlag(ACXExpeditionFlag* Flag);
+
+	// 필드 씬 인터페이스 섹션.
+public:
+	void OnSceneSuspended_Implementation();
+
+	void OnSceneResumed_Implementation();
 
 protected:
 	void Move(const FInputActionValue& InValue);
@@ -102,10 +109,6 @@ protected:
 	
 
 protected:
-	// Input.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input)
-	TObjectPtr<UInputMappingContext> InputMappingContext;
-
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input)
 	TObjectPtr<UInputAction> MoveAction;
 
