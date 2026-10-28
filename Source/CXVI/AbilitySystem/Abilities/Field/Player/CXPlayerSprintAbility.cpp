@@ -54,9 +54,7 @@ bool UCXPlayerSprintAbility::CanActivateAbility(const FGameplayAbilitySpecHandle
 	const ACharacter* Character = Cast<ACharacter>(ActorInfo->AvatarActor.Get());
 
 
-	// 스테미나가 있어야 시작 가능/캐릭터의 이동이 있어야만 발동.
-	return Character && Character->GetCharacterMovement() 
-		&& !Character->GetLastMovementInputVector().IsNearlyZero() && Character->GetVelocity().Size2D() > 10.0f;
+	return Character && Character->GetCharacterMovement();
 }
 
 void UCXPlayerSprintAbility::ActivateAbility(

@@ -26,14 +26,36 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
+
+protected:
+	UFUNCTION()
+	void HandleInteractionBeginOverlap(
+		UPrimitiveComponent* OverlappedComponent,
+		AActor* OtherActor,
+		UPrimitiveComponent* OtherComp,
+		int32 OtherBodyIndex,
+		bool bFromSweep,
+		const FHitResult& SweepResult
+	);
+
+	UFUNCTION()
+	void HandleInteractionEndOverlap(
+		UPrimitiveComponent* OverlappedComponent,
+		AActor* OtherActor,
+		UPrimitiveComponent* OtherComp,
+		int32 OtherBodyIndex
+	);
+
+
 protected:
 
 	// 원정대 깃발 메시.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ExpeditionFlag")
 	TObjectPtr<UStaticMeshComponent> ExpeditionFlag;
 
-	// 상호작용 가능하게 할 트리거 박스.
+
+	// 상호작용 가능하게 할 트리거 스피어.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ExpeditionFlag")
-	TObjectPtr<class UChildActorComponent> ExpeditionFlagTrigger;
+	TObjectPtr<class USphereComponent> ExpeditionInteractionSphere;
 	
 };

@@ -42,10 +42,11 @@ bool UCXPlayerGrapplingHookAbility::CanActivateAbility(const FGameplayAbilitySpe
     const ACXFieldPlayerCharacter* Character = ActorInfo ? Cast<ACXFieldPlayerCharacter>(ActorInfo->AvatarActor.Get()) : nullptr;
   
 
-    // 캐릭터의 존재여부, 어트리뷰트.스태미나의 여분, 그래플링 타겟 액터와 착지지점이 있는지 확인 하나라도 존재하지 않으면 실패.
+    // 캐릭터의 존재여부, 어트리뷰트.스태미나의 여분, 그래플링 타겟 액터와 착지지점이 있는지 확인 하나라도 존재하지 않으면 실패/그리고 땅에 있는가.
     return IsValid(Character)
         && IsValid(Character->GetGrapplingTargetActor())
-        && IsValid(Character->GetLandingSurfaceActor());
+        && IsValid(Character->GetLandingSurfaceActor())
+        && Character->GetCharacterMovement()->IsMovingOnGround();
 }
 
 void UCXPlayerGrapplingHookAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)

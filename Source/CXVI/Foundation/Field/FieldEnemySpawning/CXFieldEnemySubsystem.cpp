@@ -4,6 +4,7 @@
 #include "CXFieldEnemySubsystem.h"
 #include "CXFieldEnemySpawner.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(CXFieldEnemySubsystem)
 bool UCXFieldEnemySubsystem::RegisterSpawnPoint(FName SpawnId, FName RestGroupId, bool bRespawnOnRest)
 {
 	// 고유 ID가 없으면 등록할 수 없다.
