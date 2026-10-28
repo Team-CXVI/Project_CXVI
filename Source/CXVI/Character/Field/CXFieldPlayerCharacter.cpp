@@ -274,21 +274,6 @@ void ACXFieldPlayerCharacter::OnCanGrapplingHookChanged(const FGameplayTag, int3
 	RefreshGrapplingPrompt();
 }
 
-void ACXFieldPlayerCharacter::InteractiveE()
-{
-	if (IsValid(ASC))
-	{
-		if (ASC->HasMatchingGameplayTag(CXVIFieldTag::State_CanUseExpeditionFlag))
-		{
-			StartUseFlag();
-		}
-		else if (ASC->HasMatchingGameplayTag(CXVIFieldTag::State_CanUseRope))
-		{
-			StartUseRope();
-		}
-	}
-}
-
 void ACXFieldPlayerCharacter::StartUseRope()
 {
 	if (IsValid(ASC) && RopeTraversalAbilityHandle.IsValid())
@@ -411,6 +396,10 @@ void ACXFieldPlayerCharacter::Interactive()
 	else if (ASC->HasMatchingGameplayTag(CXVIFieldTag::State_CanGrapplingHook))
 	{
 		GrapplingHook();
+	}
+	else if (ASC->HasMatchingGameplayTag(CXVIFieldTag::State_CanUseRope))
+	{
+		StartUseRope();
 	}
 	else
 	{

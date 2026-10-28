@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "CXFieldCharacterBase.h"
 #include "CXVI/Foundation/Scene/CXSceneSuspendable.h"
+#include "CXVI/Actor/Field/Interactions/CXRopeTraversalActor.h"
 
 #include "CXFieldPlayerCharacter.generated.h"
 
@@ -52,6 +53,20 @@ public:
 	// 벗어난 깃발을 사용 후보에서 제거.
 	void UnregisterNearByFlag(ACXExpeditionFlag* Flag);
 
+	// 로프 섹션.
+public:
+	ACXRopeTraversalActor* GetRopeTraversalTarget() const { return CurrentRopeTraversalTarget.Get(); }
+
+	ECXRopeTraversalDirection GetRopeTraversalDirection() const
+	{
+		return CurrentRopeTraversalTarget.IsValid() ? CurrentRopeTraversalDirection : ECXRopeTraversalDirection::None;
+	}
+
+	void SetRopeTraversalTarget(ACXRopeTraversalActor* Rope, ECXRopeTraversalDirection Direction);
+
+	void ClearRopeTraversalTarget(ACXRopeTraversalActor* Rope, ECXRopeTraversalDirection Direction);
+
+
 	// 필드 씬 인터페이스 섹션.
 public:
 	void OnSceneSuspended_Implementation();
@@ -65,18 +80,6 @@ protected:
 
 	// 공격 키.
 	void AttackFunc();
-
-	// 로프 섹션.
-	ACXRopeTraversalActor* GetRopeTraversalTarget() const { return CurrentRopeTraversalTarget.Get(); }
-
-	ECXRopeTraversalDirection GetRopeTraversalDirection() const 
-	{ 
-		return CurrentRopeTraversalTarget.IsValid() ? CurrentRopeTraversalDirection : ECXRopeTraversalDirection::None;
-	}
-	 
-	void SetRopeTraversalTarget(ACXRopeTraversalActor* Rope, ECXRopeTraversalDirection Direction);
-
-	void ClearRopeTraversalTarget(ACXRopeTraversalActor* Rope, ECXRopeTraversalDirection Direction);
 
 protected:
 	void Move(const FInputActionValue& InValue);
@@ -99,12 +102,7 @@ protected:
 	// 그래플링 태그가 들어왔을 때 새로고침 하기위한 함수.
 	void OnCanGrapplingHookChanged(const FGameplayTag, int32 NewCount);
 
-	// Inpue E.
-	void InteractiveE();
-
 	void StartUseRope();
-
-
 
 	// 파쿠르 샘플.
 	void StartJumpOrParkour();
