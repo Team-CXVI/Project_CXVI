@@ -149,26 +149,22 @@ void UCXGA_FieldPlayerRopeTraversal::StartMoveToEntry()
 {
 	if (!IsActive())
 	{
-		OnTraversalInterrupted();
 		return;
 	}
 
 	ACXFieldPlayerCharacter* Player = TraversalCharacter.Get();
 	UCharacterMovementComponent* Movement = IsValid(Player) ? Player->GetCharacterMovement() : nullptr;
 
-	if (!IsValid(Movement) || !TraversalRope.IsValid())
+	if (!IsValid(Movement) || !TraversalRope.IsValid()||!Movement->IsMovingOnGround())
 	{
 		OnTraversalInterrupted();
 		return;
 	}
 
-	const float HalfHeight = Player->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
 
-	EntryMoveGoal = TraversalEntry + FVector::UpVector * HalfHeight;
+	EntryMoveGoal = FVector(TraversalEntry.X, TraversalEntry.Y, Player->GetActorLocation().Z);
 
 	Movement->StopMovementImmediately();
-	bControlsTraversalMovement = true;
-	Movement->SetMovementMode(MOVE_Flying);
 
 	TraversalMoveTask =
 		UAbilityTask_ApplyRootMotionMoveToForce::ApplyRootMotionMoveToForce(
@@ -213,7 +209,11 @@ void UCXGA_FieldPlayerRopeTraversal::OnEntryMoveFinished()
 		return;
 	}
 
-	if (FVector::DistSquared(Player->GetActorLocation(), EntryMoveGoal) > FMath::Square(10.0f))
+	UCharacterMovementComponent* Movement = Player->GetCharacterMovement();
+
+	if (!IsValid(Movement) ||
+		!Movement->IsMovingOnGround()||
+		FVector::DistSquared2D(Player->GetActorLocation(), EntryMoveGoal) > FMath::Square(10.0f))
 	{
 		OnTraversalInterrupted();
 		return;
