@@ -124,7 +124,7 @@ void ACXExpeditionFlag::HandleInteractionEndOverlap(UPrimitiveComponent* Overlap
         ASC->RemoveLooseGameplayTag(CXVIFieldTag::State_CanUseExpeditionFlag);
     }
 
-    ACXExpeditionFlag* Flag = Cast<ACXExpeditionFlag>(GetParentActor());
+    ACXExpeditionFlag* Flag = this;
     if (!IsValid(Flag))
     {
         return;
