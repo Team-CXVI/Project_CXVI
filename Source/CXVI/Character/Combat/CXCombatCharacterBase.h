@@ -12,6 +12,7 @@
 #include "CXCombatCharacterBase.generated.h"
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FCXOnCombatAbilityFinished, bool);
+DECLARE_MULTICAST_DELEGATE_OneParam(FCXOnCanStartReturnPhase, bool);
 
 UCLASS()
 class CXVI_API ACXCombatCharacterBase : public ACharacter, public IAbilitySystemInterface, public ICXCombatMessageInterface
@@ -38,6 +39,7 @@ public:
 
 	//
 	FCXOnCombatAbilityFinished OnCombatAbilityFinished;
+	FCXOnCanStartReturnPhase OnCanStartReturnPhase;
 
 	virtual bool ExecuteCombatAbility();
 

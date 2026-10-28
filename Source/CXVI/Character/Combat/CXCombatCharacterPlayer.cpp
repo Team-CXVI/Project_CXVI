@@ -220,6 +220,11 @@ void ACXCombatCharacterPlayer::SkipTurn()
 	EndTurnPhase();
 }
 
+void ACXCombatCharacterPlayer::TryRunaway()
+{
+	
+}
+
 void ACXCombatCharacterPlayer::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();

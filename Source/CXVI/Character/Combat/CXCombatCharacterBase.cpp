@@ -125,7 +125,14 @@ void ACXCombatCharacterBase::NotifyBattleAbilityEnded(FGameplayAbilitySpecHandle
 
 	ExecutingCombatAbility = FGameplayAbilitySpecHandle();
 
+	bDoingAction = false;
+	UE_LOG(LogTemp, Display, TEXT("행동 종료"));
+
+	// BT에 공격 종료 알림
 	OnCombatAbilityFinished.Broadcast(bWasCancelled);
+
+	// 턴매니저에게도 공격 종료 알림
+	FinishAction();
 }
 
 void ACXCombatCharacterBase::FinishAction()
@@ -134,7 +141,7 @@ void ACXCombatCharacterBase::FinishAction()
 	{
 		return;
 	}
-
+	
 	FCXCombatMessageData Response = SavedMessage;
 	Response.Character = this;
 	Response.MessageType = ECXCombatMessageType::Action;
@@ -229,6 +236,9 @@ void ACXCombatCharacterBase::SubmitTarget(APawn* Target)
 
 	CurrentTargetPawn = Target;
 
+	bDoingAction = true;
+	UE_LOG(LogTemp, Display, TEXT("행동 시작"));
+
 	FCXCombatMessageData Response = SavedMessage;
 	Response.Character = this;
 	Response.MessageType = ECXCombatMessageType::None;
@@ -290,7 +300,14 @@ void ACXCombatCharacterBase::CompleteCombatBehavior()
 	SetActorRotation(OriginTransform.GetRotation().Rotator());
 
 	// 다음 턴이 시작될수있으므로 마지막에 호출.
-	FinishAction();
+	if (bIsTurn && SavedMessage.Phase == ECXCombatPhase::ReturnPhase)
+	{
+		FCXCombatMessageData Response = SavedMessage;
+		Response.Character = this;
+		Response.MessageType = ECXCombatMessageType::None;
+
+		CombatMessageResponse(Response);
+	}
 }
 
 void ACXCombatCharacterBase::CancelCombatAbility()
@@ -506,11 +523,22 @@ void ACXCombatCharacterBase::ReturnPhase()
 {
 	// 적의 턴일때 패링이나 회피 리액션을 취할 수 있다
 	// 아직 패링회피 구현안되어서 이페이즈가 오면 바로 스킵
-	SavedMessage.Character = this;
+	/*SavedMessage.Character = this;
 	SavedMessage.Phase = ECXCombatPhase::ReturnPhase;
-	SavedMessage.MessageType = ECXCombatMessageType::None;
+	SavedMessage.MessageType = ECXCombatMessageType::None;*/
 
-	CombatMessageResponse(SavedMessage);
+	//CombatMessageResponse(SavedMessage);
+	ACXCombatAIController* AIController = Cast<ACXCombatAIController>(GetController());
+
+	if (!AIController || !AIController->RequestCombatReturn())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("%s: 복귀 허가 실패"), *GetName());
+
+		return;
+	}
+
+	UE_LOG(LogTemp, Display, TEXT("%s: 복귀 페이즈 진입, 복귀 허가"), *GetName());
+
 }
 
 void ACXCombatCharacterBase::EndTurnPhase()

@@ -156,10 +156,9 @@ void UCXTurnManager::HandleTurnResponse(const FCXCombatMessageData& Response)
 	{
 		// 메시지가 왔는데 현재 턴플레이어가 아닌데 오는경우는 플레이어가 반격을 하는 상태
 
-		return;
 	}
 
-	SavedMessage.Character = Sender;
+	//SavedMessage.Character = Sender;
 	SavedMessage.Targets.Reset();
 
 	if (!ProcessTurnResponse(Response, SavedMessage))
@@ -321,6 +320,10 @@ bool UCXTurnManager::ProcessTurnResponse(const FCXCombatMessageData& Response, F
 		}
 
 		// 여기서 복귀페이즈로 가도되나 계속 검사
+		if (!CheckAllActionEnded())
+		{
+			return false;
+		}
 
 		// 복귀 페이즈로 이동
 		NextTurnPhase(CurrentPhase);
@@ -444,6 +447,40 @@ void UCXTurnManager::EndBattle()
 	ResetBattle();
 
 	OnBattleEnded.Broadcast(bVictory);
+}
+
+bool UCXTurnManager::CheckAllActionEnded()
+{
+	if (!IsValid(CurrentTurnPlayer))
+	{
+		// 현재 턴 주체자가 없다? 그럴수가 있나 일단 모든 턴이 끝났다고 가정
+		return true;
+	}
+
+	if (CurrentTurnPlayer->GetDoingAction())
+	{
+		// 현재 턴 주체자가 행동중 
+		return false;
+	}
+
+	for (int32 Index = 0; Index < PlayerCharacters.Num(); ++Index)
+	{
+		if (IsValid(PlayerCharacters[Index]) && PlayerCharacters[Index]->GetIsCharacterAlive() && PlayerCharacters[Index]->GetDoingAction())
+		{
+			return false;
+		}
+	}
+
+	for (int32 Index = 0; Index < EnemyCharacters.Num(); ++Index)
+	{
+		if (IsValid(EnemyCharacters[Index]) && EnemyCharacters[Index]->GetIsCharacterAlive() && EnemyCharacters[Index]->GetDoingAction())
+		{
+			return false;
+		}
+	}
+
+	// 여기 까지왔으면 모든 행동하는 사람이 없다
+	return true;
 }
 
 void UCXTurnManager::NextTurnPhase(ECXCombatPhase& PreviousPhase)

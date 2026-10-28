@@ -81,6 +81,8 @@ private:
 	// 전투 종료
 	void EndBattle();
 
+	bool CheckAllActionEnded();
+
 	// 페이즈 변경 함수
 	void NextTurnPhase(ECXCombatPhase& PreviousPhase);
 

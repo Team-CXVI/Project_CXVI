@@ -554,8 +554,14 @@ void ACXCommandCharacter::HandleInputRunaway()
 	{
 		return;
 	}
+	
+	ACXCombatCharacterPlayer* CommandPlayer = CommandCharacter.Get();
+	if (!CommandPlayer || !CommandPlayer->GetIsAimMode())
+	{
+		return;
+	}
 
-
+	CommandPlayer->TryRunaway();
 }
 
 void ACXCommandCharacter::HandleInputSkipTurn()
