@@ -3,7 +3,7 @@
 
 #include "CXExpeditionFlag.h"
 #include "CXExpeditionFlagTriggerBox.h"
-#include "CXVI/Foundation/FieldEnemySpawning/CXFieldEnemySubsystem.h"
+#include "CXVI/Foundation/Field/FieldEnemySpawning/CXFieldEnemySubsystem.h"
 #include "CXVI/Character/Field/CXFieldPlayerCharacter.h"
 
 #include "Engine/World.h"
