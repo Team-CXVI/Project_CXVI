@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "CXFieldCharacterBase.h"
+#include "CXVI/Foundation/Scene/CXSceneSuspendable.h"
+#include "CXVI/Actor/Field/Interactions/CXRopeTraversalActor.h"
 
 #include "CXFieldPlayerCharacter.generated.h"
 
@@ -19,7 +21,7 @@ struct FInputActionValue;
 
 
 UCLASS()
-class CXVI_API ACXFieldPlayerCharacter : public ACXFieldCharacterBase
+class CXVI_API ACXFieldPlayerCharacter : public ACXFieldCharacterBase, public ICXSceneSuspendable
 {
 	GENERATED_BODY()
 
@@ -51,6 +53,34 @@ public:
 	// 벗어난 깃발을 사용 후보에서 제거.
 	void UnregisterNearByFlag(ACXExpeditionFlag* Flag);
 
+	// 로프 섹션.
+public:
+	ACXRopeTraversalActor* GetRopeTraversalTarget() const { return CurrentRopeTraversalTarget.Get(); }
+
+	ECXRopeTraversalDirection GetRopeTraversalDirection() const
+	{
+		return CurrentRopeTraversalTarget.IsValid() ? CurrentRopeTraversalDirection : ECXRopeTraversalDirection::None;
+	}
+
+	void SetRopeTraversalTarget(ACXRopeTraversalActor* Rope, ECXRopeTraversalDirection Direction);
+
+	void ClearRopeTraversalTarget(ACXRopeTraversalActor* Rope, ECXRopeTraversalDirection Direction);
+
+
+	// 필드 씬 인터페이스 섹션.
+public:
+	void OnSceneSuspended_Implementation();
+
+	void OnSceneResumed_Implementation();
+
+	// 키 바인드할 때 기능을 나눠 줄 함수.
+protected:
+	// 상호 작용 키.
+	void Interactive();
+
+	// 공격 키.
+	void AttackFunc();
+
 protected:
 	void Move(const FInputActionValue& InValue);
 	void Look(const FInputActionValue& InValue);
@@ -72,7 +102,7 @@ protected:
 	// 그래플링 태그가 들어왔을 때 새로고침 하기위한 함수.
 	void OnCanGrapplingHookChanged(const FGameplayTag, int32 NewCount);
 
-
+	void StartUseRope();
 
 	// 파쿠르 샘플.
 	void StartJumpOrParkour();
@@ -102,10 +132,6 @@ protected:
 	
 
 protected:
-	// Input.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input)
-	TObjectPtr<UInputMappingContext> InputMappingContext;
-
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input)
 	TObjectPtr<UInputAction> MoveAction;
 
@@ -116,19 +142,13 @@ protected:
 	TObjectPtr<UInputAction> JumpAction;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input)
-	TObjectPtr<UInputAction> GrapplingAction;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input)
 	TObjectPtr<UInputAction> SprintAction;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input)
-	TObjectPtr<UInputAction> AssassinationAttackAction;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input)
-	TObjectPtr<UInputAction> FlagAction;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input)
 	TObjectPtr<UInputAction> AttackAction;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input)
+	TObjectPtr<UInputAction> InteractiveAction;
 
 	// 게임플레이 어빌리티 - 스프린트
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = GameplayAbilities)
@@ -199,4 +219,21 @@ protected:
 	// 이번 휴식을 시작할 깃발.
 	UPROPERTY(Transient)
 	TWeakObjectPtr<class ACXExpeditionFlag> ActiveExpeditionFlag;
+
+
+	// 플레이어 로프 어빌리티.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = GameplayAbilities)
+	TSubclassOf<UGameplayAbility> RopeTraversalAbility;
+
+	// 로프 어빌리티 스펙을 관리할 핸들.
+	FGameplayAbilitySpecHandle RopeTraversalAbilityHandle;
+
+	// 지금 타겟한 로프.
+	UPROPERTY(Transient)
+	TWeakObjectPtr<ACXRopeTraversalActor> CurrentRopeTraversalTarget;
+
+	// 현재 로프 관련 상태.
+	UPROPERTY(Transient)
+	ECXRopeTraversalDirection CurrentRopeTraversalDirection = ECXRopeTraversalDirection::None;
 };
+
