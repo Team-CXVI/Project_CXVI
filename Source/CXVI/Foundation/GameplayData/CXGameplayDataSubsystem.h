@@ -22,7 +22,7 @@ UCLASS()
 class CXVI_API UCXGameplayDataSubsystem : public UGameInstanceSubsystem
 {
 	GENERATED_BODY()
-	
+
 public:
 	static UCXGameplayDataSubsystem& Get(const UObject* WorldContextObject);
 
@@ -48,6 +48,9 @@ public:
 
 	float EvaluateCurve(const UCurveTable* InTable, FName InRowName, float InX, float InDefaultValue = 0.f) const;
 
+	// 캐릭터 스탯 (CT_CharacterStat 행 <InStatRowPrefix>.<InStatName>, X = 레벨)
+	float EvaluateCharacterStat(FName InStatRowPrefix, FName InStatName, int32 InLevel, float InDefaultValue = 0.f) const;
+
 	const FCXItemRow* FindItemRow(FName InItemId) const;
 
 	void GetAllItemIds(TArray<FName>& OutItemIds) const;
@@ -69,7 +72,7 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UCurveTable> CharacterStatCurve;
-	
+
 	UPROPERTY()
 	TObjectPtr<UCurveTable> MonsterStatCurve;
 };
