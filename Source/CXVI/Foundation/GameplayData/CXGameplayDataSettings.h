@@ -4,10 +4,12 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DeveloperSettings.h"
+
 #include "CXGameplayDataSettings.generated.h"
 
 class UDataTable;
 class UCurveTable;
+class UCXNewGameData;
 
 /**
  * 게임플레이 데이터 테이블 경로 설정
@@ -31,4 +33,12 @@ public:
 
 	UPROPERTY(Config, EditAnywhere, Category = "Stat")
 	TSoftObjectPtr<UCurveTable> MonsterStatCurve;
+
+	// 새 게임 시작 파티 / 아이템
+	UPROPERTY(Config, EditAnywhere, Category = "UserData")
+	TSoftObjectPtr<UCXNewGameData> NewGameData;
+
+	// 수동 저장 슬롯 수 (슬롯 0은 자동 저장 전용)
+	UPROPERTY(Config, EditAnywhere, Category = "Save", meta = (ClampMin = 1))
+	int32 MaxManualSaveSlots = 3;
 };
