@@ -3,6 +3,8 @@
 
 #include "CXVI/AbilitySystem/Attributes/Combat/CXCombatAttributeSet.h"
 
+#include "Tags/CXGameplayTags.h"
+
 #include "GameplayEffectExtension.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXCombatAttributeSet)
@@ -103,6 +105,15 @@ void UCXCombatAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCa
 
 		// 데미지는 이번처리에서 소비하고 초기화
 		SetDamage(0.f);
+
+		UAbilitySystemComponent* TargetASC = GetOwningAbilitySystemComponent();
+
+		if (TargetASC && TargetASC->HasMatchingGameplayTag(CXVIGameplayTags::State_Combat_Dodging))
+		{
+			UE_LOG(LogTemp, Display, TEXT("%s 회피 성공: 데미지 %.1f 무시"), *GetNameSafe(GetOwningActor()), IncomingDamage);
+
+			return;
+		}
 
 		const float NewHealth = FMath::Clamp(OldHealth - IncomingDamage, 0.f, GetMaxHealth());
 
