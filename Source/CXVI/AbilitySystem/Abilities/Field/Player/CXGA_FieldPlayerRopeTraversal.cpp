@@ -11,6 +11,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/RootMotionSource.h"
+#include "Curves/CurveVector.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXGA_FieldPlayerRopeTraversal)
 
@@ -364,6 +365,7 @@ void UCXGA_FieldPlayerRopeTraversal::StartMoveToExit()
 		TraversalMoveTask = nullptr;
 	}
 
+
 	const float HalfHeight = Player->GetCapsuleComponent()-> GetScaledCapsuleHalfHeight();
 
 	ExitMoveGoal = TraversalExit + FVector::UpVector * (HalfHeight + 2.0f);
@@ -371,6 +373,8 @@ void UCXGA_FieldPlayerRopeTraversal::StartMoveToExit()
 	Movement->StopMovementImmediately();
 	bControlsTraversalMovement = true;
 	Movement->SetMovementMode(MOVE_Flying);
+
+	UCurveVector* ExitCurvePath = (TraversalDirection == ECXRopeTraversalDirection::Up) ? ExitUpCurvePath.Get() : ExitDownCurvePath.Get();
 
 	TraversalMoveTask =
 		UAbilityTask_ApplyRootMotionMoveToForce::ApplyRootMotionMoveToForce(
@@ -381,7 +385,7 @@ void UCXGA_FieldPlayerRopeTraversal::StartMoveToExit()
 			false,
 			MOVE_Flying,
 			true,
-			nullptr,
+			ExitCurvePath,
 			ERootMotionFinishVelocityMode::SetVelocity,
 			FVector::ZeroVector,
 			0.0f

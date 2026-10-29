@@ -133,5 +133,10 @@ protected:
 
 	bool bControlsTraversalMovement = false;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Rope")
+	TObjectPtr<class UCurveVector> ExitUpCurvePath;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Rope")
+	TObjectPtr<class UCurveVector> ExitDownCurvePath;
 
 };
