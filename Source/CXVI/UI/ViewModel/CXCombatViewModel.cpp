@@ -62,7 +62,7 @@ UCXCombatantViewModel* UCXCombatViewModel::CreateCombatantViewModel(const AActor
 	UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(InCombatant);
 	if (nullptr == ASC)
 	{
-		UE_LOG(LogCXUI, Warning, TEXT("BattleViewModel : %s에 ASC가 없어 HUD에 표시하지 않습니다."), *GetNameSafe(InCombatant));
+		UE_LOG(LogCXUI, Warning, TEXT("CombatViewModel : %s에 ASC가 없어 HUD에 표시하지 않습니다."), *GetNameSafe(InCombatant));
 		return nullptr;
 	}
 

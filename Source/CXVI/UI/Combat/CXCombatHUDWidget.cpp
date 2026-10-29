@@ -25,6 +25,6 @@ void UCXCombatHUDWidget::SetCombatViewModel(UCXCombatViewModel* InViewModel)
 	UMVVMView* View = UMVVMSubsystem::GetViewFromUserWidget(this);
 	if (nullptr == View || false == View->SetViewModelByClass(InViewModel))
 	{
-		UE_LOG(LogCXUI, Error, TEXT("%s : BattleViewModel을 연결하지 못했습니다. WBP Viewmodels에 CXBattleViewModel(Manual)이 있는지 확인하세요."), *GetName());
+		UE_LOG(LogCXUI, Error, TEXT("%s : CombatViewModel을 연결하지 못했습니다. WBP Viewmodels에 CXCombatViewModel(Manual)이 있는지, View Binding이 1개 이상 있는지 확인하세요."), *GetName());
 	}
 }

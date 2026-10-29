@@ -13,7 +13,7 @@ class UImage;
  * 파티 패널 한 칸 (WBP_CombatantEntry의 부모)
  * - 파티 패널의 Viewmodel Extension(Set Items)이 생성하고 Entry Viewmodel(CXCombatantViewModel)을 연결
  * - HP 바 / 숫자는 WBP의 View Bindings로 직접 바인딩
- * - AP 칸은 개수가 바뀌므로 C++에서 생성 : WBP에서 Mana → SetCurrentAP, MaxMana → SetMaxAP 바인딩
+ * - AP 칸은 개수가 바뀌므로 C++에서 생성 : WBP에서 AP → SetCurrentAP, MaxAP → SetMaxAP 바인딩
  * - AP 1칸 = Mana 1
  */
 UCLASS(Abstract)
