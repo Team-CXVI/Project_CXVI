@@ -22,7 +22,8 @@ class CXVI_API UCXCombatViewModel : public UMVVMViewModelBase
 	GENERATED_BODY()
 	
 public:
-	void SetCombatants(const TArray<TObjectPtr<ACXCombatCharacterBase>>& InPlayers, const TArray<TObjectPtr<ACXCombatCharacterBase>>& InEnemies);
+	// 여기서 mvvm으로 표시하는 보스 몬스터는 1마리
+	void SetCombatants(const TArray<TObjectPtr<ACXCombatCharacterBase>>& InPlayers, const TObjectPtr<ACXCombatCharacterBase>& InEnemy);
 
 	void Reset();
 
