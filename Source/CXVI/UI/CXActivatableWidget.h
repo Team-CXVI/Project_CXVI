@@ -29,7 +29,7 @@ enum class ECXWidgetInputMode : uint8
  * - 게임패드용 첫 포커스: BP의 Get Desired Focus Target 구현 → 없으면 DefaultFocusWidgetName 위젯
  * - Menu 화면은 BP에서 Is Back Handler를 켜면 뒤로가기로 자동 닫힘
  */
-UCLASS(abstract, Blueprintable)
+UCLASS(Abstract, Blueprintable)
 class CXVI_API UCXActivatableWidget : public UCommonActivatableWidget
 {
 	GENERATED_BODY()
