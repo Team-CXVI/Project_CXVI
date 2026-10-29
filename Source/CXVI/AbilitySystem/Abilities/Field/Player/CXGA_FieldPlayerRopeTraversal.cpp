@@ -216,10 +216,6 @@ void UCXGA_FieldPlayerRopeTraversal::StartMoveToEntry()
 	TraversalMoveTask->OnTimedOutAndDestinationReached.AddDynamic(this, &ThisClass::OnEntryMoveFinished);
 	TraversalMoveTask->OnTimedOut.AddDynamic(this, &ThisClass::OnTraversalInterrupted);
 
-	if (Player->GetRopeTraversalDirection() == ECXRopeTraversalDirection::Up)
-	{
-
-	}
 
 	TraversalMoveTask->ReadyForActivation();
 
@@ -270,7 +266,6 @@ void UCXGA_FieldPlayerRopeTraversal::OnTraversalInterrupted()
 
 void UCXGA_FieldPlayerRopeTraversal::StartMoveToDestination()
 {
-	PlayTraversalMontage(GetMontageSet().TraversalMontage, TEXT("RopeTraverseMonatage"));
 
 	if (!IsActive())
 	{
@@ -328,6 +323,7 @@ void UCXGA_FieldPlayerRopeTraversal::StartMoveToDestination()
 	TraversalMoveTask->OnTimedOutAndDestinationReached.AddDynamic(this, &ThisClass::OnDestinationFinished);
 	TraversalMoveTask->OnTimedOut.AddDynamic(this, &ThisClass::OnTraversalInterrupted);
 
+	PlayTraversalMontage(GetMontageSet().TraversalMontage, TEXT("RopeTraversalMonatage"));
 	TraversalMoveTask->ReadyForActivation();
 }
 
@@ -553,8 +549,6 @@ void UCXGA_FieldPlayerRopeTraversal::TryFinishExit()
 
 void UCXGA_FieldPlayerRopeTraversal::StartMoveToRopeAttachment()
 {
-	PlayTraversalMontage(GetMontageSet().AttachMontage, TEXT("RopeAttachMontage"));
-
 	if (!IsActive())
 	{
 		return;
@@ -604,12 +598,11 @@ void UCXGA_FieldPlayerRopeTraversal::StartMoveToRopeAttachment()
 		return;
 	}
 
-	TraversalMoveTask->OnTimedOutAndDestinationReached.AddDynamic(
-		this, &ThisClass::OnRopeAttachmentFinished);
+	TraversalMoveTask->OnTimedOutAndDestinationReached.AddDynamic(this, &ThisClass::OnRopeAttachmentFinished);
 
-	TraversalMoveTask->OnTimedOut.AddDynamic(
-		this, &ThisClass::OnTraversalInterrupted);
+	TraversalMoveTask->OnTimedOut.AddDynamic(this, &ThisClass::OnTraversalInterrupted);
 
+	PlayTraversalMontage(GetMontageSet().AttachMontage, TEXT("RopeAttachMontage"));
 	TraversalMoveTask->ReadyForActivation();
 
 }
