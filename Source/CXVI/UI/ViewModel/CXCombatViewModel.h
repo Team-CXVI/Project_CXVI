@@ -23,7 +23,7 @@ class CXVI_API UCXCombatViewModel : public UMVVMViewModelBase
 	
 public:
 	// 여기서 mvvm으로 표시하는 보스 몬스터는 1마리
-	void SetCombatants(const TArray<TObjectPtr<ACXCombatCharacterBase>>& InPlayers, const TObjectPtr<ACXCombatCharacterBase>& InEnemy);
+	void SetCombatants(const TArray<TObjectPtr<ACXCombatCharacterBase>>& InPlayers, const ACXCombatCharacterBase* InEnemy);
 
 	void Reset();
 
@@ -31,7 +31,7 @@ public:
 	bool HasBoss() const { return nullptr != Boss; }
 
 private:
-	UCXCombatantViewModel* CreateCombatantViewModel(AActor* InCombatant);
+	UCXCombatantViewModel* CreateCombatantViewModel(const AActor* InCombatant);
 
 	void BroadcastAll();
 

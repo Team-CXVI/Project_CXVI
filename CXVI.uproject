@@ -134,6 +134,10 @@
 			]
 		},
 		{
+			"Name": "ModelViewViewModel",
+			"Enabled": true
+		},
+		{
 			"Name": "ModelViewViewModelPreview",
 			"Enabled": true
 		}

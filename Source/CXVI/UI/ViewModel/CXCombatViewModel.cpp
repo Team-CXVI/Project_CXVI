@@ -15,7 +15,7 @@
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXCombatViewModel)
 
-void UCXCombatViewModel::SetCombatants(const TArray<TObjectPtr<ACXCombatCharacterBase>>& InPlayers, const TObjectPtr<ACXCombatCharacterBase>& InEnemy)
+void UCXCombatViewModel::SetCombatants(const TArray<TObjectPtr<ACXCombatCharacterBase>>& InPlayers, const ACXCombatCharacterBase* InEnemy)
 {
 	Reset();
 
@@ -57,7 +57,7 @@ void UCXCombatViewModel::Reset()
 	BroadcastAll();
 }
 
-UCXCombatantViewModel* UCXCombatViewModel::CreateCombatantViewModel(AActor* InCombatant)
+UCXCombatantViewModel* UCXCombatViewModel::CreateCombatantViewModel(const AActor* InCombatant)
 {
 	UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(InCombatant);
 	if (nullptr == ASC)

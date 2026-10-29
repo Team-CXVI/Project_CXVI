@@ -22,8 +22,8 @@ void UCXCombatantViewModel::Bind(UAbilitySystemComponent* InASC)
 
 	BindAttribute(UCXCombatAttributeSet::GetMaxHealthAttribute(), &ThisClass::SetMaxHealth);
 	BindAttribute(UCXCombatAttributeSet::GetHealthAttribute(), &ThisClass::SetHealth);
-	BindAttribute(UCXCombatAttributeSet::GetMaxManaAttribute(), &ThisClass::SetMaxMana);
-	BindAttribute(UCXCombatAttributeSet::GetManaAttribute(), &ThisClass::SetMana);
+	BindAttribute(UCXCombatAttributeSet::GetMaxManaAttribute(), &ThisClass::SetMaxAP);
+	BindAttribute(UCXCombatAttributeSet::GetManaAttribute(), &ThisClass::SetAP);
 }
 
 void UCXCombatantViewModel::Unbind()
@@ -80,14 +80,19 @@ void UCXCombatantViewModel::SetHealth(float InValue)
 
 void UCXCombatantViewModel::SetMaxHealth(float InValue)
 {
-	UE_MVVM_SET_PROPERTY_VALUE(Mana, InValue);
+	if (UE_MVVM_SET_PROPERTY_VALUE(MaxHealth, InValue))
+	{
+		UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetHealthPercent);
+		UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(IsDead);
+	}
 }
 
-void UCXCombatantViewModel::SetMana(float InValue)
+void UCXCombatantViewModel::SetAP(float InValue)
 {
-	UE_MVVM_SET_PROPERTY_VALUE(MaxMana, InValue);
+	UE_MVVM_SET_PROPERTY_VALUE(AP, InValue);
 }
 
-void UCXCombatantViewModel::SetMaxMana(float InValue)
+void UCXCombatantViewModel::SetMaxAP(float InValue)
 {
+	UE_MVVM_SET_PROPERTY_VALUE(MaxAP, InValue);
 }
