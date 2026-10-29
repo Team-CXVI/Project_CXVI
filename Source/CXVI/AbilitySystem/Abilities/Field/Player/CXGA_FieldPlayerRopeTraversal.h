@@ -12,6 +12,25 @@
  */
 class ACXFieldPlayerCharacter;
 class UAbilityTask_ApplyRootMotionMoveToForce;
+class UAnimMontage;
+
+USTRUCT(BlueprintType)
+struct FCXRopeTraversalMontageSet
+{
+	GENERATED_BODY()
+
+	// 로프에 붙을 떄.
+	UPROPERTY(EditDefaultsOnly)
+	TObjectPtr<UAnimMontage> AttachMontage;
+
+	// 로프에서 이동중.
+	UPROPERTY(EditDefaultsOnly)
+	TObjectPtr<UAnimMontage> TraversalMontage;
+	
+	// 로프에 착지.
+	UPROPERTY(EditDefaultsOnly)
+	TObjectPtr<UAnimMontage> ExitMontage;
+};
 
 UCLASS()
 class CXVI_API UCXGA_FieldPlayerRopeTraversal : public UGameplayAbility
@@ -105,6 +124,12 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Rope")
 	float AttachmentMoveDuration = 0.3f;
 
+	const FCXRopeTraversalMontageSet& GetMontageSet() const
+	{
+		return TraversalDirection == ECXRopeTraversalDirection::Up ? UpMontages : DownMontages;
+	}
+	
+	void PlayTraversalMontage(UAnimMontage* Montage, FName TaskName, bool bStopWhenAbilityEnds = true);
 
 protected:
 	UPROPERTY(Transient)
@@ -138,5 +163,13 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Rope")
 	TObjectPtr<class UCurveVector> ExitDownCurvePath;
+
+	// 상승.
+	UPROPERTY(EditDefaultsOnly, Category = "Rope|Montage")
+	FCXRopeTraversalMontageSet UpMontages;
+
+	// 하강.
+	UPROPERTY(EditDefaultsOnly, Category = "Rope|Montage")
+	FCXRopeTraversalMontageSet DownMontages;
 
 };

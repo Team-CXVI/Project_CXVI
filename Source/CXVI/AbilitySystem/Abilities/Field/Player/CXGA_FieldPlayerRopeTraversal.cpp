@@ -12,6 +12,7 @@
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/RootMotionSource.h"
 #include "Curves/CurveVector.h"
+#include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXGA_FieldPlayerRopeTraversal)
 
@@ -78,6 +79,7 @@ void UCXGA_FieldPlayerRopeTraversal::ActivateAbility(const FGameplayAbilitySpecH
 	if (!Rope->GetApproachPoint(Direction, Approach))
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
 	}
 
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
@@ -211,6 +213,11 @@ void UCXGA_FieldPlayerRopeTraversal::StartMoveToEntry()
 	TraversalMoveTask->OnTimedOutAndDestinationReached.AddDynamic(this, &ThisClass::OnEntryMoveFinished);
 	TraversalMoveTask->OnTimedOut.AddDynamic(this, &ThisClass::OnTraversalInterrupted);
 
+	if (Player->GetRopeTraversalDirection() == ECXRopeTraversalDirection::Up)
+	{
+
+	}
+
 	TraversalMoveTask->ReadyForActivation();
 
 }
@@ -260,6 +267,8 @@ void UCXGA_FieldPlayerRopeTraversal::OnTraversalInterrupted()
 
 void UCXGA_FieldPlayerRopeTraversal::StartMoveToDestination()
 {
+	PlayTraversalMontage(GetMontageSet().TraversalMontage, TEXT("RopeTraverseMonatage"));
+
 	if (!IsActive())
 	{
 		return;
@@ -347,6 +356,8 @@ void UCXGA_FieldPlayerRopeTraversal::OnDestinationFinished()
 
 void UCXGA_FieldPlayerRopeTraversal::StartMoveToExit()
 {
+	PlayTraversalMontage(GetMontageSet().ExitMontage, TEXT("RopeExitMontage"),false);
+
 	if (!IsActive())
 	{
 		return;
@@ -490,6 +501,8 @@ void UCXGA_FieldPlayerRopeTraversal::HandleTraversalLanded(const FHitResult& Hit
 
 void UCXGA_FieldPlayerRopeTraversal::StartMoveToRopeAttachment()
 {
+	PlayTraversalMontage(GetMontageSet().AttachMontage, TEXT("RopeAttachMontage"));
+
 	if (!IsActive())
 	{
 		return;
@@ -575,4 +588,15 @@ void UCXGA_FieldPlayerRopeTraversal::OnRopeAttachmentFinished()
 	UE_LOG(LogTemp, Log, TEXT("[RopeAbility] 로프 부착 완료"));
 
 	StartMoveToDestination();
+}
+
+void UCXGA_FieldPlayerRopeTraversal::PlayTraversalMontage(UAnimMontage* Montage, FName TaskName, bool bStopWhenAbilityEnds)
+{
+	if (!IsValid(Montage))
+	{
+		return;
+	}
+
+	UAbilityTask_PlayMontageAndWait* Task = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(this, TaskName, Montage, 1.0f, NAME_None, bStopWhenAbilityEnds);
+	Task->ReadyForActivation();
 }
