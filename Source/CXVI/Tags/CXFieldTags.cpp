@@ -3,6 +3,8 @@
 namespace CXVIFieldTag
 {
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_MovingBlock, "State.MovingBlock", "플레이어 이동 제한 상태");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Airborne, "State.Airborne", "캐릭터가 지상을 벗어난 상태");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_BlockInteractionUI, "State.BlockInteractionUI", "어빌리티 사용 중 상호작용 안내 차단");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_CanGrapplingHook, "State.CanGrapplingHook","플레이어 그래플링 가능 상태");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_CanAssassination, "State.CanAssassination","플레이어 몬스터 기습 공격 가능 상태");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_CanUseExpeditionFlag, "State.CanUseExpeditionFlag","플레이어 원정대 깃발 사용 가능 상태");
