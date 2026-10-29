@@ -14,7 +14,8 @@
 				"DeveloperSettings",
 				"CommonUI",
 				"GameplayAbilities",
-				"AIModule"
+				"AIModule",
+				"ModelViewViewModel"
 			]
 		}
 	],
@@ -131,6 +132,10 @@
 			"TargetAllowList": [
 				"Editor"
 			]
+		},
+		{
+			"Name": "ModelViewViewModelPreview",
+			"Enabled": true
 		}
 	]
 }
