@@ -124,6 +124,9 @@ void UCXGA_FieldPlayerRopeTraversal::EndAbility(const FGameplayAbilitySpecHandle
 	}
 	
 	bWaitingForLanding = false;
+	bExitLanded = false;
+	bExitMontageFinished = false;
+	LandingTimeoutTask = nullptr;
 	if (ACXFieldPlayerCharacter* Player = TraversalCharacter.Get())
 	{
 		Player->LandedDelegate.RemoveDynamic(this, &ThisClass::HandleTraversalLanded);
@@ -356,7 +359,22 @@ void UCXGA_FieldPlayerRopeTraversal::OnDestinationFinished()
 
 void UCXGA_FieldPlayerRopeTraversal::StartMoveToExit()
 {
-	PlayTraversalMontage(GetMontageSet().ExitMontage, TEXT("RopeExitMontage"),false);
+	bExitLanded = false;
+	bExitMontageFinished = false;
+
+	UAbilityTask_PlayMontageAndWait* ExitMontageTask = PlayTraversalMontage(GetMontageSet().ExitMontage, TEXT("RopeExitMontage"), false);
+	if (IsValid(ExitMontageTask))
+	{
+		ExitMontageTask->OnBlendOut.AddDynamic(this, &ThisClass::OnExitMontageFinished);
+		ExitMontageTask->OnCompleted.AddDynamic(this, &ThisClass::OnExitMontageFinished);
+		ExitMontageTask->OnInterrupted.AddDynamic(this, &ThisClass::OnExitMontageFinished);
+		ExitMontageTask->OnCancelled.AddDynamic(this, &ThisClass::OnExitMontageFinished);
+	}
+	else
+	{
+		// 착지 몽타주가 없으면 착지만 기다립니다.
+		bExitMontageFinished = true;
+	}
 
 	if (!IsActive())
 	{
@@ -457,10 +475,10 @@ void UCXGA_FieldPlayerRopeTraversal::OnExitMoveFinished()
 	bWaitingForLanding = true;
 	Player->LandedDelegate.AddUniqueDynamic(this, &ThisClass::HandleTraversalLanded);
 
-	auto* TimeoutTask = UAbilityTask_WaitDelay::WaitDelay(this, FMath::Max(LandingTimeOut, 0.1f));
+	LandingTimeoutTask = UAbilityTask_WaitDelay::WaitDelay(this, FMath::Max(LandingTimeOut, 0.1f));
 
-	TimeoutTask->OnFinish.AddDynamic(this, &ThisClass::OnTraversalInterrupted);
-	TimeoutTask->ReadyForActivation();
+	LandingTimeoutTask->OnFinish.AddDynamic(this, &ThisClass::OnTraversalInterrupted);
+	LandingTimeoutTask->ReadyForActivation();
 
 	Movement->SetMovementMode(MOVE_Falling);
 
@@ -492,11 +510,45 @@ void UCXGA_FieldPlayerRopeTraversal::HandleTraversalLanded(const FHitResult& Hit
 	}
 
 	bWaitingForLanding = false;
+	Player->LandedDelegate.RemoveDynamic(this, &ThisClass::HandleTraversalLanded);
+
+	// 착지했으니 타임아웃은 더 이상 필요 없습니다.
+	if (IsValid(LandingTimeoutTask))
+	{
+		LandingTimeoutTask->EndTask();
+		LandingTimeoutTask = nullptr;
+	}
 
 	UE_LOG(LogTemp, Log, TEXT("[RopeAbility] Exit 착지 완료"));
 
-	EndAbility(CurrentSpecHandle, GetCurrentActorInfo(), CurrentActivationInfo, true, false);
+	bExitLanded = true;
+	TryFinishExit();
 
+}
+
+void UCXGA_FieldPlayerRopeTraversal::OnExitMontageFinished()
+{
+	if (!IsActive() || bExitMontageFinished)
+	{
+		return;
+	}
+
+	bExitMontageFinished = true;
+
+	UE_LOG(LogTemp, Log, TEXT("[RopeAbility] 착지 몽타주 종료"));
+
+	TryFinishExit();
+}
+
+void UCXGA_FieldPlayerRopeTraversal::TryFinishExit()
+{
+	// 착지와 착지 몽타주가 모두 끝나야 이동 제한을 풉니다.
+	if (!IsActive() || !bExitLanded || !bExitMontageFinished)
+	{
+		return;
+	}
+
+	EndAbility(CurrentSpecHandle, GetCurrentActorInfo(), CurrentActivationInfo, true, false);
 }
 
 void UCXGA_FieldPlayerRopeTraversal::StartMoveToRopeAttachment()
@@ -590,13 +642,14 @@ void UCXGA_FieldPlayerRopeTraversal::OnRopeAttachmentFinished()
 	StartMoveToDestination();
 }
 
-void UCXGA_FieldPlayerRopeTraversal::PlayTraversalMontage(UAnimMontage* Montage, FName TaskName, bool bStopWhenAbilityEnds)
+UAbilityTask_PlayMontageAndWait* UCXGA_FieldPlayerRopeTraversal::PlayTraversalMontage(UAnimMontage* Montage, FName TaskName, bool bStopWhenAbilityEnds)
 {
 	if (!IsValid(Montage))
 	{
-		return;
+		return nullptr;
 	}
 
 	UAbilityTask_PlayMontageAndWait* Task = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(this, TaskName, Montage, 1.0f, NAME_None, bStopWhenAbilityEnds);
 	Task->ReadyForActivation();
+	return Task;
 }

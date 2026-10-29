@@ -12,6 +12,8 @@
  */
 class ACXFieldPlayerCharacter;
 class UAbilityTask_ApplyRootMotionMoveToForce;
+class UAbilityTask_PlayMontageAndWait;
+class UAbilityTask_WaitDelay;
 class UAnimMontage;
 
 USTRUCT(BlueprintType)
@@ -112,6 +114,18 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Rope")
 	float LandingTimeOut = 3.0f;
 
+	UPROPERTY(Transient)
+	TObjectPtr<UAbilityTask_WaitDelay> LandingTimeoutTask;
+
+	// 착지 몽타주가 끝날 때까지 어빌리티를 유지합니다.
+	UFUNCTION()
+	void OnExitMontageFinished();
+
+	void TryFinishExit();
+
+	bool bExitLanded = false;
+	bool bExitMontageFinished = false;
+
 	// 발판 위 접근점에서 로프에 붙는 이동.
 	void StartMoveToRopeAttachment();
 
@@ -129,7 +143,7 @@ protected:
 		return TraversalDirection == ECXRopeTraversalDirection::Up ? UpMontages : DownMontages;
 	}
 	
-	void PlayTraversalMontage(UAnimMontage* Montage, FName TaskName, bool bStopWhenAbilityEnds = true);
+	UAbilityTask_PlayMontageAndWait* PlayTraversalMontage(UAnimMontage* Montage, FName TaskName, bool bStopWhenAbilityEnds = true);
 
 protected:
 	UPROPERTY(Transient)
