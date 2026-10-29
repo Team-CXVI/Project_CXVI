@@ -108,12 +108,12 @@ void UCXGA_Dodge::OnAbilityInterrupted()
 
 void UCXGA_Dodge::RegisterMontageTask()
 {
-	// 몽타주를 재생할 Task
+	// 몽타주를 재생할 Task                                         
 	UAbilityTask_PlayMontageAndWait* MontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
 		this,					// 사용할 어빌리티
 		NAME_None,				// Task 이름인데 별도로 지정X
 		Montage,		// 재생할 몽타주
-		2.f,					// 재생 속도 (1.f 이 기본속도)
+		1.f,					// 재생 속도 (1.f 이 기본속도)
 		NAME_None
 	);
 

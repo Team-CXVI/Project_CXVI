@@ -32,7 +32,7 @@ bool ACXCombatAIController::RequestCombatAction(AActor* Target, const FVector& A
 
 	if (BB->GetValueAsBool(TEXT("HasAction")))
 	{
-		return true;
+		return false;
 	}
 
 	BB->SetValueAsObject(TEXT("TargetActor"), Target);

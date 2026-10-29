@@ -126,14 +126,31 @@ void ACXCombatCharacterBase::NotifyBattleAbilityEnded(FGameplayAbilitySpecHandle
 
 	ExecutingCombatAbility = FGameplayAbilitySpecHandle();
 
+	// 패링 가능한 상태
+	if (bCounterAttackPending)
+	{
+		bCounterAttackPending = false;
+
+		PendingAction.Clear();
+		PendingAction.Type = ECXActionType::CounterAttack;
+
+		CurrentTargetPawn = CounterAttackTarget.Get();
+
+		if (ActionPhase())
+		{
+			return;
+
+		}
+
+		UE_LOG(LogTemp, Warning, TEXT("%s : 반격 요청 실패"), *GetName());
+
+	}
+
 	bDoingAction = false;
-	UE_LOG(LogTemp, Display, TEXT("행동 종료"));
+	UE_LOG(LogTemp, Display, TEXT("%s : 행동 종료"), *GetName());
 
 	// BT에 공격 종료 알림
-	if(bIsTurn)
-	{ 
-		OnCombatAbilityFinished.Broadcast(bWasCancelled);
-	}
+	OnCombatAbilityFinished.Broadcast(bWasCancelled);
 
 	// 턴매니저에게도 공격 종료 알림
 	FinishAction();
@@ -200,6 +217,12 @@ void ACXCombatCharacterBase::HandleParrySucceeded(AActor* InInstigator)
 	if (!HasAuthority() || !IsValid(InInstigator))
 	{
 		return;
+	}
+
+	ACXCombatCharacterBase* Attacker = Cast<ACXCombatCharacterBase>(InInstigator);
+	if (Attacker != CounterAttackTarget)
+	{
+		CounterAttackTarget = Attacker;
 	}
 
 	FCXCombatMessageData Message;
@@ -330,12 +353,14 @@ void ACXCombatCharacterBase::CompleteCombatBehavior()
 	// 위치는 Move To로 돌아오고 방향만 복원.
 	SetActorRotation(OriginTransform.GetRotation().Rotator());
 
-	// 다음 턴이 시작될수있으므로 마지막에 호출.
-	if (bIsTurn && SavedMessage.Phase == ECXCombatPhase::ReturnPhase)
+	bWaitingForReturn = false;
+
+	if (SavedMessage.Phase == ECXCombatPhase::ReturnPhase)
 	{
-		FCXCombatMessageData Response = SavedMessage;
+		FCXCombatMessageData Response;
 		Response.Character = this;
-		Response.MessageType = ECXCombatMessageType::None;
+		Response.Phase = ECXCombatPhase::ReturnPhase;
+		Response.MessageType = ECXCombatMessageType::ReturnCompleted;
 
 		CombatMessageResponse(Response);
 	}
@@ -445,6 +470,7 @@ bool ACXCombatCharacterBase::DodgeAbility()
 
 			return false;
 		}
+		return true;
 	}
 
 	// 사용할 회피 어빌리티가 없음.
@@ -503,9 +529,71 @@ bool ACXCombatCharacterBase::ParryAbility()
 
 			return false;
 		}
+		return true;
 	}
 
 	// 사용할 회피 어빌리티가 없음.
+	return false;
+}
+
+bool ACXCombatCharacterBase::CounterAbility()
+{
+	if (!IsValid(ASC) || !bIsCharacterAlive)
+	{
+		return false;
+	}
+
+	FScopedAbilityListLock AbilityListLock(*ASC);
+
+	FGameplayTagContainer DodgeTag;
+	DodgeTag.AddTag(CXVIGameplayTags::Ability_Counter_Attack);
+
+	TArray<FGameplayAbilitySpec*> MatchingAbilities;
+
+	ASC->GetActivatableGameplayAbilitySpecsByAllMatchingTags(
+		DodgeTag,
+		MatchingAbilities,
+		false
+	);
+
+	for (FGameplayAbilitySpec* Spec : MatchingAbilities)
+	{
+		if (!Spec || !Spec->Ability)
+		{
+			continue;
+		}
+
+		if (Spec->IsActive())
+		{
+			return false;
+		}
+
+		// 캐릭터당 하나의 행동만 실행.
+		if (ExecutingCombatAbility.IsValid())
+		{
+			return false;
+		}
+
+		const FGameplayAbilitySpecHandle Handle = Spec->Handle;
+
+		ExecutingCombatAbility = Handle;
+		CurrentActivatingHandles.AddUnique(Handle);
+		bDoingAction = true;
+
+		if (!ASC->TryActivateAbility(Handle))
+		{
+			CurrentActivatingHandles.Remove(Handle);
+			ExecutingCombatAbility = FGameplayAbilitySpecHandle();
+			bDoingAction = false;
+
+			return false;
+		}
+
+		return true;
+	}
+
+	// 사용할 회피 어빌리티가 없음
+	
 	return false;
 }
 
@@ -587,7 +675,15 @@ void ACXCombatCharacterBase::ProcessMessage(const ECXCombatPhase& CurPhase)
 	case ECXCombatPhase::BeforeSelectPhase:BeforeSelectPhase(); break;
 	case ECXCombatPhase::SelectActionPhase:SelectActionPhase(); break;
 	case ECXCombatPhase::SelectTargetPhase:SelectTargetPhase(); break;
-	case ECXCombatPhase::ActionPhase:ActionPhase(); break;
+	case ECXCombatPhase::ActionPhase:
+	{
+		if (!ActionPhase())
+		{
+			bDoingAction = false;
+			FinishAction();
+		}
+		break;
+	}
 	case ECXCombatPhase::ReturnPhase:ReturnPhase(); break;
 	case ECXCombatPhase::EndPhase:EndTurnPhase(); break;
 	}
@@ -633,14 +729,14 @@ void ACXCombatCharacterBase::SelectTargetPhase()
 	
 }
 
-void ACXCombatCharacterBase::ActionPhase()
+bool ACXCombatCharacterBase::ActionPhase()
 {
+
 	ACXCombatCharacterBase* Target = Cast<ACXCombatCharacterBase>(CurrentTargetPawn.Get());
 
 	if (!IsValid(Target) || !Target->GetIsCharacterAlive())
 	{
-		FinishAction();
-		return;
+		return false;
 	}
 
 	if (!GetController())
@@ -654,8 +750,7 @@ void ACXCombatCharacterBase::ActionPhase()
 	{
 		UE_LOG(LogTemp, Warning, TEXT("%s : CombatAicontroller가 없음"), *GetName());
 
-		FinishAction();
-		return;
+		return false;
 	}
 
 	const float Distance = GetCapsuleComponent()->GetScaledCapsuleRadius() + Target->GetCapsuleComponent()->GetScaledCapsuleRadius() + 25.f;
@@ -665,12 +760,17 @@ void ACXCombatCharacterBase::ActionPhase()
 	// 접근 이동부터 공격 종료 까지 행동 중으로 취급
 	bDoingAction = true;
 
+	bWaitingForReturn = true;
+
 	if (!AIController->RequestCombatAction(Target, AttackLocation, OriginTransform.GetLocation(), ShouldApproachTarget()))
 	{
 
 		bDoingAction = false;
-		FinishAction();
+		bWaitingForReturn = false;
+		return false;
 	}
+
+	return true;
 }
 
 void ACXCombatCharacterBase::ReturnPhase()

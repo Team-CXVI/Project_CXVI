@@ -82,6 +82,7 @@ private:
 	void EndBattle();
 
 	bool CheckAllActionEnded();
+	bool CheckAllReturnEnded() const;
 	void ResetDefenseTargets();
 
 	// 페이즈 변경 함수

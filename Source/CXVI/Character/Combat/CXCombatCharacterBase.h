@@ -29,6 +29,7 @@ public:
 	bool BasicAttackAbility();
 	bool DodgeAbility();
 	bool ParryAbility();
+	bool CounterAbility();
 
 	// 어빌리티 끝났다고 알리는 함수
 	void NotifyBattleAbilityEnded(FGameplayAbilitySpecHandle Handle, bool bWasCancelled);
@@ -55,9 +56,12 @@ public:
 	FORCEINLINE bool GetIsTurn() const { return bIsTurn; }
 	FORCEINLINE void SetOriginTransform(const FTransform& NewTransform) { OriginTransform = NewTransform; }
 	FORCEINLINE bool GetDoingAction() const { return bDoingAction; }
-	FORCEINLINE void SetDoingAction(bool NewDoingAction) { bDoingAction = NewDoingAction; }
+	FORCEINLINE void SetDoingAction(bool NewValue) { bDoingAction = NewValue; }
 	FORCEINLINE bool GetIsDefenseTarget() const { return bIsDefenseTarget; }
-	FORCEINLINE void SetIsDefenseTarget(bool bNewValue) { bIsDefenseTarget = bNewValue; }
+	FORCEINLINE void SetIsDefenseTarget(bool NewValue) { bIsDefenseTarget = NewValue; }
+	FORCEINLINE bool GetCounterAttackPending() const { return bCounterAttackPending; }
+	FORCEINLINE void SetCounterAttackPending(bool NewValue) { bCounterAttackPending = NewValue; }
+	FORCEINLINE bool GetWaitingForReturn() const { return bWaitingForReturn; }
 
 	float GetCombatSpeed() const;
 
@@ -105,7 +109,7 @@ protected:
 	void BeforeSelectPhase();
 	virtual void SelectActionPhase();
 	virtual void SelectTargetPhase();
-	virtual void ActionPhase();
+	virtual bool ActionPhase();
 	void ReturnPhase();
 	void EndTurnPhase();
 
@@ -149,6 +153,7 @@ protected:
 
 	FTransform OriginTransform;
 	TWeakObjectPtr<APawn> CurrentTargetPawn;
+	TWeakObjectPtr<ACXCombatCharacterBase> CounterAttackTarget;
 
 	// 어빌리티 초기화 플래그
 	bool bIsInitializedAbility = false;
@@ -166,6 +171,10 @@ protected:
 
 	// 현재 공격받고있는 상태인지
 	bool bIsDefenseTarget = false;
+
+	bool bCounterAttackPending = false;
+
+	bool bWaitingForReturn = false;
 
 protected:
 	/*UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Attribute")

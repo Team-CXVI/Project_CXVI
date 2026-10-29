@@ -29,7 +29,8 @@ enum class ECXCombatMessageType : uint8
 	Action,					// 행동
 	TurnCompleted,
 	AttackStarted,
-	ParrySucceeded
+	ParrySucceeded,
+	ReturnCompleted
 };
 
 enum class ECXActionType : uint8
@@ -38,6 +39,7 @@ enum class ECXActionType : uint8
 	BasicAttack,
 	Skill,
 	Item,
+	CounterAttack,
 };
 
 enum class ECXTargetTeam : uint8

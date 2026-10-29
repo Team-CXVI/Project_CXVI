@@ -340,7 +340,7 @@ bool UCXTurnManager::ProcessTurnResponse(const FCXCombatMessageData& Response, F
 		ResetDefenseTargets();
 
 		// 복귀 페이즈로 이동
-		CurrentPhase = ECXCombatPhase::ReturnPhase;
+		CurrentPhase = CheckAllReturnEnded() ? ECXCombatPhase::EndPhase : ECXCombatPhase::ReturnPhase;
 		OutNextPhaseRequest.Phase = CurrentPhase;
 		break;
 	}
@@ -410,11 +410,36 @@ bool UCXTurnManager::ProcessTurnResponse(const FCXCombatMessageData& Response, F
 		const TWeakObjectPtr<ACXCombatCharacterBase> Key(Defender);
 
 		int32& SuccessCount = ParrySuccessCounts.FindOrAdd(Key);
-		++SuccessCount; 
+		++SuccessCount;
 
 		UE_LOG(LogTemp, Display, TEXT("[패링 성공] %s: %d/%d"), *Defender->GetName(), SuccessCount, CurrentAttackTotalHitCount);
 		// 집계만 하고 페이즈는 진행X
+
+		if (SuccessCount == CurrentAttackTotalHitCount)
+		{
+			// 모든 공격을 패리했으므로 보상.
+			Defender->SetCounterAttackPending(true);
+		}
+
 		return false;
+	}
+	case ECXCombatMessageType::ReturnCompleted:
+	{
+		if (CurrentPhase != ECXCombatPhase::ReturnPhase || Response.Phase != ECXCombatPhase::ReturnPhase)
+		{
+			return false;
+		}
+
+		if (!CheckAllReturnEnded())
+		{
+			// 다른 캐릭터 복귀중
+			return false;
+		}
+
+		CurrentPhase = ECXCombatPhase::EndPhase;
+		OutNextPhaseRequest.Phase = CurrentPhase;
+
+		break;
 	}
 
 	}
@@ -541,6 +566,27 @@ bool UCXTurnManager::CheckAllActionEnded()
 	return true;
 }
 
+bool UCXTurnManager::CheckAllReturnEnded() const
+{
+	for (const auto& Character : PlayerCharacters)
+	{
+		if (IsValid(Character) && Character->GetWaitingForReturn())
+		{
+			return false;
+		}
+	}
+
+	for (const auto& Character : EnemyCharacters)
+	{
+		if (IsValid(Character) && Character->GetWaitingForReturn())
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
 void UCXTurnManager::ResetDefenseTargets()
 {
 	for (int32 Index = 0; Index < PlayerCharacters.Num(); ++Index)
@@ -599,6 +645,30 @@ void UCXTurnManager::SendPhaseRequest(const FCXCombatMessageData& OutMessage)
 	}
 
 	OnPlayerInputEnabledChanged.Broadcast(InputMode);
+
+	if (OutMessage.Phase == ECXCombatPhase::ReturnPhase)
+	{
+		// 콜백중 SavedMessage가 바뀔수 있으므로 복사해서 사용.
+		const FCXCombatMessageData ReturnMessage = OutMessage;
+
+		for (const auto& Character : PlayerCharacters)
+		{
+			if (IsValid(Character) && Character->GetWaitingForReturn())
+			{
+				Character->CombatMessageRequest(ReturnMessage);
+			}
+		}
+
+		for (const auto& Character : EnemyCharacters)
+		{
+			if (IsValid(Character) && Character->GetWaitingForReturn())
+			{
+				Character->CombatMessageRequest(ReturnMessage);
+			}
+		}
+
+		return;
+	}
 
 	if (IsValid(CurrentTurnPlayer))
 	{

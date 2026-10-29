@@ -267,6 +267,9 @@ bool ACXCombatCharacterPlayer::ExecuteCombatAbility()
 	case ECXActionType::Skill:
 		return ActivateSelectedSkill(Action.SlotIndex);
 
+	case ECXActionType::CounterAttack:
+		return CounterAbility();
+
 	default:
 		return false;
 	}
