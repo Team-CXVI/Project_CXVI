@@ -71,6 +71,11 @@ protected:
 
 	void StartGrapplingMontage();
 
+	// 착지 전에 Flight Section이 끝나면 마지막 자세로 멈춰서 Land Section으로 넘어가지 않게 함.
+	void HoldFlightPoseUntilLanded();
+
+	void ResumeGrapplingMontage();
+
 protected:
 	// 세부 애니메이션
 	UFUNCTION()
@@ -125,6 +130,11 @@ protected:
 
 	FTimerHandle GrapplingFacingTimerHandle;
 	FRotator GrapplingFacingRotation = FRotator::ZeroRotator;
+
+	FTimerHandle GrapplingAirHoldTimerHandle;
+
+	// 착지 대기로 몽타주를 멈췄는지.
+	bool bGrapplingMontagePaused = false;
 
 	UPROPERTY(EditDefaultsOnly,Category="Grappling")
 	float GrapplingTurnSpeed = 500.0f;
