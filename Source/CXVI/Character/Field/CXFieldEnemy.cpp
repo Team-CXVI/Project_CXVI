@@ -3,7 +3,7 @@
 
 #include "CXFieldEnemy.h"
 #include "Interactions/CXPreemptiveAttackTriggerBox.h"
-#include "CXVI/Foundation/FieldEnemySpawning/CXFieldEnemySubsystem.h"
+#include "CXVI/Foundation/Field/FieldEnemySpawning/CXFieldEnemySubsystem.h"
 #include "CXVI/AI/Field/CXFieldAI.h"
 #include "Character/Field/CXFIeldPlayerCharacter.h"
 #include "CXVI/Foundation/Scene/CXSceneSubsystem.h"

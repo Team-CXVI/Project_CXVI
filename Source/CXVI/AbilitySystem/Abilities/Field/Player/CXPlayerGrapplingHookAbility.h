@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Abilities/GameplayAbility.h"
 #include "ActiveGameplayEffectHandle.h"
+#include "Engine/TimerHandle.h"
 #include "CXPlayerGrapplingHookAbility.generated.h"
 
 class AActor;
@@ -54,6 +55,8 @@ protected:
 	UFUNCTION()
 	void HandleGrapplingLanded(const FHitResult& Hit);
 
+	void UpdateGrapplingFacing();
+
 protected:
 	// 애니메이션.
 	UFUNCTION()
@@ -65,6 +68,8 @@ protected:
 protected:
 	UFUNCTION()
 	void OnGrapplingMoveReached();
+
+	void StartGrapplingMontage();
 
 protected:
 	// 세부 애니메이션
@@ -117,5 +122,11 @@ protected:
 	
 	// 이번 어빌리티가 이동 모드를 변경했는지.
 	bool bControlsGrapplingMovement = false;
+
+	FTimerHandle GrapplingFacingTimerHandle;
+	FRotator GrapplingFacingRotation = FRotator::ZeroRotator;
+
+	UPROPERTY(EditDefaultsOnly,Category="Grappling")
+	float GrapplingTurnSpeed = 500.0f;
 
 };

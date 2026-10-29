@@ -109,6 +109,17 @@ void ACXFieldPlayerCharacter::BeginPlay()
 		);
 		AttackAbilityHandle = ASC->GiveAbility(AttackSpec);
 	}
+
+	if (IsValid(ASC) && RopeTraversalAbility)
+	{
+		FGameplayAbilitySpec RopeTraversalAbilitySpec(
+			RopeTraversalAbility,
+			1,
+			INDEX_NONE,
+			this
+		);
+		RopeTraversalAbilityHandle = ASC->GiveAbility(RopeTraversalAbilitySpec);
+	}
 }
 
 
@@ -123,17 +134,17 @@ void ACXFieldPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerI
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
-	if (InputMappingContext)
-	{
-		if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
-		{
-			
-			if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
-			{
-				Subsystem->AddMappingContext(InputMappingContext, 0);
-			}
-		}
-	}
+	//if (InputMappingContext)
+	//{
+	//	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
+	//	{
+	//		
+	//		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
+	//		{
+	//			Subsystem->AddMappingContext(InputMappingContext, 0);
+	//		}
+	//	}
+	//}
 
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
 	{
@@ -150,15 +161,16 @@ void ACXFieldPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerI
 			EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ThisClass::Look);
 		}
 
+		if (InteractiveAction)
+		{
+			EnhancedInputComponent->BindAction(InteractiveAction, ETriggerEvent::Started, this, &ThisClass::Interactive);
+		}
+
 		if (JumpAction)
 		{
 			EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ThisClass::StartJumpOrParkour);
 			EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ThisClass::ReleaseJumpOrParkour);
 			EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Canceled, this, &ThisClass::ReleaseJumpOrParkour);
-		}
-		if (GrapplingAction)
-		{
-			EnhancedInputComponent->BindAction(GrapplingAction, ETriggerEvent::Started, this, &ThisClass::GrapplingHook);
 		}
 
 		if (SprintAction)
@@ -170,22 +182,54 @@ void ACXFieldPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerI
 			EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Canceled, this, &ThisClass::StopSprint);
 		}
 
-		if (AssassinationAttackAction)
-		{
-			EnhancedInputComponent->BindAction(AssassinationAttackAction, ETriggerEvent::Started, this, &ThisClass::Assassination);
-		}
-
-		if (FlagAction)
-		{
-			EnhancedInputComponent->BindAction(FlagAction, ETriggerEvent::Started, this, &ThisClass::StartUseFlag);
-		}
-
 		if (AttackAction)
 		{
-			EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Started, this, &ThisClass::Attack);
+			EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Started, this, &ThisClass::AttackFunc);
 		}
 	}
 
+}
+
+void ACXFieldPlayerCharacter::SetRopeTraversalTarget(ACXRopeTraversalActor* Rope, ECXRopeTraversalDirection Direction)
+{
+	if (!IsValid(Rope) || Direction == ECXRopeTraversalDirection::None)
+	{
+		return;
+	}
+	
+	CurrentRopeTraversalTarget = Rope;
+	CurrentRopeTraversalDirection = Direction;
+
+	if (IsValid(ASC))
+	{
+		ASC->SetLooseGameplayTagCount(CXVIFieldTag::State_CanUseRope, 1);
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("[RopeTarget] 등록: %s / %s"), *GetNameSafe(Rope), Direction == ECXRopeTraversalDirection::Up ? TEXT("상승") : TEXT("하강"));
+	UE_LOG(LogTemp, Log, TEXT("[RopeTarget] 사용 가능: %d"),
+		IsValid(ASC) &&
+		ASC->HasMatchingGameplayTag(CXVIFieldTag::State_CanUseRope));
+}
+
+void ACXFieldPlayerCharacter::ClearRopeTraversalTarget(ACXRopeTraversalActor* Rope, ECXRopeTraversalDirection Direction)
+{
+	if (CurrentRopeTraversalTarget.Get() != Rope || CurrentRopeTraversalDirection != Direction)
+	{
+		return;
+	}
+
+	CurrentRopeTraversalTarget.Reset();
+	CurrentRopeTraversalDirection = ECXRopeTraversalDirection::None;
+
+	if (IsValid(ASC))
+	{
+		ASC->SetLooseGameplayTagCount(CXVIFieldTag::State_CanUseRope,0);
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("[RopeTarget] 해제: %s"), *GetNameSafe(Rope));
+	UE_LOG(LogTemp, Log, TEXT("[RopeTarget] 사용 가능: %d"),
+		IsValid(ASC) &&
+		ASC->HasMatchingGameplayTag(CXVIFieldTag::State_CanUseRope));
 }
 
 void ACXFieldPlayerCharacter::Move(const FInputActionValue& InValue)
@@ -228,6 +272,14 @@ void ACXFieldPlayerCharacter::Look(const FInputActionValue& InValue)
 void ACXFieldPlayerCharacter::OnCanGrapplingHookChanged(const FGameplayTag, int32 NewCount)
 {
 	RefreshGrapplingPrompt();
+}
+
+void ACXFieldPlayerCharacter::StartUseRope()
+{
+	if (IsValid(ASC) && RopeTraversalAbilityHandle.IsValid())
+	{
+		ASC->TryActivateAbility(RopeTraversalAbilityHandle);
+	}
 }
 
 void ACXFieldPlayerCharacter::ShowCable(AActor* Target)
@@ -314,6 +366,65 @@ void ACXFieldPlayerCharacter::UnregisterNearByFlag(ACXExpeditionFlag* Flag)
 		return;
 	}
 	NearByActiveExpeditionFlag.Reset();
+}
+
+void ACXFieldPlayerCharacter::OnSceneSuspended_Implementation()
+{
+	SetActorHiddenInGame(true);
+	GetCharacterMovement()->DisableMovement();
+}
+
+void ACXFieldPlayerCharacter::OnSceneResumed_Implementation()
+{
+	SetActorHiddenInGame(false);
+	GetCharacterMovement()->SetDefaultMovementMode();
+}
+
+void ACXFieldPlayerCharacter::Interactive()
+{
+	// GrapplingHook StartUseFlag
+
+	if (!IsValid(ASC))
+	{
+		return;
+	}
+
+	if (ASC->HasMatchingGameplayTag(CXVIFieldTag::State_CanUseExpeditionFlag))
+	{
+		StartUseFlag();
+	}
+	else if (ASC->HasMatchingGameplayTag(CXVIFieldTag::State_CanGrapplingHook))
+	{
+		GrapplingHook();
+	}
+	else if (ASC->HasMatchingGameplayTag(CXVIFieldTag::State_CanUseRope))
+	{
+		StartUseRope();
+	}
+	else
+	{
+		return;
+	}
+
+}
+
+void ACXFieldPlayerCharacter::AttackFunc()
+{
+	if (!IsValid(ASC))
+	{
+		return;
+	}
+	
+	if (ASC->HasMatchingGameplayTag(CXVIFieldTag::State_CanAssassination))
+	{
+		Assassination();
+	}
+	else
+	{
+		Attack();
+		return;
+	}
+
 }
 
 void ACXFieldPlayerCharacter::StartJumpOrParkour()

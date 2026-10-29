@@ -66,6 +66,11 @@ float UCXGameplayDataSubsystem::EvaluateCurve(const UCurveTable* InTable, FName 
 	return InDefaultValue;
 }
 
+float UCXGameplayDataSubsystem::EvaluateCharacterStat(FName InStatRowPrefix, FName InStatName, int32 InLevel, float InDefaultValue) const
+{
+	return EvaluateCurve(CharacterStatCurve, MakeStatRowName(InStatRowPrefix, InStatName), static_cast<float>(InLevel), InDefaultValue);
+}
+
 const FCXItemRow* UCXGameplayDataSubsystem::FindItemRow(FName InItemId) const
 {
 	return FindRow<FCXItemRow>(ItemTable, InItemId);
