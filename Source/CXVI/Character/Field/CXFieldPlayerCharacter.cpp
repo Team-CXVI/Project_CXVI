@@ -5,7 +5,6 @@
 #include "CXVI/Tags/CXFieldTags.h"
 #include "CXVI/Actor/Field/Interactions/CXExpeditionFlag.h"
 
-
 #include "Components/SkeletalMeshComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "EnhancedInputComponent.h"
@@ -20,7 +19,6 @@
 #include "Animation/AnimInstance.h"
 #include "AnimationWarpingLibrary.h"
 #include "MotionWarpingComponent.h"
-#include "Components/WidgetComponent.h"
 #include "CableComponent.h"
 
 
@@ -28,14 +26,6 @@
 
 ACXFieldPlayerCharacter::ACXFieldPlayerCharacter()
 {
-	// 그래플링 UI 설정.
-	GrapplingPrompt = CreateDefaultSubobject<UWidgetComponent>(TEXT("GrapplingPrompt"));
-	GrapplingPrompt->SetupAttachment(GetRootComponent());
-	GrapplingPrompt->SetWidgetSpace(EWidgetSpace::Screen);
-	GrapplingPrompt->SetDrawSize(FVector2D(100.0f, 40.0f));
-	GrapplingPrompt->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	GrapplingPrompt->SetVisibility(false);
-
 	GrapplingCable = CreateDefaultSubobject<UCableComponent>(TEXT("GrapplingCable"));
 	GrapplingCable->SetupAttachment(GetMesh());
 
@@ -58,6 +48,22 @@ ACXFieldPlayerCharacter::ACXFieldPlayerCharacter()
 void ACXFieldPlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (IsValid(ASC))
+	{
+		// 기존 활성 어빌리티도 포함하고, 이후 시작/종료는 이벤트로 추적합니다.
+		for (const FGameplayAbilitySpec& Spec : ASC->GetActivatableAbilities())
+		{
+			ActiveInteractionUIAbilityCount += Spec.ActiveCount;
+		}
+		InteractionUIAbilityActivatedHandle = ASC->AbilityActivatedCallbacks.AddUObject(
+			this, &ThisClass::HandleInteractionUIAbilityActivated);
+		InteractionUIAbilityEndedHandle = ASC->AbilityEndedCallbacks.AddUObject(
+			this, &ThisClass::HandleInteractionUIAbilityEnded);
+		ASC->SetLooseGameplayTagCount(CXVIFieldTag::State_BlockInteractionUI,
+			ActiveInteractionUIAbilityCount > 0 ? 1 : 0);
+		RefreshAirborneTag();
+	}
 
 
 
@@ -82,12 +88,6 @@ void ACXFieldPlayerCharacter::BeginPlay()
 			this);
 		GrapplingHookHandle = ASC->GiveAbility(GrapplingHookSpec);
 	}
-
-	// 그래플링 태그 여부에 따른 델리게이트 함수 호출/ 후에 콜백을 없애주기위해 변수로 설정.
-	GrapplingTagDelegateHandle =
-		ASC->RegisterGameplayTagEvent(CXVIFieldTag::State_CanGrapplingHook, EGameplayTagEventType::NewOrRemoved).AddUObject(this, &ThisClass::OnCanGrapplingHookChanged);
-
-	RefreshGrapplingPrompt();
 
 	if (IsValid(ASC) && PreemptiveAttackAbility)
 	{
@@ -122,6 +122,51 @@ void ACXFieldPlayerCharacter::BeginPlay()
 	}
 }
 
+
+void ACXFieldPlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (IsValid(ASC))
+	{
+		ASC->AbilityActivatedCallbacks.Remove(InteractionUIAbilityActivatedHandle);
+		ASC->AbilityEndedCallbacks.Remove(InteractionUIAbilityEndedHandle);
+	}
+	Super::EndPlay(EndPlayReason);
+}
+
+void ACXFieldPlayerCharacter::OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode)
+{
+	Super::OnMovementModeChanged(PrevMovementMode, PreviousCustomMode);
+	RefreshAirborneTag();
+}
+
+void ACXFieldPlayerCharacter::RefreshAirborneTag()
+{
+	const UCharacterMovementComponent* Movement = GetCharacterMovement();
+	if (IsValid(ASC) && IsValid(Movement))
+	{
+		ASC->SetLooseGameplayTagCount(CXVIFieldTag::State_Airborne,
+			Movement->IsMovingOnGround() ? 0 : 1);
+	}
+}
+
+void ACXFieldPlayerCharacter::HandleInteractionUIAbilityActivated(UGameplayAbility* Ability)
+{
+	++ActiveInteractionUIAbilityCount;
+	if (IsValid(ASC))
+	{
+		ASC->SetLooseGameplayTagCount(CXVIFieldTag::State_BlockInteractionUI, 1);
+	}
+}
+
+void ACXFieldPlayerCharacter::HandleInteractionUIAbilityEnded(UGameplayAbility* Ability)
+{
+	ActiveInteractionUIAbilityCount = FMath::Max(ActiveInteractionUIAbilityCount - 1, 0);
+	if (IsValid(ASC))
+	{
+		ASC->SetLooseGameplayTagCount(CXVIFieldTag::State_BlockInteractionUI,
+			ActiveInteractionUIAbilityCount > 0 ? 1 : 0);
+	}
+}
 
 void ACXFieldPlayerCharacter::SetGrapplingTarget(AActor* TargetActor, AActor* LandingActor)
 {
@@ -269,10 +314,7 @@ void ACXFieldPlayerCharacter::Look(const FInputActionValue& InValue)
 	}
 }
 
-void ACXFieldPlayerCharacter::OnCanGrapplingHookChanged(const FGameplayTag, int32 NewCount)
-{
-	RefreshGrapplingPrompt();
-}
+
 
 void ACXFieldPlayerCharacter::StartUseRope()
 {
@@ -648,55 +690,4 @@ void ACXFieldPlayerCharacter::GrapplingHook()
 	{
 		ASC->TryActivateAbility(GrapplingHookHandle);
 	}
-}
-
-void ACXFieldPlayerCharacter::RefreshGrapplingPrompt()
-{
-	// 그래플링 프롬프트 리프레시 설정 -> 태그가 들어올때마다 UI 표시 위해.
-	if (!GrapplingPrompt)
-	{
-		return;
-	}
-
-	// 그래플링 할 타겟.
-	AActor* Target = CurrentGrapplingTarget.Get();
-	USceneComponent* TargetComponent = IsValid(Target) ? Target->GetRootComponent() : nullptr;
-
-	APlayerController* PC = Cast<APlayerController>(GetController());
-
-	const bool bShow =
-		ASC &&
-		ASC->HasMatchingGameplayTag(CXVIFieldTag::State_CanGrapplingHook) &&
-		Target &&
-		IsValid(TargetComponent) &&
-		PC &&
-		PC->GetLocalPlayer();
-
-	if (!bShow)
-	{
-		GrapplingPrompt->SetVisibility(false);
-		return;
-	}
-
-	// 이 플레이어에게만 표시.
-	GrapplingPrompt->SetOwnerPlayer(PC->GetLocalPlayer());
-
-	// UI 위치를 타겟 액터에 붙이기.
-	if (GrapplingPrompt->GetAttachParent() != TargetComponent)
-	{
-		GrapplingPrompt->AttachToComponent(TargetComponent, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
-	}
-
-	GrapplingPrompt->SetRelativeLocation(FVector(0.0f, 0.0f, 100.0f));
-
-	const bool bWasVisible = GrapplingPrompt->IsVisible();
-
-	GrapplingPrompt->SetVisibility(true);
-
-	// 숨겨져 있다가 나타는 순간 BP 호출.
-	if (!bWasVisible)
-	{
-		OnGrapplingPromptShown();
-	}
-
 }

@@ -13,7 +13,6 @@ class UInputMappingContext;
 class UInputAction;
 class UAnimInstance;
 class UAnimMontage;
-class UWidgetComponent;
 class UCableComponent;
 class ACXExpeditionFlag;
 struct FInputActionValue;
@@ -29,6 +28,8 @@ public:
 	ACXFieldPlayerCharacter();
 	
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	virtual void OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode = 0) override;
 	
 
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
@@ -91,16 +92,6 @@ protected:
 
 	// 그래플링 어빌리티.
 	void GrapplingHook();
-
-	// 태그가 있고/없을 때 UI의 상태 변경을 위한 함수.
-	void RefreshGrapplingPrompt();
-
-	// 기존 블루프린트 이벤트 참조를 유지한다. UI 표시 제거 후에는 호출하지 않는다.
-	UFUNCTION(BlueprintImplementableEvent, Category = "Grappling")
-	void OnGrapplingPromptShown();
-
-	// 그래플링 태그가 들어왔을 때 새로고침 하기위한 함수.
-	void OnCanGrapplingHookChanged(const FGameplayTag, int32 NewCount);
 
 	void StartUseRope();
 
@@ -172,13 +163,6 @@ protected:
 	// 그래플링 훅 스펙을 관리할 핸들.
 	FGameplayAbilitySpecHandle GrapplingHookHandle;
 
-	// 태그가 달리고 없어졌을때 델리게이트 함수를 저장할 변수.
-	FDelegateHandle GrapplingTagDelegateHandle;
-
-	// 그래플링 UI
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Grappling")
-	TObjectPtr<UWidgetComponent> GrapplingPrompt;
-
 	// 그래플링 훅 케이블.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Grappling")
 	TObjectPtr<UCableComponent> GrapplingCable;
@@ -235,5 +219,14 @@ protected:
 	// 현재 로프 관련 상태.
 	UPROPERTY(Transient)
 	ECXRopeTraversalDirection CurrentRopeTraversalDirection = ECXRopeTraversalDirection::None;
+
+private:
+	void RefreshAirborneTag();
+	void HandleInteractionUIAbilityActivated(UGameplayAbility* Ability);
+	void HandleInteractionUIAbilityEnded(UGameplayAbility* Ability);
+
+	int32 ActiveInteractionUIAbilityCount = 0;
+	FDelegateHandle InteractionUIAbilityActivatedHandle;
+	FDelegateHandle InteractionUIAbilityEndedHandle;
 };
 
