@@ -3,6 +3,7 @@
 
 #include "UI/CXTitleScreenWidget.h"
 #include "CXButtonBase.h"
+#include "Foundation/UserData/CXUserDataSubsystem.h"
 #include "Level/CXLevelTransitionSubsystem.h"
 #include "Level/CXLevelTransitionSettings.h"
 
@@ -26,11 +27,19 @@ void UCXTitleScreenWidget::NativeOnInitialized()
 
 void UCXTitleScreenWidget::HandleStartClicked()
 {
-	// 레벨 전환 중 중복 요청은 LevelTransition쪽에서 거부 처리
-	if (UCXLevelTransitionSubsystem* LevelTransition = UCXLevelTransitionSubsystem::TryGet(this))
+	UCXLevelTransitionSubsystem* LevelTransition = UCXLevelTransitionSubsystem::TryGet(this);
+	if (nullptr == LevelTransition || LevelTransition->IsTransitioning())
 	{
-		LevelTransition->TravelToLevel(GetDefault<UCXLevelTransitionSettings>()->NewGameLevel, NAME_None);
+		return;
 	}
+
+	// 이전 게임(타이틀 복귀 전) 데이터를 새 게임 데이터로 초기화
+	if (UCXUserDataSubsystem* UserData = UCXUserDataSubsystem::TryGet(this))
+	{
+		UserData->StartNewGame();
+	}
+
+	LevelTransition->TravelToLevel(GetDefault<UCXLevelTransitionSettings>()->NewGameLevel, NAME_None);
 }
 
 void UCXTitleScreenWidget::HandleQuitClicked()
