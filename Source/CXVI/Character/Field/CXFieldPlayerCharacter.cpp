@@ -109,6 +109,17 @@ void ACXFieldPlayerCharacter::BeginPlay()
 		);
 		AttackAbilityHandle = ASC->GiveAbility(AttackSpec);
 	}
+
+	if (IsValid(ASC) && RopeTraversalAbility)
+	{
+		FGameplayAbilitySpec RopeTraversalAbilitySpec(
+			RopeTraversalAbility,
+			1,
+			INDEX_NONE,
+			this
+		);
+		RopeTraversalAbilityHandle = ASC->GiveAbility(RopeTraversalAbilitySpec);
+	}
 }
 
 
@@ -179,6 +190,48 @@ void ACXFieldPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerI
 
 }
 
+void ACXFieldPlayerCharacter::SetRopeTraversalTarget(ACXRopeTraversalActor* Rope, ECXRopeTraversalDirection Direction)
+{
+	if (!IsValid(Rope) || Direction == ECXRopeTraversalDirection::None)
+	{
+		return;
+	}
+	
+	CurrentRopeTraversalTarget = Rope;
+	CurrentRopeTraversalDirection = Direction;
+
+	if (IsValid(ASC))
+	{
+		ASC->SetLooseGameplayTagCount(CXVIFieldTag::State_CanUseRope, 1);
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("[RopeTarget] 등록: %s / %s"), *GetNameSafe(Rope), Direction == ECXRopeTraversalDirection::Up ? TEXT("상승") : TEXT("하강"));
+	UE_LOG(LogTemp, Log, TEXT("[RopeTarget] 사용 가능: %d"),
+		IsValid(ASC) &&
+		ASC->HasMatchingGameplayTag(CXVIFieldTag::State_CanUseRope));
+}
+
+void ACXFieldPlayerCharacter::ClearRopeTraversalTarget(ACXRopeTraversalActor* Rope, ECXRopeTraversalDirection Direction)
+{
+	if (CurrentRopeTraversalTarget.Get() != Rope || CurrentRopeTraversalDirection != Direction)
+	{
+		return;
+	}
+
+	CurrentRopeTraversalTarget.Reset();
+	CurrentRopeTraversalDirection = ECXRopeTraversalDirection::None;
+
+	if (IsValid(ASC))
+	{
+		ASC->SetLooseGameplayTagCount(CXVIFieldTag::State_CanUseRope,0);
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("[RopeTarget] 해제: %s"), *GetNameSafe(Rope));
+	UE_LOG(LogTemp, Log, TEXT("[RopeTarget] 사용 가능: %d"),
+		IsValid(ASC) &&
+		ASC->HasMatchingGameplayTag(CXVIFieldTag::State_CanUseRope));
+}
+
 void ACXFieldPlayerCharacter::Move(const FInputActionValue& InValue)
 {
 	if (!Controller || (ASC && ASC->HasMatchingGameplayTag(CXVIFieldTag::State_MovingBlock)))
@@ -219,6 +272,14 @@ void ACXFieldPlayerCharacter::Look(const FInputActionValue& InValue)
 void ACXFieldPlayerCharacter::OnCanGrapplingHookChanged(const FGameplayTag, int32 NewCount)
 {
 	RefreshGrapplingPrompt();
+}
+
+void ACXFieldPlayerCharacter::StartUseRope()
+{
+	if (IsValid(ASC) && RopeTraversalAbilityHandle.IsValid())
+	{
+		ASC->TryActivateAbility(RopeTraversalAbilityHandle);
+	}
 }
 
 void ACXFieldPlayerCharacter::ShowCable(AActor* Target)
@@ -335,6 +396,10 @@ void ACXFieldPlayerCharacter::Interactive()
 	else if (ASC->HasMatchingGameplayTag(CXVIFieldTag::State_CanGrapplingHook))
 	{
 		GrapplingHook();
+	}
+	else if (ASC->HasMatchingGameplayTag(CXVIFieldTag::State_CanUseRope))
+	{
+		StartUseRope();
 	}
 	else
 	{

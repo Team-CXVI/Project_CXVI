@@ -16,6 +16,8 @@
 #include "Components/CapsuleComponent.h"
 #include "Abilities/Tasks/AbilityTask_ApplyRootMotionMoveToForce.h"
 #include "GameFramework/RootMotionSource.h"
+#include "Engine/World.h"
+#include "TimerManager.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXPlayerGrapplingHookAbility)
 
@@ -107,6 +109,16 @@ void UCXPlayerGrapplingHookAbility::ActivateAbility(const FGameplayAbilitySpecHa
     bControlsGrapplingMovement = false;
 
     Movement->StopMovementImmediately();
+
+    GrapplingFacingRotation = FRotator(0.0f, Character->GetActorRotation().Yaw, 0.0f);
+    FVector ToTarget = Target->GetActorLocation() - Character->GetActorLocation();
+    ToTarget.Z = 0.0f;
+
+    if (!ToTarget.IsNearlyZero())
+    {
+        GrapplingFacingRotation = FRotator(FRotator(0.0f, ToTarget.Rotation().Yaw,0.0f));
+    }
+
     Character->HideCable();
 
     Character->LandedDelegate.AddUniqueDynamic(this, &ThisClass::HandleGrapplingLanded);
@@ -127,25 +139,8 @@ void UCXPlayerGrapplingHookAbility::ActivateAbility(const FGameplayAbilitySpecHa
     TimeoutTask->OnFinish.AddDynamic(this, &ThisClass::OnGrapplingInterrupted);
     TimeoutTask->ReadyForActivation();
 
-    // 몽타주 재생.
-    UAbilityTask_PlayMontageAndWait* MontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(this, NAME_None, GrapplingMontage, 1.0f, FName(TEXT("Start")), true);
-
-    MontageTask->OnInterrupted.AddDynamic(this, &ThisClass::OnGrapplingInterrupted);
-
-    MontageTask->OnCancelled.AddDynamic(this, &ThisClass::OnGrapplingInterrupted);
-
-    MontageTask->OnCompleted.AddDynamic(this, &ThisClass::OnGrapplingMontageCompleted);
-
-    MontageTask->ReadyForActivation();
-
-
-
-    // 재생 실패 롤백에서 능력이 종료됐을 수도 있음.
-    if (!IsActive())
-    {
-        return;
-    }
-
+   
+    UpdateGrapplingFacing();
 
 }
 
@@ -179,8 +174,10 @@ void UCXPlayerGrapplingHookAbility::EndAbility(
         return;
     }
 
-
-
+    if (UWorld* World = GetWorld())
+    {
+        World->GetTimerManager().ClearTimer(GrapplingFacingTimerHandle);
+    }
 
     // 실행 중인 좌표 이동 제어 종료.
     if (IsValid(GrapplingMoveTask))
@@ -253,6 +250,43 @@ void UCXPlayerGrapplingHookAbility::HandleGrapplingLanded(const FHitResult& Hit)
 
 }
 
+void UCXPlayerGrapplingHookAbility::UpdateGrapplingFacing()
+{
+    if (!IsActive() || GrapplingPhase != ECXGrapplingPhase::Preparing)
+    {
+        return;
+    }
+
+    UWorld* World = GetWorld();
+    ACXFieldPlayerCharacter* Character = GrapplingCharacter.Get();
+
+    if (!IsValid(World) || !IsValid(Character) ||
+        !GrapplingTarget.IsValid() || !LandingSurface.IsValid())
+    {
+        OnGrapplingInterrupted();
+        return;
+    }
+
+    const FRotator NewRotation = FMath::RInterpConstantTo(
+        Character->GetActorRotation(),
+        GrapplingFacingRotation,
+        World->GetDeltaSeconds(),
+        GrapplingTurnSpeed);
+
+    Character->SetActorRotation(NewRotation);
+
+    if (NewRotation.Equals(GrapplingFacingRotation, 1.0f))
+    {
+        World->GetTimerManager().ClearTimer(GrapplingFacingTimerHandle);
+        Character->SetActorRotation(GrapplingFacingRotation);
+        StartGrapplingMontage();
+        return;
+    }
+
+    GrapplingFacingTimerHandle =
+        World->GetTimerManager().SetTimerForNextTick(
+            this, &ThisClass::UpdateGrapplingFacing);
+}
 
 void UCXPlayerGrapplingHookAbility::OnGrapplingInterrupted()
 {
@@ -323,6 +357,27 @@ void UCXPlayerGrapplingHookAbility::OnGrapplingMoveReached()
 
     // 발판 바로 위에서 실제 바닥 착지를 처리.
     Movement->SetMovementMode(MOVE_Falling);
+}
+
+void UCXPlayerGrapplingHookAbility::StartGrapplingMontage()
+{
+    // 재생 실패 롤백에서 능력이 종료됐을 수도 있음.
+    if (!IsActive())
+    {
+        return;
+    }
+
+    // 몽타주 재생.
+    UAbilityTask_PlayMontageAndWait* MontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(this, NAME_None, GrapplingMontage, 1.0f, FName(TEXT("Start")), true);
+
+    MontageTask->OnInterrupted.AddDynamic(this, &ThisClass::OnGrapplingInterrupted);
+
+    MontageTask->OnCancelled.AddDynamic(this, &ThisClass::OnGrapplingInterrupted);
+
+    MontageTask->OnCompleted.AddDynamic(this, &ThisClass::OnGrapplingMontageCompleted);
+
+    MontageTask->ReadyForActivation();
+
 }
 
 void UCXPlayerGrapplingHookAbility::OnShowCableEvent(FGameplayEventData Payload)
