@@ -66,6 +66,8 @@ void UCXTurnManager::ResetBattle()
 	EnemyCharacters.Reset();
 	TurnOrderArray.Reset();
 	CurrentTurnPlayer = nullptr;
+	CurrentAttackTotalHitCount = 0;
+	ParrySuccessCounts.Reset();
 	CurrentPhase = ECXCombatPhase::BeginPhase;
 }
 
@@ -109,6 +111,9 @@ void UCXTurnManager::StartTurn()
 	{
 		return;
 	}
+
+	CurrentAttackTotalHitCount = 0;
+	ParrySuccessCounts.Reset();
 
 	CurrentPhase = ECXCombatPhase::BeginPhase;
 
@@ -369,8 +374,52 @@ bool UCXTurnManager::ProcessTurnResponse(const FCXCombatMessageData& Response, F
 		return false;
 	}
 
+	case ECXCombatMessageType::AttackStarted:
+	{
+		ACXCombatCharacterBase* Attacker = Cast<ACXCombatCharacterBase>(Response.Character.Get());
+		if (!IsValid(Attacker) || Attacker != CurrentTurnPlayer || CurrentPhase != ECXCombatPhase::ActionPhase)
+		{
+			return false;
+		}
+
+		if (Response.TotalHitCount <= 0)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("%s : 공격의 타격 데이터가 비어있습니다"), *Attacker->GetName());
+			return false;
+		}
+
+		CurrentAttackTotalHitCount = Response.TotalHitCount;
+
+		// 새로운 공격이므로 이전 성공 기록 초기화.
+		ParrySuccessCounts.Reset();
+
+		UE_LOG(LogTemp, Display, TEXT("[공격등록] 공격자=%s, 총타격 수 =%d"), *Attacker->GetName(), CurrentAttackTotalHitCount);
+		return false;
+	}
+
+	case ECXCombatMessageType::ParrySucceeded:
+	{
+		ACXCombatCharacterBase* Defender = Cast<ACXCombatCharacterBase>(Response.Character.Get());
+		if (CurrentPhase != ECXCombatPhase::ActionPhase || CurrentAttackTotalHitCount <= 0 ||
+			!IsValid(CurrentTurnPlayer) || Response.Attacker.Get() != CurrentTurnPlayer.Get() ||
+			!IsValid(Defender) || !Defender->GetIsCharacterAlive() || !Defender->GetIsDefenseTarget())
+		{
+			return false;
+		}
+
+		const TWeakObjectPtr<ACXCombatCharacterBase> Key(Defender);
+
+		int32& SuccessCount = ParrySuccessCounts.FindOrAdd(Key);
+		++SuccessCount; 
+
+		UE_LOG(LogTemp, Display, TEXT("[패링 성공] %s: %d/%d"), *Defender->GetName(), SuccessCount, CurrentAttackTotalHitCount);
+		// 집계만 하고 페이즈는 진행X
+		return false;
+	}
 
 	}
+
+	
 	return true;
 }
 

@@ -27,7 +27,9 @@ enum class ECXCombatMessageType : uint8
 	SkippedTurn,			// 자기 턴을 스킵함.
 	Runaway,				// 도망
 	Action,					// 행동
-	TurnCompleted
+	TurnCompleted,
+	AttackStarted,
+	ParrySucceeded
 };
 
 enum class ECXActionType : uint8
@@ -60,8 +62,14 @@ struct FCXCombatMessageData
 	ECXCombatPhase Phase = ECXCombatPhase::BeginPhase;
 	ECXCombatMessageType MessageType = ECXCombatMessageType::None;
 
+	// 현재 메시지를 보낸 캐릭터
 	TWeakObjectPtr<APawn> Character;
+	// 공격한 폰
+	TWeakObjectPtr<APawn> Attacker;
 	TArray<TWeakObjectPtr<APawn>> Targets;
+
+	// 총 타격수
+	int32 TotalHitCount = 0;
 
 };
 

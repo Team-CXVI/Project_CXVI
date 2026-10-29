@@ -115,6 +115,14 @@ void UCXCombatAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCa
 			return;
 		}
 
+		if (IncomingDamage > 0.f && TargetASC && TargetASC->HasMatchingGameplayTag(CXVIGameplayTags::State_Combat_Parrying))
+		{
+			AActor* Insigator = Data.EffectSpec.GetEffectContext().GetInstigator();
+
+			OnParrySucceeded.Broadcast(Insigator);
+			return;                              
+		}
+
 		const float NewHealth = FMath::Clamp(OldHealth - IncomingDamage, 0.f, GetMaxHealth());
 
 		SetHealth(NewHealth);

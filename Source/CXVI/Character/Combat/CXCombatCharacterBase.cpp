@@ -84,6 +84,7 @@ void ACXCombatCharacterBase::PostInitializeComponents()
 	ASC->GetSet<UCXCombatAttributeSet>()->OnOutOfHealth.AddDynamic(this, &ACXCombatCharacterBase::OnOutOfHealthCpp);
 
 	CharacterAttributeSet->OnDamageApplied.AddUniqueDynamic(this, &ACXCombatCharacterBase::HandleDamageApplied);
+	CharacterAttributeSet->OnParrySucceeded.AddUniqueDynamic(this, &ACXCombatCharacterBase::HandleParrySucceeded);
 }
 
 void ACXCombatCharacterBase::InitializeGAS()
@@ -138,6 +139,17 @@ void ACXCombatCharacterBase::NotifyBattleAbilityEnded(FGameplayAbilitySpecHandle
 	FinishAction();
 }
 
+void ACXCombatCharacterBase::NotifyAttackStarted(int32 TotalHitCount)
+{
+	FCXCombatMessageData Message;
+	Message.Character = this;
+	Message.Phase = ECXCombatPhase::ActionPhase;
+	Message.MessageType = ECXCombatMessageType::AttackStarted;
+	Message.TotalHitCount = TotalHitCount;
+
+	CombatMessageResponse(Message);
+}
+
 void ACXCombatCharacterBase::FinishAction()
 {
 	/*if ( SavedMessage.Phase != ECXCombatPhase::ActionPhase)
@@ -181,6 +193,22 @@ void ACXCombatCharacterBase::HandleDamageApplied(AActor* InInstigator, float App
 
 	Attacker->TryGainBasicAttackMana();
 
+}
+
+void ACXCombatCharacterBase::HandleParrySucceeded(AActor* InInstigator)
+{
+	if (!HasAuthority() || !IsValid(InInstigator))
+	{
+		return;
+	}
+
+	FCXCombatMessageData Message;
+	Message.Character = this;
+	Message.Attacker = Cast<APawn>(InInstigator);
+	Message.Phase = ECXCombatPhase::ActionPhase;
+	Message.MessageType = ECXCombatMessageType::ParrySucceeded;
+
+	CombatMessageResponse(Message);
 }
 
 float ACXCombatCharacterBase::GetCombatSpeed() const
@@ -376,6 +404,64 @@ bool ACXCombatCharacterBase::DodgeAbility()
 
 	FGameplayTagContainer DodgeTag;
 	DodgeTag.AddTag(CXVIGameplayTags::Ability_Dodge);
+
+	TArray<FGameplayAbilitySpec*> MatchingAbilities;
+
+	ASC->GetActivatableGameplayAbilitySpecsByAllMatchingTags(
+		DodgeTag,
+		MatchingAbilities,
+		false
+	);
+
+	for (FGameplayAbilitySpec* Spec : MatchingAbilities)
+	{
+		if (!Spec || !Spec->Ability)
+		{
+			continue;
+		}
+
+		if (Spec->IsActive())
+		{
+			return false;
+		}
+
+		// 캐릭터당 하나의 행동만 실행.
+		if (ExecutingCombatAbility.IsValid())
+		{
+			return false;
+		}
+
+		const FGameplayAbilitySpecHandle Handle = Spec->Handle;
+
+		ExecutingCombatAbility = Handle;
+		CurrentActivatingHandles.AddUnique(Handle);
+		bDoingAction = true;
+
+		if (!ASC->TryActivateAbility(Handle))
+		{
+			CurrentActivatingHandles.Remove(Handle);
+			ExecutingCombatAbility = FGameplayAbilitySpecHandle();
+			bDoingAction = false;
+
+			return false;
+		}
+	}
+
+	// 사용할 회피 어빌리티가 없음.
+	return false;
+}
+
+bool ACXCombatCharacterBase::ParryAbility()
+{
+	if (!IsValid(ASC) || !bIsCharacterAlive)
+	{
+		return false;
+	}
+
+	FScopedAbilityListLock AbilityListLock(*ASC);
+
+	FGameplayTagContainer DodgeTag;
+	DodgeTag.AddTag(CXVIGameplayTags::Ability_Parry);
 
 	TArray<FGameplayAbilitySpec*> MatchingAbilities;
 

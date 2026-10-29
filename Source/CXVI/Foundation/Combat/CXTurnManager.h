@@ -125,4 +125,10 @@ private:
 
 	// 현재 패링동작중인 객체 수
 	int32 PendingReactionCount = 0;
+
+	// 현재 공격총 타격 수
+	int32 CurrentAttackTotalHitCount = 0;
+
+	// 이번 공격에 대한 캐릭터별 패링 성공 횟수
+	TMap<TWeakObjectPtr<ACXCombatCharacterBase>, int32> ParrySuccessCounts;
 };

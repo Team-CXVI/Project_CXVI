@@ -12,6 +12,8 @@
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FAttributeDataChanged, float, OldValue, float, NewValue);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOutOfHealth, AActor*, InInstigator);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FDamageApplied, AActor*, InInstigator, float, AppliedDamage);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FCXParrySucceeded, AActor*, InInstigator);
+
 
 /**
  * 
@@ -47,6 +49,9 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Attribute")
 	mutable FDamageApplied OnDamageApplied;
+
+	UPROPERTY(BlueprintAssignable, Category = "Combat|Parry")
+	FCXParrySucceeded OnParrySucceeded;
 
 protected:
 

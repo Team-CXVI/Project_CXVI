@@ -28,9 +28,12 @@ public:
 
 	bool BasicAttackAbility();
 	bool DodgeAbility();
+	bool ParryAbility();
 
 	// 어빌리티 끝났다고 알리는 함수
 	void NotifyBattleAbilityEnded(FGameplayAbilitySpecHandle Handle, bool bWasCancelled);
+	void NotifyAttackStarted(int32 TotalHitCount);
+
 	void FinishAction();
 
 	virtual void CombatMessageRequest(const FCXCombatMessageData& MessageRequest) override;
@@ -78,6 +81,9 @@ protected:
 
 	UFUNCTION()
 	void HandleDamageApplied(AActor* InInstigator, float AppliedDamage);
+
+	UFUNCTION()
+	void HandleParrySucceeded(AActor* InInstigator);
 
 	void TeleportToAttackLocation();
 	void ReturnToOriginLocation();

@@ -113,7 +113,7 @@ void UCXGA_Dodge::RegisterMontageTask()
 		this,					// 사용할 어빌리티
 		NAME_None,				// Task 이름인데 별도로 지정X
 		Montage,		// 재생할 몽타주
-		1.f,					// 재생 속도 (1.f 이 기본속도)
+		2.f,					// 재생 속도 (1.f 이 기본속도)
 		NAME_None
 	);
 
