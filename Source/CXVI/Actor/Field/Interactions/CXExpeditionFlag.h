@@ -57,13 +57,18 @@ protected:
 	bool CanShowFlagUI(const ACXFieldPlayerCharacter* Player) const;
 	void ObserveUIState(ACXFieldPlayerCharacter* Player);
 	void StopObservingUIState();
+	void HandleUIStateTagChanged(const FGameplayTag Tag, int32 NewCount);
 	void RefreshFlagUI();
 
 	TWeakObjectPtr<ACXFieldPlayerCharacter> ObservedPlayer;
+	TWeakObjectPtr<UAbilitySystemComponent> ObservedASC;
+	FDelegateHandle AirborneTagHandle;
+	FDelegateHandle AbilityUITagHandle;
+	FDelegateHandle MovingBlockTagHandle;
 	TWeakObjectPtr<UUserWidget> LastPromptWidget;
 	bool bPromptShown = false;
 
-	// 시선·점프·스프린트처럼 태그 이벤트가 없는 조건을 주기적으로 확인한다.
+	// 시선·몽타주처럼 태그 이벤트가 없는 깃발 고유 조건만 주기적으로 확인한다.
 	FTimerHandle UIRefreshTimerHandle;
 
 	// 플레이어 정면 기준으로 깃발이 이 각도 안에 있을 때만 UI를 표시한다.

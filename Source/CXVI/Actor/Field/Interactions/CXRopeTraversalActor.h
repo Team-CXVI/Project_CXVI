@@ -69,13 +69,18 @@ protected:
 	bool CanShowRopeUI(ACXFieldPlayerCharacter* Player);
 	void ObserveUIState(ACXFieldPlayerCharacter* Player);
 	void StopObservingUIState();
+	void HandleUIStateTagChanged(const FGameplayTag Tag, int32 NewCount);
 	void RefreshRopeUI();
 
 	TWeakObjectPtr<ACXFieldPlayerCharacter> ObservedPlayer;
+	TWeakObjectPtr<UAbilitySystemComponent> ObservedASC;
+	FDelegateHandle AirborneTagHandle;
+	FDelegateHandle AbilityUITagHandle;
+	FDelegateHandle MovingBlockTagHandle;
 	TWeakObjectPtr<UUserWidget> LastPromptWidget;
 	bool bPromptShown = false;
 
-	// 시선·점프·스프린트처럼 태그 이벤트가 없는 조건을 주기적으로 확인한다.
+	// 시선처럼 태그 이벤트가 없는 로프 고유 조건만 주기적으로 확인한다.
 	FTimerHandle UIRefreshTimerHandle;
 
 	// 플레이어가 들어와 있는 쪽(하단/상단)의 UI.

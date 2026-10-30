@@ -327,7 +327,7 @@ void ACXRopeTraversalActor::UpdateRopeUI(ACXFieldPlayerCharacter* Player, bool b
 		return;
 	}
 
-	// 범위 안에서 조건이 깨지면(점프·스프린트·로프 사용 중·시선 이탈) 페이드 없이 바로 숨긴다.
+	// 범위 안에서 조건이 깨지면(점프·스프린트 등 어빌리티·로프 사용 중·시선 이탈) 페이드 없이 바로 숨긴다.
 	Widget->StopAllAnimations();
 	Widget->SetVisibility(ESlateVisibility::Collapsed);
 }
@@ -341,15 +341,15 @@ bool ACXRopeTraversalActor::CanShowRopeUI(ACXFieldPlayerCharacter* Player)
 		return false;
 	}
 
-	// 점프·낙하, 스프린트 중, 로프 이동 중(어빌리티가 MovingBlock을 소유)에는 숨긴다.
+	// 공통 조건(그래플링과 동일): 점프·낙하, 어빌리티 사용 중(스프린트·로프 이동 등), 이동 제한.
 	if (ASC->HasMatchingGameplayTag(CXVIFieldTag::State_Airborne) ||
-		ASC->HasMatchingGameplayTag(CXVIFieldTag::Input_Field_Sprint) ||
+		ASC->HasMatchingGameplayTag(CXVIFieldTag::State_BlockInteractionUI) ||
 		ASC->HasMatchingGameplayTag(CXVIFieldTag::State_MovingBlock))
 	{
 		return false;
 	}
 
-	// 로프 사용 조건과 같은 기준(정면 45도 안의 로프 포인트)으로 시선을 확인한다.
+	// 로프 고유 조건: 로프 사용 조건과 같은 기준(정면 45도 안의 로프 포인트)으로 시선을 확인한다.
 	const ECXRopeTraversalDirection Direction =
 		RopePromptUI.Get() == BottomPromptUI.Get() ? ECXRopeTraversalDirection::Up : ECXRopeTraversalDirection::Down;
 	return IsFacingRopePoint(Player, Direction);
@@ -358,20 +358,55 @@ bool ACXRopeTraversalActor::CanShowRopeUI(ACXFieldPlayerCharacter* Player)
 void ACXRopeTraversalActor::ObserveUIState(ACXFieldPlayerCharacter* Player)
 {
 	StopObservingUIState();
-	if (!IsValid(Player))
+	UAbilitySystemComponent* ASC = IsValid(Player) ? Player->GetAbilitySystemComponent() : nullptr;
+	if (!IsValid(ASC))
 	{
 		return;
 	}
 	ObservedPlayer = Player;
+	ObservedASC = ASC;
 
+	// 공통 조건은 그래플링과 같은 태그 이벤트로 감지한다.
+	AirborneTagHandle = ASC->RegisterGameplayTagEvent(
+		CXVIFieldTag::State_Airborne, EGameplayTagEventType::NewOrRemoved)
+		.AddUObject(this, &ThisClass::HandleUIStateTagChanged);
+	AbilityUITagHandle = ASC->RegisterGameplayTagEvent(
+		CXVIFieldTag::State_BlockInteractionUI, EGameplayTagEventType::NewOrRemoved)
+		.AddUObject(this, &ThisClass::HandleUIStateTagChanged);
+	MovingBlockTagHandle = ASC->RegisterGameplayTagEvent(
+		CXVIFieldTag::State_MovingBlock, EGameplayTagEventType::NewOrRemoved)
+		.AddUObject(this, &ThisClass::HandleUIStateTagChanged);
+
+	// 시선은 이벤트가 없어서 주기적으로 확인한다.
 	GetWorldTimerManager().SetTimer(
 		UIRefreshTimerHandle, this, &ThisClass::RefreshRopeUI, 0.05f, true);
 }
 
 void ACXRopeTraversalActor::StopObservingUIState()
 {
+	if (UAbilitySystemComponent* ASC = ObservedASC.Get())
+	{
+		ASC->RegisterGameplayTagEvent(CXVIFieldTag::State_Airborne,
+			EGameplayTagEventType::NewOrRemoved).Remove(AirborneTagHandle);
+		ASC->RegisterGameplayTagEvent(CXVIFieldTag::State_BlockInteractionUI,
+			EGameplayTagEventType::NewOrRemoved).Remove(AbilityUITagHandle);
+		ASC->RegisterGameplayTagEvent(CXVIFieldTag::State_MovingBlock,
+			EGameplayTagEventType::NewOrRemoved).Remove(MovingBlockTagHandle);
+	}
 	GetWorldTimerManager().ClearTimer(UIRefreshTimerHandle);
 	ObservedPlayer.Reset();
+	ObservedASC.Reset();
+	AirborneTagHandle.Reset();
+	AbilityUITagHandle.Reset();
+	MovingBlockTagHandle.Reset();
+}
+
+void ACXRopeTraversalActor::HandleUIStateTagChanged(const FGameplayTag Tag, int32 NewCount)
+{
+	if (ACXFieldPlayerCharacter* Player = ObservedPlayer.Get())
+	{
+		UpdateRopeUI(Player, true);
+	}
 }
 
 void ACXRopeTraversalActor::RefreshRopeUI()
