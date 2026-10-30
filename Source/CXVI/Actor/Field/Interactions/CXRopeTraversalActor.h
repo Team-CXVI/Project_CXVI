@@ -32,6 +32,7 @@ public:
 
 	bool GetApproachPoint(ECXRopeTraversalDirection Direction, FVector& OutApproach)const;
 
+	bool IsFacingRopePoint(const AActor* Player, ECXRopeTraversalDirection Direciton);
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
