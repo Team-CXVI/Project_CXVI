@@ -22,8 +22,8 @@ void UCXCombatantViewModel::Bind(UAbilitySystemComponent* InASC)
 
 	BindAttribute(UCXCombatAttributeSet::GetMaxHealthAttribute(), &ThisClass::SetMaxHealth);
 	BindAttribute(UCXCombatAttributeSet::GetHealthAttribute(), &ThisClass::SetHealth);
-	BindAttribute(UCXCombatAttributeSet::GetMaxManaAttribute(), &ThisClass::SetMaxAP);
-	BindAttribute(UCXCombatAttributeSet::GetManaAttribute(), &ThisClass::SetAP);
+	BindAttribute(UCXCombatAttributeSet::GetMaxAPAttribute(), &ThisClass::SetMaxAP);
+	BindAttribute(UCXCombatAttributeSet::GetAPAttribute(), &ThisClass::SetAP);
 }
 
 void UCXCombatantViewModel::Unbind()

@@ -29,8 +29,8 @@ public:
 	ATTRIBUTE_ACCESSORS_BASIC(ThisClass, MaxHealth);
 	ATTRIBUTE_ACCESSORS_BASIC(ThisClass, Health);
 	ATTRIBUTE_ACCESSORS_BASIC(ThisClass, Damage);
-	ATTRIBUTE_ACCESSORS_BASIC(ThisClass, Mana);
-	ATTRIBUTE_ACCESSORS_BASIC(ThisClass, MaxMana);
+	ATTRIBUTE_ACCESSORS_BASIC(ThisClass, AP);
+	ATTRIBUTE_ACCESSORS_BASIC(ThisClass, MaxAP);
 	ATTRIBUTE_ACCESSORS_BASIC(ThisClass, CombatSpeed);
 	ATTRIBUTE_ACCESSORS_BASIC(ThisClass, AttackRange);
 	ATTRIBUTE_ACCESSORS_BASIC(ThisClass, AttackRadius);
@@ -73,10 +73,10 @@ protected:
 	FGameplayAttributeData Damage;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attirbutes")
-	FGameplayAttributeData Mana;
+	FGameplayAttributeData AP;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attirbutes")
-	FGameplayAttributeData MaxMana;
+	FGameplayAttributeData MaxAP;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attirbutes")
 	FGameplayAttributeData CombatSpeed;

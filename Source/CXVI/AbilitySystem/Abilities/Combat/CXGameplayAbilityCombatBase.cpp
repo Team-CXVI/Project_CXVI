@@ -22,6 +22,31 @@ UCXGameplayAbilityCombatBase::UCXGameplayAbilityCombatBase()
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 }
 
+float UCXGameplayAbilityCombatBase::GetAPCost() const
+{
+	return AbilityData ? FMath::Max(0.f, AbilityData->APCost) : 0.f;;
+}
+
+void UCXGameplayAbilityCombatBase::ApplyCost(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) const
+{
+	if (IsValid(AbilityData) || !CostGameplayEffectClass || !ActorInfo)
+	{
+		return;
+	}
+
+	FGameplayEffectSpecHandle Spec = MakeOutgoingGameplayEffectSpec(Handle, ActorInfo, ActivationInfo, CostGameplayEffectClass, GetAbilityLevel(Handle, ActorInfo));
+
+	if (!Spec.IsValid())
+	{
+		return;
+	}
+
+	Spec.Data->SetSetByCallerMagnitude(CXVIGameplayTags::Data_AP, -GetAPCost());
+
+	// 이 함수가 비용 적용을 담당하므로 Super::ApplyCost는 호출하지 않음.
+	ApplyGameplayEffectSpecToOwner(Handle, ActorInfo, ActivationInfo, Spec);
+}
+
 void UCXGameplayAbilityCombatBase::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
 	// 재생할 몽타주가 없으면 공격을 종료.
@@ -87,22 +112,32 @@ void UCXGameplayAbilityCombatBase::EndAbility(const FGameplayAbilitySpecHandle H
 	Character->NotifyBattleAbilityEnded(Handle, bWasCancelled);
 }
 
-float UCXGameplayAbilityCombatBase::GetManaCost() const
-{
-	return AbilityData ? FMath::Max(0.f, AbilityData->ManaCost) : 0.f;
-}
-
 bool UCXGameplayAbilityCombatBase::CheckCost(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, FGameplayTagContainer* OptionalRelevantTags) const
 {
 	// 설정 누락을 비용 0인 스킬로 취급하지 않는다.
-	if (!IsValid(AbilityData) || !CostGameplayEffectClass)
+	if (!IsValid(AbilityData) || !CostGameplayEffectClass || !ActorInfo)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("%s: 스킬 데이터 또는 비용 GE가 설정되지 않았습니다."), *GetName());
 		return false;
 	}
 	
-	// 실제 자원 검사는 공통 비용 GE를 사용하는 GAS기본 구현에 맡긴다.
-	return Super::CheckCost(Handle, ActorInfo, OptionalRelevantTags);
+	UAbilitySystemComponent* OwnerASC = ActorInfo->AbilitySystemComponent.Get();
+
+	if (!IsValid(OwnerASC))
+	{
+		return false;
+	}
+
+	const float Cost = GetAPCost();
+
+	// 무료 행동과 AP를 획득하는 행동은 잔량 검사가 필요없다.
+	if (Cost <= 0.f)
+	{
+		return true;
+	}
+
+	const float CurrentAP = OwnerASC->GetNumericAttribute(UCXCombatAttributeSet::GetAPAttribute());
+
+	return CurrentAP >= Cost;
 }
 
 void UCXGameplayAbilityCombatBase::OnAttackCompleted()

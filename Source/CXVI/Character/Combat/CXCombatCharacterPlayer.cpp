@@ -198,7 +198,7 @@ bool ACXCombatCharacterPlayer::CanActivateSelectSkill(int32 SlotIndex) const
 	// 이 호출은 마나를 소비하지 않음
 	if (!Ability->CheckCost(Spec->Handle, ActorInfo))
 	{
-		const float CurrentMana = CharacterAttributeSet ? CharacterAttributeSet->GetMana() : 0.f;
+		const float CurrentMana = CharacterAttributeSet ? CharacterAttributeSet->GetAP() : 0.f;
 
 		UE_LOG(LogTemp, Display, TEXT("%s: 마나 부족으로 스킬을 사용할 수  없습니다. 현재 마나 =%.0f"), *GetName(), CurrentMana);
 		

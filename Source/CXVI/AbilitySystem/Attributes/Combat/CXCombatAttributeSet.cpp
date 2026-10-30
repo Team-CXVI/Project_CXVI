@@ -10,7 +10,7 @@
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXCombatAttributeSet)
 
 UCXCombatAttributeSet::UCXCombatAttributeSet()
-	: MaxHealth(100.f), Mana(0.f), MaxMana(100.f),
+	: MaxHealth(100.f), AP(0.f), MaxAP(100.f),
 	CombatSpeed(100.f), AttackRange(100.f), AttackRadius(50.f), AttackRate(40.f)
 {
 	InitHealth(GetMaxHealth());
@@ -26,13 +26,13 @@ void UCXCombatAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribu
 	{
 		NewValue = FMath::Clamp(NewValue, 0.f, GetMaxHealth());
 	}
-	else if (Attribute == GetMaxManaAttribute())
+	else if (Attribute == GetMaxAPAttribute())
 	{
 		NewValue = FMath::Max<float>(0.f, NewValue);
 	}
-	else if (Attribute == GetManaAttribute())
+	else if (Attribute == GetAPAttribute())
 	{
-		NewValue = FMath::Clamp(NewValue, 0.f, GetMaxMana());
+		NewValue = FMath::Clamp(NewValue, 0.f, GetMaxAP());
 	}
 }
 
@@ -48,21 +48,21 @@ void UCXCombatAttributeSet::PostAttributeChange(const FGameplayAttribute& Attrib
 	{
 		OnHealthChanged.Broadcast(OldValue, NewValue);
 	}
-	else if (Attribute == GetMaxManaAttribute())
+	else if (Attribute == GetMaxAPAttribute())
 	{
-		if (GetMana() > NewValue)
+		if (GetAP() > NewValue)
 		{
-			SetMana(NewValue);
+			SetAP(NewValue);
 		}
 	}
-	else if (Attribute == GetManaAttribute())
+	else if (Attribute == GetAPAttribute())
 	{
 		if (!FMath::IsNearlyEqual(OldValue, NewValue))
 		{
 			UE_LOG(LogTemp, Display,
 				TEXT("%s 마나: %.0f -> %.0f / %.0f"),
 				*GetNameSafe(GetOwningActor()),
-				OldValue, NewValue, GetMaxMana());
+				OldValue, NewValue, GetMaxAP());
 		}
 	}
 }
@@ -71,13 +71,13 @@ void UCXCombatAttributeSet::PreAttributeBaseChange(const FGameplayAttribute& Att
 {
 	Super::PreAttributeBaseChange(Attribute, NewValue);
 
-	if (Attribute == GetMaxManaAttribute())
+	if (Attribute == GetMaxAPAttribute())
 	{
 		NewValue = FMath::Max(0.f, NewValue);
 	}
-	else if (Attribute == GetManaAttribute())
+	else if (Attribute == GetAPAttribute())
 	{
-		NewValue = FMath::Clamp(NewValue, 0.f, GetMaxMana());
+		NewValue = FMath::Clamp(NewValue, 0.f, GetMaxAP());
 	}
 }
 
@@ -85,16 +85,16 @@ void UCXCombatAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCa
 {
 	Super::PostGameplayEffectExecute(Data);
 
-	if (Data.EvaluatedData.Attribute == GetManaAttribute())
+	if (Data.EvaluatedData.Attribute == GetAPAttribute())
 	{
-		SetMana(FMath::Clamp(GetMana(), 0.f, GetMaxMana()));
+		SetAP(FMath::Clamp(GetAP(), 0.f, GetMaxAP()));
 		return;
 	}
 
-	if (Data.EvaluatedData.Attribute == GetMaxManaAttribute())
+	if (Data.EvaluatedData.Attribute == GetMaxAPAttribute())
 	{
-		SetMaxMana(FMath::Max(0.f, GetMaxMana()));
-		SetMana(FMath::Clamp(GetMana(), 0.f, GetMaxMana()));
+		SetMaxAP(FMath::Max(0.f, GetMaxAP()));
+		SetAP(FMath::Clamp(GetAP(), 0.f, GetMaxAP()));
 		return;
 	}
 
@@ -117,6 +117,8 @@ void UCXCombatAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCa
 
 		if (IncomingDamage > 0.f && TargetASC && TargetASC->HasMatchingGameplayTag(CXVIGameplayTags::State_Combat_Parrying))
 		{
+			SetAP(FMath::Clamp(GetAP() + 1.f, 0.f, GetMaxAP()));
+
 			AActor* Insigator = Data.EffectSpec.GetEffectContext().GetInstigator();
 
 			OnParrySucceeded.Broadcast(Insigator);
