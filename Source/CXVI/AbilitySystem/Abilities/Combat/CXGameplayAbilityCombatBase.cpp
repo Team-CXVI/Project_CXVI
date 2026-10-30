@@ -7,7 +7,8 @@
 #include "CXVI/Tags/CXGameplayTags.h"
 
 #include "CXVI/AbilitySystem/Abilities/Combat/CXAbilityData.h"
-#include "AbilitySystem/Attributes/Combat/CXCombatAttributeSet.h"
+#include "AbilitySystem/Attributes/Combat/CXCombatAttributeSetBase.h"
+#include "AbilitySystem/Attributes/Combat/CXCombatPlayerAttributeSet.h"
 
 #include "GameplayEffect.h"
 #include "AbilitySystemComponent.h"
@@ -29,7 +30,26 @@ float UCXGameplayAbilityCombatBase::GetAPCost() const
 
 void UCXGameplayAbilityCombatBase::ApplyCost(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) const
 {
-	if (IsValid(AbilityData) || !CostGameplayEffectClass || !ActorInfo)
+	if (IsValid(AbilityData) || !ActorInfo)
+	{
+		return;
+	}
+
+	const UAbilitySystemComponent* OwnerASC = ActorInfo->AbilitySystemComponent.Get();
+
+	if (!IsValid(OwnerASC))
+	{
+		return;
+	}
+
+	if (!OwnerASC->GetSet<UCXCombatPlayerAttributeSet>())
+	{
+		return;
+	}
+
+	const float Cost = GetAPCost();
+
+	if (Cost == 0.f || !CostGameplayEffectClass)
 	{
 		return;
 	}
@@ -41,7 +61,7 @@ void UCXGameplayAbilityCombatBase::ApplyCost(const FGameplayAbilitySpecHandle Ha
 		return;
 	}
 
-	Spec.Data->SetSetByCallerMagnitude(CXVIGameplayTags::Data_AP, -GetAPCost());
+	Spec.Data->SetSetByCallerMagnitude(CXVIGameplayTags::Data_AP, -Cost);
 
 	// 이 함수가 비용 적용을 담당하므로 Super::ApplyCost는 호출하지 않음.
 	ApplyGameplayEffectSpecToOwner(Handle, ActorInfo, ActivationInfo, Spec);
@@ -115,7 +135,7 @@ void UCXGameplayAbilityCombatBase::EndAbility(const FGameplayAbilitySpecHandle H
 bool UCXGameplayAbilityCombatBase::CheckCost(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, FGameplayTagContainer* OptionalRelevantTags) const
 {
 	// 설정 누락을 비용 0인 스킬로 취급하지 않는다.
-	if (!IsValid(AbilityData) || !CostGameplayEffectClass || !ActorInfo)
+	if (!IsValid(AbilityData) || !ActorInfo)
 	{
 		return false;
 	}
@@ -127,17 +147,27 @@ bool UCXGameplayAbilityCombatBase::CheckCost(const FGameplayAbilitySpecHandle Ha
 		return false;
 	}
 
-	const float Cost = GetAPCost();
+	const UCXCombatPlayerAttributeSet* PlayerAttributes = OwnerASC->GetSet<UCXCombatPlayerAttributeSet>();
 
-	// 무료 행동과 AP를 획득하는 행동은 잔량 검사가 필요없다.
-	if (Cost <= 0.f)
+	if (!IsValid(PlayerAttributes))
 	{
 		return true;
 	}
 
-	const float CurrentAP = OwnerASC->GetNumericAttribute(UCXCombatAttributeSet::GetAPAttribute());
+	const float Cost = GetAPCost();
 
-	return CurrentAP >= Cost;
+	// 무료 행동과 AP를 획득하는 행동은 잔량 검사가 필요없다.
+	if (Cost == 0.f)
+	{
+		return true;
+	}
+
+	if (!CostGameplayEffectClass)
+	{
+		return false;
+	}
+
+	return Cost < 0.f || PlayerAttributes->GetAP() >= Cost;
 }
 
 void UCXGameplayAbilityCombatBase::OnAttackCompleted()
@@ -220,7 +250,7 @@ void UCXGameplayAbilityCombatBase::OnAttackEvent(FGameplayEventData Payload)
 
 	// 현재 공격력 : AttackRate
 
-	const float AttackPower = FMath::Max(0.f, SourceASC->GetNumericAttribute(UCXCombatAttributeSet::GetAttackRateAttribute()));
+	const float AttackPower = FMath::Max(0.f, SourceASC->GetNumericAttribute(UCXCombatAttributeSetBase::GetAttackPowerAttribute()));
 
 	const float Multiplier = FMath::Max(0.f, AbilityData->HitDamageMultipilers[HitIndex]);
 

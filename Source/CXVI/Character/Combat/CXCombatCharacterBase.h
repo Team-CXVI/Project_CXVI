@@ -133,8 +133,6 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "UI")
 	TObjectPtr<class UWidgetComponent> HpBar;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Attribute")
-	TObjectPtr<class UCXCombatAttributeSet> CharacterAttributeSet;
 
 	// Gameplay Effect
 	UPROPERTY(EditDefaultsOnly, Category = "Combat|Mana")

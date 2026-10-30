@@ -5,7 +5,7 @@
 
 #include "CXVI/Tags/CXGameplayTags.h"
 
-#include "CXVI/AbilitySystem/Attributes/Combat/CXCombatAttributeSet.h"
+#include "CXVI/AbilitySystem/Attributes/Combat/CXCombatPlayerAttributeSet.h"
 
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
@@ -34,6 +34,9 @@ ACXCombatCharacterPlayer::ACXCombatCharacterPlayer()
 	{
 		GetMesh()->SetSkeletalMesh(CharacterMeshRef.Object);
 	}
+
+	AttributeSet = CreateDefaultSubobject<UCXCombatPlayerAttributeSet>(TEXT("AttributeSet"));
+	ASC->AddAttributeSetSubobject<UCXCombatPlayerAttributeSet>(AttributeSet);
 
 	//static ConstructorHelpers::FClassFinder<UAnimInstance> CharacterAnimRef(
 	//	TEXT("/Game/CXVI/Characters/Combat/Animation/ABP_Combat_Character.ABP_Combat_Character_C")
@@ -198,7 +201,9 @@ bool ACXCombatCharacterPlayer::CanActivateSelectSkill(int32 SlotIndex) const
 	// 이 호출은 마나를 소비하지 않음
 	if (!Ability->CheckCost(Spec->Handle, ActorInfo))
 	{
-		const float CurrentMana = CharacterAttributeSet ? CharacterAttributeSet->GetAP() : 0.f;
+		UCXCombatPlayerAttributeSet* PlayerAttribute = Cast<UCXCombatPlayerAttributeSet>(CharacterAttributeSet);
+
+		const float CurrentMana = PlayerAttribute ? PlayerAttribute->GetAP() : 0.f;
 
 		UE_LOG(LogTemp, Display, TEXT("%s: 마나 부족으로 스킬을 사용할 수  없습니다. 현재 마나 =%.0f"), *GetName(), CurrentMana);
 		

@@ -18,6 +18,8 @@ UCXCombatAttributeSet::UCXCombatAttributeSet()
 
 void UCXCombatAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue)
 {
+	Super::PreAttributeChange(Attribute, NewValue);
+
 	if (Attribute == GetMaxHealthAttribute())
 	{
 		NewValue = FMath::Max<float>(1.f, NewValue);

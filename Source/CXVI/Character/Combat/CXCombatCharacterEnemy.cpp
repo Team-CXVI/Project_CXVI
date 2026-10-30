@@ -3,7 +3,7 @@
 
 #include "CXVI/Character/Combat/CXCombatCharacterEnemy.h"
 
-#include "CXVI/AbilitySystem/Attributes/Combat/CXCombatAttributeSet.h"
+#include "CXVI/AbilitySystem/Attributes/Combat/CXCombatEnemyAttributeSet.h"
 #include "Foundation/Combat/CombatMessage/CXCombatMessageData.h"
 
 #include "AbilitySystemComponent.h"
@@ -22,6 +22,9 @@ ACXCombatCharacterEnemy::ACXCombatCharacterEnemy()
 	{
 		GetMesh()->SetSkeletalMesh(CharacterMeshRef.Object);
 	}
+
+	AttributeSet = CreateDefaultSubobject<UCXCombatEnemyAttributeSet>(TEXT("AttributeSet"));
+	ASC->AddAttributeSetSubobject<UCXCombatEnemyAttributeSet>(AttributeSet);
 
 	/*static ConstructorHelpers::FClassFinder<UAnimInstance> CharacterAnimRef(
 		TEXT("/Game/CXVI/Characters/Combat/Animation/ABP_Combat_Character.ABP_Combat_Character_C")

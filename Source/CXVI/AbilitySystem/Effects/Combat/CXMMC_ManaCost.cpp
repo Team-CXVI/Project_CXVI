@@ -20,5 +20,5 @@ float UCXMMC_ManaCost::CalculateBaseMagnitude_Implementation(const FGameplayEffe
 	}
 
 	// 데이터는 양수로 저장하고 GE에는 감소량으로 전달.
-	return -Ability->GetManaCost();
+	return -Ability->GetAPCost();
 }
