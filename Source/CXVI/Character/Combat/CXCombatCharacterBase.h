@@ -12,6 +12,7 @@
 #include "CXCombatCharacterBase.generated.h"
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FCXOnCombatAbilityFinished, bool);
+DECLARE_MULTICAST_DELEGATE_OneParam(FCXOnCanStartReturnPhase, bool);
 
 UCLASS()
 class CXVI_API ACXCombatCharacterBase : public ACharacter, public IAbilitySystemInterface, public ICXCombatMessageInterface
@@ -26,9 +27,14 @@ public:
 	void InitializeGAS();
 
 	bool BasicAttackAbility();
+	bool DodgeAbility();
+	bool ParryAbility();
+	bool CounterAbility();
 
 	// 어빌리티 끝났다고 알리는 함수
 	void NotifyBattleAbilityEnded(FGameplayAbilitySpecHandle Handle, bool bWasCancelled);
+	void NotifyAttackStarted(int32 TotalHitCount);
+
 	void FinishAction();
 
 	virtual void CombatMessageRequest(const FCXCombatMessageData& MessageRequest) override;
@@ -38,6 +44,7 @@ public:
 
 	//
 	FCXOnCombatAbilityFinished OnCombatAbilityFinished;
+	FCXOnCanStartReturnPhase OnCanStartReturnPhase;
 
 	virtual bool ExecuteCombatAbility();
 
@@ -45,9 +52,17 @@ public:
 	void CancelCombatAbility();
 
 	// Getter / Setter
-	FORCEINLINE const bool GetIsCharacterAlive() const { return bIsCharacterAlive; }
-	FORCEINLINE const bool GetIsTurn() const { return bIsTurn; }
+	FORCEINLINE bool GetIsCharacterAlive() const { return bIsCharacterAlive; }
+	FORCEINLINE bool GetIsTurn() const { return bIsTurn; }
 	FORCEINLINE void SetOriginTransform(const FTransform& NewTransform) { OriginTransform = NewTransform; }
+	FORCEINLINE bool GetDoingAction() const { return bDoingAction; }
+	FORCEINLINE void SetDoingAction(bool NewValue) { bDoingAction = NewValue; }
+	FORCEINLINE bool GetIsDefenseTarget() const { return bIsDefenseTarget; }
+	FORCEINLINE void SetIsDefenseTarget(bool NewValue) { bIsDefenseTarget = NewValue; }
+	FORCEINLINE bool GetCounterAttackPending() const { return bCounterAttackPending; }
+	FORCEINLINE void SetCounterAttackPending(bool NewValue) { bCounterAttackPending = NewValue; }
+	FORCEINLINE bool GetWaitingForReturn() const { return bWaitingForReturn; }
+
 	float GetCombatSpeed() const;
 
 	APawn* GetSelectedCombatTarget() const { return CurrentTargetPawn.Get(); }
@@ -71,8 +86,13 @@ protected:
 	UFUNCTION()
 	void HandleDamageApplied(AActor* InInstigator, float AppliedDamage);
 
+	UFUNCTION()
+	void HandleParrySucceeded(AActor* InInstigator);
+
 	void TeleportToAttackLocation();
 	void ReturnToOriginLocation();
+
+
 
 	bool TryStartCombatAbility(FGameplayAbilitySpecHandle Handle);
 
@@ -89,8 +109,8 @@ protected:
 	void BeforeSelectPhase();
 	virtual void SelectActionPhase();
 	virtual void SelectTargetPhase();
-	virtual void ActionPhase();
-	void ReactionPhase();
+	virtual bool ActionPhase();
+	void ReturnPhase();
 	void EndTurnPhase();
 
 	const TArray<TWeakObjectPtr<APawn>>& GetTargetCandidates() const { return SavedMessage.Targets; }
@@ -120,7 +140,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Combat|Mana")
 	TSubclassOf<class UGameplayEffect> BasicAttackManaGainEffect;
 
-private:
+protected:
 	// 페이즈 끝남 델리게이트
 	FOnTurnPhaseFinished PhaseFinishedEvent;
 
@@ -133,17 +153,28 @@ private:
 
 	FTransform OriginTransform;
 	TWeakObjectPtr<APawn> CurrentTargetPawn;
+	TWeakObjectPtr<ACXCombatCharacterBase> CounterAttackTarget;
 
 	// 어빌리티 초기화 플래그
 	bool bIsInitializedAbility = false;
 
+	// 생존 플래그
 	bool bIsCharacterAlive = false;
 
+	// 현재 자기 턴인지
 	bool bIsTurn = false;
 
 	// 마나 획득 플래그
 	bool bBasicAttackManaGranted = false;
 
+	bool bDoingAction = false;
+
+	// 현재 공격받고있는 상태인지
+	bool bIsDefenseTarget = false;
+
+	bool bCounterAttackPending = false;
+
+	bool bWaitingForReturn = false;
 
 protected:
 	/*UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Attribute")

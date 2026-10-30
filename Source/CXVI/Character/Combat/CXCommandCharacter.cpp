@@ -5,7 +5,6 @@
 
 #include "CXVI/Character/Combat/CXCombatCharacterPlayer.h"
 #include "CXVI/Foundation/Combat/CXCombatManagerSubsystem.h"
-#include "CXVI/Actor/Combat/CXTestCombatArena.h"
 
 #include "Engine/LocalPlayer.h"
 #include "Engine/World.h"
@@ -17,8 +16,8 @@
 #include "InputAction.h"
 #include "UObject/ConstructorHelpers.h"
 
-#include "CXVI/Foundation/Combat/CXCombatManagerSubsystem_V2.h"
 #include "CXVI/Actor/Combat/CXCombatArena.h"
+
 
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXCommandCharacter)
@@ -26,12 +25,12 @@
 // Sets default values
 ACXCommandCharacter::ACXCommandCharacter()
 {
-	static ConstructorHelpers::FObjectFinder<UCXCombatInputData> InputDataRef(
+	/*static ConstructorHelpers::FObjectFinder<UCXCombatInputData> InputDataRef(
 		TEXT("/Game/Combat/Input/DA_CombatInputData.DA_CombatInputData"));
 	if (InputDataRef.Succeeded())
 	{
 		CombatInputData = InputDataRef.Object;
-	}
+	}*/
 }
 
 void ACXCommandCharacter::AddCommandCharacter(ACXCombatCharacterPlayer* NewPlayer)
@@ -50,14 +49,14 @@ void ACXCommandCharacter::AddCommandCharacter(ACXCombatCharacterPlayer* NewPlaye
 	);
 }
 
-void ACXCommandCharacter::SetCombatInputMode(ECombatInputMode NewMode)
+void ACXCommandCharacter::SetCombatInputMode(ECXCombatInputMode NewMode)
 {
-	const ECombatInputMode PreviousMode = CombatInputMode;
+	const ECXCombatInputMode PreviousMode = CombatInputMode;
 	const TWeakObjectPtr<ACXCombatCharacterPlayer> PreviousCharacter = CommandCharacter;
 	UpdateCommandCharacter();
 	CombatInputMode = NewMode;
 
-	if (NewMode == ECombatInputMode::Disabled ||(NewMode == ECombatInputMode::Command &&
+	if (NewMode == ECXCombatInputMode::Disabled ||(NewMode == ECXCombatInputMode::Command &&
 			(PreviousMode != NewMode || PreviousCharacter != CommandCharacter)))
 	{
 		TargetCandidates.Reset();
@@ -67,7 +66,54 @@ void ACXCommandCharacter::SetCombatInputMode(ECombatInputMode NewMode)
 		SavedSelection.Clear();
 	}
 
-	RefreshInputMappingContexts();
+
+	// 태그 부여로 다른 입력 차단
+	//UEnhancedInputLocalPlayerSubsystem* Subsystem = InputSubsystem.Get();
+	UCXInputControlSubsystem* ControlSystem = UCXInputControlSubsystem::TryGet(GetWorld());
+
+	if (!ControlSystem)
+	{
+		return;
+	}
+
+	if (ReactionModeHandle.IsValid())
+	{
+		ControlSystem->RemoveInputModeTag(ReactionModeHandle);
+	}
+
+	if (NewMode == ECXCombatInputMode::Reaction)
+	{
+		ReactionModeHandle = ControlSystem->AddInputModeTag(CXVIGameplayTags::InputMode_Combat_Reaction, "ReactionMode");
+	}
+	else
+	{
+		ControlSystem->RemoveInputModeTag(ReactionModeHandle);
+	}
+
+	//switch (NewMode)
+	//{
+	//case ECXCombatInputMode::Command:
+	//	/*Modes.AddTag(CXVIGameplayTags::InputMode_Combat_Command);*/
+	//	ActionModeHandle = ControlSystem->AddInputModeTag(CXVIGameplayTags::InputMode_Combat_Command, "CombatMode");
+	//	break;
+
+	//case ECXCombatInputMode::Reaction:
+	//	//Modes.AddTag(CXVIGameplayTags::InputMode_Combat_Reaction);
+	//	ReactionModeHandle = ControlSystem->AddInputModeTag(CXVIGameplayTags::InputMode_Combat_Reaction, "ReactionMode");
+	//	break;
+
+	//default:
+	//	// disabled에서는 둘다 태그 없음
+	//	break;
+	//}
+
+	/*if (Modes != Subsystem->GetInputMode())
+	{
+		FModifyContextOptions Options;
+		Options.bIgnoreAllPressedKeysUntilRelease = true;
+
+		Subsystem->SetInputMode(Modes, Options);
+	}*/
 }
 
 void ACXCommandCharacter::SetMenuState(ECommandMenuState NewState)
@@ -82,106 +128,10 @@ void ACXCommandCharacter::SetMenuState(ECommandMenuState NewState)
 	}
 
 	MenuState = NewState;
-	RefreshInputMappingContexts();
-}
-
-void ACXCommandCharacter::RefreshInputMappingContexts()
-{
-	UEnhancedInputLocalPlayerSubsystem* Subsystem = InputSubsystem.Get();
-	if (!Subsystem)
-	{
-		return;
-	}
-
-	ECXInputContext Context = ECXInputContext::Unassigned;
-	if (CombatInputMode == ECombatInputMode::Command)
-	{
-		switch (MenuState)
-		{
-		case ECommandMenuState::ActionMenu: Context = ECXInputContext::ActionMenu; break;
-		case ECommandMenuState::ItemMenu: Context = ECXInputContext::ItemMenu; break;
-		case ECommandMenuState::SkillMenu: Context = ECXInputContext::SkillMenu; break;
-		case ECommandMenuState::TargetSelect: Context = ECXInputContext::TargetSelect; break;
-		}
-	}
-	else if (CombatInputMode == ECombatInputMode::Reaction)
-	{
-		Context = ECXInputContext::Reaction;
-	}
-
-	TArray<TWeakObjectPtr<UInputMappingContext>> DesiredContexts;
-	if (CombatInputData && CombatInputMode != ECombatInputMode::Disabled)
-	{
-		for (const FInputData& Data : CombatInputData->GetInputData())
-		{
-			const bool bCommon = Data.Context == ECXInputContext::Common &&
-				CombatInputMode == ECombatInputMode::Command;
-			if (Data.IMC && (bCommon || Data.Context == Context))
-			{
-				DesiredContexts.AddUnique(Data.IMC.Get());
-			}
-		}
-	}
-
-	FModifyContextOptions Options;
-	Options.bIgnoreAllPressedKeysUntilRelease = true;
-	for (const auto& ActiveContext : ActiveMappingContexts)
-	{
-		if (ActiveContext.IsValid() && !DesiredContexts.Contains(ActiveContext))
-		{
-			Subsystem->RemoveMappingContext(ActiveContext.Get(), Options);
-		}
-	}
-	for (const auto& DesiredContext : DesiredContexts)
-	{
-		if (!ActiveMappingContexts.Contains(DesiredContext))
-		{
-			const bool bCommon = CombatInputData->GetInputData().ContainsByPredicate(
-				[&DesiredContext](const FInputData& Data)
-				{
-					return Data.IMC.Get() == DesiredContext.Get() && Data.Context == ECXInputContext::Common;
-				});
-			Subsystem->AddMappingContext(DesiredContext.Get(), bCommon ? 0 : 1, Options);
-		}
-	}
-	ActiveMappingContexts = MoveTemp(DesiredContexts);
-}
-
-void ACXCommandCharacter::RemoveInputMappingContexts()
-{
-	if (UEnhancedInputLocalPlayerSubsystem* Subsystem = InputSubsystem.Get())
-	{
-		for (const auto& Context : ActiveMappingContexts)
-		{
-			if (Context.IsValid())
-			{
-				Subsystem->RemoveMappingContext(Context.Get());
-			}
-		}
-	}
-	ActiveMappingContexts.Reset();
 }
 
 
-void ACXCommandCharacter::UpdateCommandCharacter()
-{
-	CommandCharacter.Reset();
 
-	for (const auto& WeakPlayer : CommandCharacters)
-	{
-		ACXCombatCharacterPlayer* CommandPlayer = WeakPlayer.Get();
-		if (!CommandPlayer)
-		{
-			continue;
-		}
-
-		if (CommandPlayer->GetIsTurn())
-		{
-			CommandCharacter = CommandPlayer;
-			return;
-		}
-	}
-}
 
 // Called when the game starts or when spawned
 void ACXCommandCharacter::BeginPlay()
@@ -191,7 +141,6 @@ void ACXCommandCharacter::BeginPlay()
 
 void ACXCommandCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	RemoveInputMappingContexts();
 	InputSubsystem.Reset();
 	Super::EndPlay(EndPlayReason);
 }
@@ -200,7 +149,6 @@ void ACXCommandCharacter::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
 
-	RemoveInputMappingContexts();
 	InputSubsystem.Reset();
 	APlayerController* PlayerController = Cast<APlayerController>(NewController);
 	if (IsValid(PlayerController))
@@ -208,7 +156,14 @@ void ACXCommandCharacter::PossessedBy(AController* NewController)
 		if (ULocalPlayer* LocalPlayer = PlayerController->GetLocalPlayer())
 		{
 			InputSubsystem = LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>();
-			RefreshInputMappingContexts();
+			if (InputSubsystem.IsValid() && ActionMappingContext && ReactionMappingContext)
+			{
+				FModifyContextOptions Options;
+				Options.bIgnoreAllPressedKeysUntilRelease = true;
+
+				InputSubsystem->AddMappingContext(ActionMappingContext, 0, Options);
+				InputSubsystem->AddMappingContext(ReactionMappingContext, 1, Options);
+			}
 		}
 	}
 }
@@ -217,7 +172,7 @@ void ACXCommandCharacter::UnPossessed()
 {
 	RemoveInputMappingContexts();
 	InputSubsystem.Reset();
-	CombatInputMode = ECombatInputMode::Disabled;
+	CombatInputMode = ECXCombatInputMode::Disabled;
 	MenuState = ECommandMenuState::ActionMenu;
 	TargetReturnMenu = ECommandMenuState::ActionMenu;
 	SavedSelection.Clear();
@@ -245,45 +200,69 @@ void ACXCommandCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 
 	UEnhancedInputComponent* EnhancedInput = Cast<UEnhancedInputComponent>(PlayerInputComponent);
 
-	if (!EnhancedInput || !CombatInputData)
+	if (!EnhancedInput)
 	{
 		return;
 	}
 
-	TMap<const UInputAction*, TSet<ETriggerEvent>> BoundEvents;
-	for (const FInputData& ModeData : CombatInputData->GetInputData())
-	{
-		if (!ModeData.IMC || ModeData.Context == ECXInputContext::Unassigned)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("입력 데이터의 IMC와 Context를 설정해주세요."));
-			continue;
-		}
-		for (const FCXInputActionData& Data : ModeData.Actions)
-		{
-			const UInputAction* Action = Data.Action.Get();
-
-			if (!Action || BoundEvents.FindOrAdd(Action).Contains(Data.TriggerEvent))
-			{
-				continue;
-			}
-
-			EnhancedInput->BindAction(
-				Action,
-				Data.TriggerEvent,
-				this,
-				&ACXCommandCharacter::HandleInputAction,
-				Data.TriggerEvent
-			);
-			BoundEvents.FindChecked(Action).Add(Data.TriggerEvent);
-		}
-	}
+	EnhancedInput->BindAction(ConfirmAction, ETriggerEvent::Started, this, &ACXCommandCharacter::HandleInputConfirm);
+	EnhancedInput->BindAction(CancelAction, ETriggerEvent::Started, this, &ACXCommandCharacter::HandleInputCancel);
+	EnhancedInput->BindAction(Slot1Action, ETriggerEvent::Started, this, &ACXCommandCharacter::HandleInputSlot1);
+	EnhancedInput->BindAction(Slot2Action, ETriggerEvent::Started, this, &ACXCommandCharacter::HandleInputSlot2);
+	EnhancedInput->BindAction(Slot3Action, ETriggerEvent::Started, this, &ACXCommandCharacter::HandleInputSlot3);
+	EnhancedInput->BindAction(ParryAction, ETriggerEvent::Started, this, &ACXCommandCharacter::HandleInputParry);
+	EnhancedInput->BindAction(DodgeAction, ETriggerEvent::Started, this, &ACXCommandCharacter::HandleInputDodge);
+	EnhancedInput->BindAction(LeftSelectAction, ETriggerEvent::Started, this, &ACXCommandCharacter::HandleInputSelectLeft);
+	EnhancedInput->BindAction(RightSelectAction, ETriggerEvent::Started, this, &ACXCommandCharacter::HandleInputSelectRight);
+	EnhancedInput->BindAction(ToggleAimModeAction, ETriggerEvent::Started, this, &ACXCommandCharacter::HandleInputToggleAimMode);
+	EnhancedInput->BindAction(FireAction, ETriggerEvent::Started, this, &ACXCommandCharacter::HandleInputFire);
+	EnhancedInput->BindAction(LookAction, ETriggerEvent::Triggered, this, &ACXCommandCharacter::HandleInputLook);
+	
+	EnhancedInput->BindAction(RunawayAction, ETriggerEvent::Started, this, &ACXCommandCharacter::HandleInputRunaway);
+	EnhancedInput->BindAction(SkipTurnAction, ETriggerEvent::Started, this, &ACXCommandCharacter::HandleInputSkipTurn);
 
 }
 
-
-void ACXCommandCharacter::HandleMenuInput(ECommandKey Key)
+void ACXCommandCharacter::UpdateCommandCharacter()
 {
-	if (CombatInputMode != ECombatInputMode::Command)
+	CommandCharacter.Reset();
+
+	for (const auto& WeakPlayer : CommandCharacters)
+	{
+		ACXCombatCharacterPlayer* CommandPlayer = WeakPlayer.Get();
+		if (!CommandPlayer)
+		{
+			continue;
+		}
+
+		if (CommandPlayer->GetIsTurn())
+		{
+			CommandCharacter = CommandPlayer;
+			return;
+		}
+	}
+}
+
+
+void ACXCommandCharacter::RemoveInputMappingContexts()
+{
+	if (UEnhancedInputLocalPlayerSubsystem* Subsystem = InputSubsystem.Get())
+	{
+		if (ActionMappingContext)
+		{
+			Subsystem->RemoveMappingContext(ActionMappingContext.Get());
+		}
+
+		if (ReactionMappingContext)
+		{
+			Subsystem->RemoveMappingContext(ReactionMappingContext.Get());
+		}
+	}
+}
+
+void ACXCommandCharacter::HandleInputConfirm()
+{
+	if (CombatInputMode != ECXCombatInputMode::Command)
 	{
 		return;
 	}
@@ -291,40 +270,7 @@ void ACXCommandCharacter::HandleMenuInput(ECommandKey Key)
 	switch (MenuState)
 	{
 	case ECommandMenuState::ActionMenu:
-		HandleActionMenuInput(Key);
-		break;
-
-	case ECommandMenuState::ItemMenu:
-		HandleItemMenuInput(Key);
-		break;
-
-	case ECommandMenuState::SkillMenu:
-		HandleSkillMenuInput(Key);
-		break;
-
-	case ECommandMenuState::TargetSelect:
-		HandleTargetSelectInput(Key);
-		break;
-	}
-}
-
-void ACXCommandCharacter::HandleActionMenuInput(ECommandKey Key)
-{
-	// 메뉴 선택
-	switch (Key)
 	{
-		// w - 아이템
-	case ECommandKey::W:
-		UE_LOG(LogTemp, Display, TEXT("아이템선택창"));
-		SetMenuState(ECommandMenuState::ItemMenu);
-		break;
-		// e - 스킬
-	case ECommandKey::E:
-		UE_LOG(LogTemp, Display, TEXT("스킬선택창"));
-		SetMenuState(ECommandMenuState::SkillMenu);
-		break;
-		// f - 기본공격
-	case ECommandKey::F:
 		SavedSelection.Clear();
 		SavedSelection.Type = ECXActionType::BasicAttack;
 		SavedSelection.TargetTeam = ECXTargetTeam::Enemy;
@@ -332,91 +278,7 @@ void ACXCommandCharacter::HandleActionMenuInput(ECommandKey Key)
 		SubmitActionToPlayer(SavedSelection);
 		break;
 	}
-
-}
-
-void ACXCommandCharacter::HandleItemMenuInput(ECommandKey Key)
-{
-	// 아이템 고르는 창
-	// q w e로 선택 가능 esc로 뒤로가기
-	switch (Key)
-	{
-	//case ECommandKey::Q:
-	//	UE_LOG(LogTemp, Display, TEXT("1번 아이템 선택"));
-	//	/*Selection.Clear();
-	//	Selection.Type = ECXActionType::Item;
-	//	Selection.TargetTeam = ECXTargetTeam::Player;
-
-	//	SubmitActionToPlayer(Selection);*/
-	//	break;
-	//case ECommandKey::W:
-	//	UE_LOG(LogTemp, Display, TEXT("1번 아이템 선택"));
-	//	break;
-	//case ECommandKey::E:
-	//	UE_LOG(LogTemp, Display, TEXT("1번 아이템 선택"));
-	//	break;
-	case ECommandKey::ESC:
-		UE_LOG(LogTemp, Display, TEXT("메뉴로 돌아가기"));
-		SavedSelection.Clear();
-		SetMenuState(ECommandMenuState::ActionMenu);
-		break;
-	}
-}
-
-void ACXCommandCharacter::HandleSkillMenuInput(ECommandKey Key)
-{
-	// 스킬 고르는 창
-	// q w e로 선택 하고 esc로 뒤로 가기
-	switch (Key)
-	{
-	case ECommandKey::Q:
-		UE_LOG(LogTemp, Display, TEXT("1번 스킬 선택"));
-		SavedSelection.Clear();
-		SavedSelection.Type = ECXActionType::Skill;
-		SavedSelection.SlotIndex = 0;
-		SavedSelection.TargetTeam = ECXTargetTeam::Enemy;
-
-		SubmitActionToPlayer(SavedSelection);
-		break;
-	case ECommandKey::W:
-		UE_LOG(LogTemp, Display, TEXT("2번 스킬 선택"));
-		SavedSelection.Clear();
-		SavedSelection.Type = ECXActionType::Skill;
-		SavedSelection.SlotIndex = 1;
-		SavedSelection.TargetTeam = ECXTargetTeam::Enemy;
-
-		SubmitActionToPlayer(SavedSelection);
-		break;
-	case ECommandKey::E:
-		UE_LOG(LogTemp, Display, TEXT("3번 스킬 선택"));
-		SavedSelection.Clear();
-		SavedSelection.Type = ECXActionType::Skill;
-		SavedSelection.SlotIndex = 2;
-		SavedSelection.TargetTeam = ECXTargetTeam::Enemy;
-
-		SubmitActionToPlayer(SavedSelection);
-		break;
-	case ECommandKey::ESC:
-		UE_LOG(LogTemp, Display, TEXT("메뉴로 돌아가기"));
-		SavedSelection.Clear();
-		SetMenuState(ECommandMenuState::ActionMenu);
-		break;
-	}
-}
-
-void ACXCommandCharacter::HandleTargetSelectInput(ECommandKey Key)
-{
-	switch (Key)
-	{
-	case ECommandKey::A:
-		MoveTargetSelection(-1);
-		return;
-
-	case ECommandKey::D:
-		MoveTargetSelection(1);
-		return;
-
-	case ECommandKey::F:
+	case ECommandMenuState::TargetSelect:
 	{
 		ACXCombatCharacterPlayer* Player = CommandCharacter.Get();
 
@@ -434,14 +296,323 @@ void ACXCommandCharacter::HandleTargetSelectInput(ECommandKey Key)
 		}
 
 		Player->SubmitTarget(TargetCandidates[SelectedTargetIndex].Get());
+		break;
 	}
-	case ECommandKey::ESC:
-		CancelTargetSelection();
-		return;
-	default:
-		return;
 	}
 }
+
+void ACXCommandCharacter::HandleInputCancel()
+{
+	if (CombatInputMode != ECXCombatInputMode::Command)
+	{
+		return;
+	}
+
+	switch (MenuState)
+	{
+	case ECommandMenuState::SkillMenu:
+	{
+		UE_LOG(LogTemp, Display, TEXT("메뉴로 돌아가기"));
+		SavedSelection.Clear();
+		SetMenuState(ECommandMenuState::ActionMenu);
+		return;
+	}
+	case ECommandMenuState::TargetSelect:
+	{
+		CancelTargetSelection();
+		return;
+	}
+	case ECommandMenuState::ItemMenu:
+	{
+		UE_LOG(LogTemp, Display, TEXT("메뉴로 돌아가기"));
+		SavedSelection.Clear();
+		SetMenuState(ECommandMenuState::ActionMenu);
+		return;
+	}
+	}
+}
+
+void ACXCommandCharacter::HandleInputSlot1()
+{
+	if (CombatInputMode != ECXCombatInputMode::Command)
+	{
+		return;
+	}
+
+	switch (MenuState)
+	{
+	case ECommandMenuState::SkillMenu:
+	{
+		UE_LOG(LogTemp, Display, TEXT("1번 스킬 선택"));
+		SavedSelection.Clear();
+		SavedSelection.Type = ECXActionType::Skill;
+		SavedSelection.SlotIndex = 0;
+		SavedSelection.TargetTeam = ECXTargetTeam::Enemy;
+
+		SubmitActionToPlayer(SavedSelection);
+		return;
+	}
+	case ECommandMenuState::ItemMenu:
+	{
+		UE_LOG(LogTemp, Display, TEXT("1번아이템 선택"));
+		return;
+	}
+	}
+}
+
+void ACXCommandCharacter::HandleInputSlot2()
+{
+	if (CombatInputMode != ECXCombatInputMode::Command)
+	{
+		return;
+	}
+
+	switch (MenuState)
+	{
+	case ECommandMenuState::SkillMenu:
+	{
+		UE_LOG(LogTemp, Display, TEXT("2번 스킬 선택"));
+		SavedSelection.Clear();
+		SavedSelection.Type = ECXActionType::Skill;
+		SavedSelection.SlotIndex = 1;
+		SavedSelection.TargetTeam = ECXTargetTeam::Enemy;
+		SubmitActionToPlayer(SavedSelection);
+
+		return;
+	}
+	case ECommandMenuState::ActionMenu:
+	{
+		UE_LOG(LogTemp, Display, TEXT("아이템선택창"));
+		SetMenuState(ECommandMenuState::ItemMenu);
+		return;
+	}
+	case ECommandMenuState::ItemMenu:
+	{
+		UE_LOG(LogTemp, Display, TEXT("2번 아이템 선택"));
+		
+		return;
+	}
+	}
+}
+
+void ACXCommandCharacter::HandleInputSlot3()
+{
+	if (CombatInputMode != ECXCombatInputMode::Command)
+	{
+		return;
+	}
+
+	switch (MenuState)
+	{
+	case ECommandMenuState::SkillMenu:
+	{
+		UE_LOG(LogTemp, Display, TEXT("3번 스킬 선택"));
+		SavedSelection.Clear();
+		SavedSelection.Type = ECXActionType::Skill;
+		SavedSelection.SlotIndex = 2;
+		SavedSelection.TargetTeam = ECXTargetTeam::Enemy;
+		SubmitActionToPlayer(SavedSelection);
+		return;
+	}
+	case ECommandMenuState::ActionMenu:
+	{
+		UE_LOG(LogTemp, Display, TEXT("스킬선택창"));
+		SetMenuState(ECommandMenuState::SkillMenu);
+		return;
+	}
+	case ECommandMenuState::ItemMenu:
+	{
+		UE_LOG(LogTemp, Display, TEXT("3번 아이템 선택"));
+
+		return;
+	}
+	}
+}
+
+void ACXCommandCharacter::HandleInputSelectLeft()
+{
+	if (CombatInputMode != ECXCombatInputMode::Command ||
+		MenuState != ECommandMenuState::TargetSelect)
+	{
+		return;
+	}
+
+	MoveTargetSelection(-1);
+}
+
+void ACXCommandCharacter::HandleInputSelectRight()
+{
+	if (CombatInputMode != ECXCombatInputMode::Command ||
+		MenuState != ECommandMenuState::TargetSelect)
+	{
+		return;
+	}
+
+	MoveTargetSelection(1);
+}
+
+void ACXCommandCharacter::HandleInputParry()
+{
+	if (CombatInputMode != ECXCombatInputMode::Reaction)
+	{
+		return;
+	}
+	UE_LOG(LogTemp, Display, TEXT("패리 키 누름 "));
+
+	for (int32 Index = 0; Index < CommandCharacters.Num(); ++Index)
+	{
+		ACXCombatCharacterPlayer* CommandPlayer = CommandCharacters[Index].Get();
+		if (!IsValid(CommandPlayer))
+		{
+			return;
+		}
+
+		if (CommandPlayer->GetIsDefenseTarget())
+		{
+			CommandPlayer->ParryAbility();
+		}
+	}
+}
+
+void ACXCommandCharacter::HandleInputDodge()
+{
+	if (CombatInputMode != ECXCombatInputMode::Reaction)
+	{
+		return;
+	}
+
+	UE_LOG(LogTemp, Display, TEXT("회피 키 누름 "));
+
+	for (int32 Index = 0; Index < CommandCharacters.Num(); ++Index)
+	{
+		ACXCombatCharacterPlayer* CommandPlayer = CommandCharacters[Index].Get();
+		if (!IsValid(CommandPlayer))
+		{
+			return;
+		}
+
+		if (CommandPlayer->GetIsDefenseTarget())
+		{
+			CommandPlayer->DodgeAbility();
+		}
+	}
+
+
+}
+
+void ACXCommandCharacter::HandleInputFire()
+{
+	if (CombatInputMode != ECXCombatInputMode::Command
+		|| MenuState != ECommandMenuState::ActionMenu)
+	{
+		return;
+	}
+
+	ACXCombatCharacterPlayer* CommandPlayer = CommandCharacter.Get();
+	if (!CommandPlayer)
+	{
+		return;
+	}
+
+	CommandPlayer->FireAbility();
+}
+
+void ACXCommandCharacter::HandleInputToggleAimMode()
+{
+	if (CombatInputMode != ECXCombatInputMode::Command
+		|| MenuState != ECommandMenuState::ActionMenu)
+	{
+		return;
+	}
+
+	ACXCombatCharacterPlayer* CommandPlayer = CommandCharacter.Get();
+	APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	UWorld* World = GetWorld();
+
+	if (!IsValid(CommandPlayer) || !IsValid(PlayerController) || !World)
+	{
+		return;
+	}
+
+	UCXCombatManagerSubsystem* CombatManager = World->GetSubsystem<UCXCombatManagerSubsystem>();
+
+	/*ACXTestCombatArena* Arena = CombatManager ? CombatManager->GetCombatArena() : nullptr;
+
+	if (!IsValid(Arena))
+	{
+		return;
+	}*/
+
+	if (CommandPlayer->ToggleAimMode())
+	{
+		//SwitchInputMappintContext(BattleLookMappingContext);
+		PlayerController->SetViewTargetWithBlend(CommandPlayer, 0.25f);
+	}
+	else
+	{
+		//PlayerController->SetViewTargetWithBlend(Arena, 0.25f);
+		//AGASGameMode* GameMode = Cast<AGASGameMode>(GetWorld()->GetAuthGameMode());
+		//if (GameMode)
+		//{
+		//	//SwitchInputMappintContext(BattleLookMappingContext);
+		//	SetViewTargetWithBlend(GameMode->GetBattleArena(), 0.25f);
+		//}
+	}
+}
+
+void ACXCommandCharacter::HandleInputLook(const FInputActionValue& Value )
+{
+	if (CombatInputMode != ECXCombatInputMode::Command
+		|| MenuState != ECommandMenuState::ActionMenu)
+	{
+		return;
+	}
+
+	ACXCombatCharacterPlayer* CommandPlayer = CommandCharacter.Get();
+	if (!CommandPlayer || !CommandPlayer->GetIsAimMode())
+	{
+		return;
+	}
+
+	CommandPlayer->Look(Value);
+}
+
+void ACXCommandCharacter::HandleInputRunaway()
+{
+	if (CombatInputMode != ECXCombatInputMode::Command
+		|| MenuState != ECommandMenuState::ActionMenu)
+	{
+		return;
+	}
+	
+	ACXCombatCharacterPlayer* CommandPlayer = CommandCharacter.Get();
+	if (!CommandPlayer || !CommandPlayer->GetIsAimMode())
+	{
+		return;
+	}
+
+	CommandPlayer->TryRunaway();
+}
+
+void ACXCommandCharacter::HandleInputSkipTurn()
+{
+	UE_LOG(LogTemp, Display, TEXT("스킵시도"));
+
+	if (CombatInputMode != ECXCombatInputMode::Command
+		|| MenuState != ECommandMenuState::ActionMenu)
+	{
+		return;
+	}
+
+	ACXCombatCharacterPlayer* CommandPlayer = CommandCharacter.Get();
+	if (!IsValid(CommandPlayer))
+	{
+		return;
+	} 
+
+	CommandPlayer->SkipTurn();
+}
+
 
 void ACXCommandCharacter::SubmitActionToPlayer(const FCXActionSelection& Selection)
 {
@@ -463,120 +634,10 @@ void ACXCommandCharacter::SubmitActionToPlayer(const FCXActionSelection& Selecti
 	Player->SubmitAction(Selection);
 }
 
-void ACXCommandCharacter::HandleInputAction(const FInputActionInstance& Instance, ETriggerEvent TriggerEvent)
-{
-	if (!CombatInputData || CombatInputMode == ECombatInputMode::Disabled)
-	{
-		return;
-	}
-
-	// IA/이벤트마다 한 번만 수신하고, 메뉴 전용 명령을 공통 명령보다 우선한다.
-	// 처리 도중 IMC를 바꿔도 같은 입력으로 다음 메뉴의 명령이 연속 실행되지 않는다.
-	for (int32 Pass = 0; Pass < 2; ++Pass)
-	{
-		for (const FInputData& ModeData : CombatInputData->GetInputData())
-		{
-			const bool bCommon = ModeData.Context == ECXInputContext::Common;
-			if (bCommon != (Pass == 1) || !ActiveMappingContexts.Contains(ModeData.IMC.Get()))
-			{
-				continue;
-			}
-
-			for (const FCXInputActionData& Data : ModeData.Actions)
-			{
-				if (Data.Action.Get() == Instance.GetSourceAction().Get() && Data.TriggerEvent == TriggerEvent)
-				{
-					HandleInputCommand(Instance.GetValue(), Data.Command);
-					return;
-				}
-			}
-		}
-	}
-}
-
-void ACXCommandCharacter::HandleInputCommand(const FInputActionValue& Value, ECXInputCommand Command)
-{
-	if (CombatInputMode != ECombatInputMode::Command)
-	{
-		return;
-	}
-
-	switch (Command)
-	{
-	case ECXInputCommand::OpenItemMenu:
-		if (MenuState == ECommandMenuState::ActionMenu)
-		{
-			HandleActionMenuInput(ECommandKey::W);
-		}
-		break;
-
-	case ECXInputCommand::OpenSkillMenu:
-		if (MenuState == ECommandMenuState::ActionMenu)
-		{
-			HandleActionMenuInput(ECommandKey::E);
-		}
-		break;
-
-	case ECXInputCommand::BasicAttack:
-		if (MenuState == ECommandMenuState::ActionMenu)
-		{
-			HandleActionMenuInput(ECommandKey::F);
-		}
-		break;
-
-	case ECXInputCommand::Skill1:
-	case ECXInputCommand::Skill2:
-	case ECXInputCommand::Skill3:
-		if (MenuState == ECommandMenuState::SkillMenu)
-		{
-			const ECommandKey Key = Command == ECXInputCommand::Skill1 ? ECommandKey::Q :
-				Command == ECXInputCommand::Skill2 ? ECommandKey::W : ECommandKey::E;
-			HandleSkillMenuInput(Key);
-		}
-		break;
-
-	case ECXInputCommand::PreviousTarget:
-	case ECXInputCommand::NextTarget:
-		if (MenuState == ECommandMenuState::TargetSelect)
-		{
-			HandleTargetSelectInput(Command == ECXInputCommand::PreviousTarget ? ECommandKey::A : ECommandKey::D);
-		}
-		break;
-
-	case ECXInputCommand::Confirm:
-		if (MenuState == ECommandMenuState::TargetSelect)
-		{
-			HandleTargetSelectInput(ECommandKey::F);
-		}
-		break;
-
-	case ECXInputCommand::Cancel:
-		HandleMenuInput(ECommandKey::ESC);
-		break;
-
-	case ECXInputCommand::ToggleAim:
-		OnAimModeInput();
-		break;
-
-	case ECXInputCommand::Look:
-		OnMouseLookInput(Value);
-		break;
-
-	case ECXInputCommand::Fire:
-		if (MenuState == ECommandMenuState::ActionMenu)
-		{
-			OnFireInput();
-		}
-		break;
-
-	default:
-		break;
-	}
-}
 
 void ACXCommandCharacter::OnAimModeInput()
 {
-	if (CombatInputMode != ECombatInputMode::Command)
+	if (CombatInputMode != ECXCombatInputMode::Command)
 	{
 		return;
 	}
@@ -596,7 +657,7 @@ void ACXCommandCharacter::OnAimModeInput()
 	}
 
 	//UCXCombatManagerSubsystem* CombatManager = World->GetSubsystem<UCXCombatManagerSubsystem>();
-	UCXCombatManagerSubsystem_V2* CombatManager = World->GetSubsystem<UCXCombatManagerSubsystem_V2>();
+	UCXCombatManagerSubsystem* CombatManager = World->GetSubsystem<UCXCombatManagerSubsystem>();
 
 	//ACXTestCombatArena* Arena = CombatManager ? CombatManager->GetCombatArena() : nullptr;
 	ACXCombatArena* Arena = CombatManager ? CombatManager->GetCombatArena() : nullptr;
@@ -625,7 +686,7 @@ void ACXCommandCharacter::OnAimModeInput()
 
 void ACXCommandCharacter::OnMouseLookInput(const FInputActionValue& Value)
 {
-	if (CombatInputMode != ECombatInputMode::Command)
+	if (CombatInputMode != ECXCombatInputMode::Command)
 	{
 		return;
 	}
@@ -641,7 +702,7 @@ void ACXCommandCharacter::OnMouseLookInput(const FInputActionValue& Value)
 
 void ACXCommandCharacter::OnFireInput()
 {
-	if (CombatInputMode != ECombatInputMode::Command)
+	if (CombatInputMode != ECXCombatInputMode::Command)
 	{
 		return;
 	}

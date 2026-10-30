@@ -4,17 +4,21 @@
 #include "CXCombatScene.h"
 
 #include "Foundation/Scene/CXSceneSubsystem.h"
-#include "Foundation/Combat/CXCombatManagerSubsystem_V2.h"
+#include "Foundation/Combat/CXCombatManagerSubsystem.h"
 #include "Foundation/Combat/CombatMessage/CXCombatMessageData.h"
 #include "Actor/Combat/CXCombatArena.h"
 #include "Character/Combat/CXCommandCharacter.h"
 #include "Tags/CXGameplayTags.h"
-
+#include "UI/Combat/CXCombatHUDWidget.h"
+#include "UI/ViewModel/CXCombatViewModel.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXCombatScene)
 
 void UCXCombatScene::OnEnter(const FCXSceneContext& InContext)
 {
+	// 베이스의 HUD Push에서 주입할 수 있도록 먼저 생성 (전투원은 StartBattle에서 채움)
+	CombatViewModel = NewObject<UCXCombatViewModel>(this);
+
 	// 베이스에서 커맨드 Pawn 빙의 + IMC 등록 (전투 준비보다 먼저)
 	Super::OnEnter(InContext);
 
@@ -34,9 +38,16 @@ void UCXCombatScene::OnExit()
 	UnbindSceneChanged();
 
 	// 화면이 가려진 상태에서 정리. 턴 정지(바인딩 해제)가 전투원 Destroy보다 먼저
-	if (UCXCombatManagerSubsystem_V2* CombatManager = GetCombatManager())
+	if (UCXCombatManagerSubsystem* CombatManager = GetCombatManager())
 	{
 		CombatManager->EndBattle();
+	}
+
+	// 전투원들이 파괴 되기전에 ViewModel에 바인딩 된 ASC 구독 해제
+	if (CombatViewModel)
+	{
+		CombatViewModel->Reset();
+		CombatViewModel = nullptr;
 	}
 
 	if (ACXCombatArena* CombatArena = Arena.Get())
@@ -49,6 +60,20 @@ void UCXCombatScene::OnExit()
 	Super::OnExit();
 }
 
+void UCXCombatScene::InitializeSceneHUD(UCXActivatableWidget& InHUD)
+{
+	Super::InitializeSceneHUD(InHUD);
+
+	if (UCXCombatHUDWidget* CombatHUD = Cast<UCXCombatHUDWidget>(&InHUD))
+	{
+		CombatHUD->SetCombatViewModel(CombatViewModel);
+	}
+	else
+	{
+		UE_LOG(LogCXScene, Warning, TEXT("CombatScene : HUDClass(%s)가 UCXCombatHUDWidget이 아닙니다."), *GetNameSafe(InHUD.GetClass()));
+	}
+}
+
 bool UCXCombatScene::StartBattle(const FCXSceneContext& InContext)
 {
 	const FCXCombatEnterParams* Params = InContext.GetPayload<FCXCombatEnterParams>();
@@ -58,7 +83,7 @@ bool UCXCombatScene::StartBattle(const FCXSceneContext& InContext)
 		return false;
 	}
 
-	UCXCombatManagerSubsystem_V2* CombatManager = GetCombatManager();
+	UCXCombatManagerSubsystem* CombatManager = GetCombatManager();
 	if (nullptr == CombatManager)
 	{
 		return false;
@@ -85,6 +110,10 @@ bool UCXCombatScene::StartBattle(const FCXSceneContext& InContext)
 		return false;
 	}
 	Arena = CombatArena;
+
+	// 전투원들의 ViewModel을 생성
+	// TODO : 보스몬스터가 추가 되면 2번째 인자에 추가
+	CombatViewModel->SetCombatants(CombatArena->GetPlayers(), /*Boss*/nullptr);
 
 	FCXBattleSetup Setup;
 	Setup.Arena = CombatArena;
@@ -146,7 +175,7 @@ void UCXCombatScene::UnbindSceneChanged()
 	}
 }
 
-UCXCombatManagerSubsystem_V2* UCXCombatScene::GetCombatManager() const
+UCXCombatManagerSubsystem* UCXCombatScene::GetCombatManager() const
 {
-	return UCXCombatManagerSubsystem_V2::TryGet(this);
+	return UCXCombatManagerSubsystem::TryGet(this);
 }

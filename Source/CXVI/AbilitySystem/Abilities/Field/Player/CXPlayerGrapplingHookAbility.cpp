@@ -7,6 +7,8 @@
 
 
 #include "Animation/AnimMontage.h"
+#include "Animation/AnimInstance.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Abilities/Tasks/AbilityTask_WaitDelay.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
@@ -81,8 +83,22 @@ void UCXPlayerGrapplingHookAbility::ActivateAbility(const FGameplayAbilitySpecHa
 
     const float CapsuleHalfHeight = Character->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
 
+    // 착지 발판은 위치 표시용이라 실제 바닥과 높이가 다를 수 있어 아래로 트레이스해서 바닥 높이를 찾음.
+    FVector LandingFloor = LandingSurface->GetActorLocation();
+    {
+        FHitResult FloorHit;
+        FCollisionQueryParams FloorParams(SCENE_QUERY_STAT(GrapplingLandingFloor), false, Character);
+        const FVector TraceStart = LandingFloor + FVector::UpVector * 200.0f;
+        const FVector TraceEnd = LandingFloor - FVector::UpVector * 500.0f;
+
+        if (GetWorld()->LineTraceSingleByChannel(FloorHit, TraceStart, TraceEnd, ECC_Visibility, FloorParams))
+        {
+            LandingFloor = FloorHit.ImpactPoint;
+        }
+    }
+
     // 캐릭터의 액터 좌표는 캡슐 중심이므로, 발 위치에 캡슐 반높이를 더해야됨.
-    GrapplingGoal = LandingSurface->GetActorLocation() + FVector::UpVector * (CapsuleHalfHeight + 2.0f);
+    GrapplingGoal = LandingFloor + FVector::UpVector * (CapsuleHalfHeight + 2.0f);
 
     // 필요한 몽타주 Section이 준비됐는지 검사.
     const bool bHasSection =
@@ -177,7 +193,11 @@ void UCXPlayerGrapplingHookAbility::EndAbility(
     if (UWorld* World = GetWorld())
     {
         World->GetTimerManager().ClearTimer(GrapplingFacingTimerHandle);
+        World->GetTimerManager().ClearTimer(GrapplingAirHoldTimerHandle);
     }
+
+    // 멈춰 둔 몽타주가 남지 않도록 재생을 되돌림.
+    ResumeGrapplingMontage();
 
     // 실행 중인 좌표 이동 제어 종료.
     if (IsValid(GrapplingMoveTask))
@@ -226,7 +246,21 @@ void UCXPlayerGrapplingHookAbility::HandleGrapplingLanded(const FHitResult& Hit)
         return;
     }
 
-    const bool bCorrectLanding = LandingSurface.IsValid() && Hit.GetActor() == LandingSurface.Get();
+    // 착지 발판에 충돌이 없을 수 있어 액터 대신 착지 지점이 발판 영역 안인지 확인.
+    bool bCorrectLanding = LandingSurface.IsValid() && Hit.GetActor() == LandingSurface.Get();
+
+    if (!bCorrectLanding && LandingSurface.IsValid())
+    {
+        FVector SurfaceOrigin;
+        FVector SurfaceExtent;
+        LandingSurface->GetActorBounds(false, SurfaceOrigin, SurfaceExtent, true);
+
+        const FVector Offset = Hit.ImpactPoint - SurfaceOrigin;
+        bCorrectLanding =
+            FMath::Abs(Offset.X) <= SurfaceExtent.X + 50.0f &&
+            FMath::Abs(Offset.Y) <= SurfaceExtent.Y + 50.0f &&
+            FMath::Abs(Offset.Z) <= SurfaceExtent.Z + 100.0f;
+    }
 
     if (!bCorrectLanding)
     {
@@ -245,6 +279,13 @@ void UCXPlayerGrapplingHookAbility::HandleGrapplingLanded(const FHitResult& Hit)
     }
 
     GrapplingPhase = ECXGrapplingPhase::Landing;
+
+    if (UWorld* World = GetWorld())
+    {
+        World->GetTimerManager().ClearTimer(GrapplingAirHoldTimerHandle);
+    }
+
+    ResumeGrapplingMontage();
 
     ASC->CurrentMontageJumpToSection(FName(TEXT("Land")));
 
@@ -445,7 +486,7 @@ void UCXPlayerGrapplingHookAbility::OnStartMoveEvent(FGameplayEventData Payload)
             this,
             FName(TEXT("GrapplingMove")),
             GrapplingGoal,
-            GrapplingDuration,
+            GrapplingDuration,     
             false,                                          // 이동 모드는 위에서 직접 실행.
             MOVE_Flying,
             false,                                          // 경로상의 목표 위치를 따라잡도록 보정.
@@ -465,5 +506,63 @@ void UCXPlayerGrapplingHookAbility::OnStartMoveEvent(FGameplayEventData Payload)
     GrapplingMoveTask->OnTimedOut.AddDynamic(this, &ThisClass::OnGrapplingInterrupted);
 
     GrapplingMoveTask->ReadyForActivation();
-  
+
+    // Flight Section이 끝나기 직전에 아직 공중이면 착지 전까지 자세를 유지.
+    // Section 길이는 몽타주 타임라인 기준이라 RateScale로 실제 재생 시간을 구함.
+    const int32 FlightIndex = GrapplingMontage->GetSectionIndex(FName(TEXT("Flight")));
+    const float FlightLength = GrapplingMontage->GetSectionLength(FlightIndex) / FMath::Max(GrapplingMontage->RateScale, KINDA_SMALL_NUMBER);
+
+    if (UWorld* World = GetWorld())
+    {
+        World->GetTimerManager().SetTimer(
+            GrapplingAirHoldTimerHandle,
+            this,
+            &ThisClass::HoldFlightPoseUntilLanded,
+            FMath::Max(FlightLength - 1.0f / 60.0f, 0.01f),
+            false);
+    }
+
+}
+
+void UCXPlayerGrapplingHookAbility::HoldFlightPoseUntilLanded()
+{
+    if (!IsActive() || GrapplingPhase != ECXGrapplingPhase::Flying)
+    {
+        return;
+    }
+
+    ACXFieldPlayerCharacter* Character = GrapplingCharacter.Get();
+    UAnimInstance* AnimInstance = IsValid(Character) && Character->GetMesh() ? Character->GetMesh()->GetAnimInstance() : nullptr;
+
+    if (!IsValid(AnimInstance) || !AnimInstance->Montage_IsPlaying(GrapplingMontage))
+    {
+        return;
+    }
+
+    // 타이머 오차로 Land Section에 들어가지 않도록 Flight 마지막 프레임에 고정.
+    float FlightStart = 0.0f;
+    float FlightEnd = 0.0f;
+    GrapplingMontage->GetSectionStartAndEndTime(GrapplingMontage->GetSectionIndex(FName(TEXT("Flight"))), FlightStart, FlightEnd);
+
+    AnimInstance->Montage_SetPosition(GrapplingMontage, FMath::Max(FlightEnd - KINDA_SMALL_NUMBER * 10.0f, FlightStart));
+    AnimInstance->Montage_Pause(GrapplingMontage);
+    bGrapplingMontagePaused = true;
+}
+
+void UCXPlayerGrapplingHookAbility::ResumeGrapplingMontage()
+{
+    if (!bGrapplingMontagePaused)
+    {
+        return;
+    }
+
+    bGrapplingMontagePaused = false;
+
+    ACXFieldPlayerCharacter* Character = GrapplingCharacter.Get();
+    UAnimInstance* AnimInstance = IsValid(Character) && Character->GetMesh() ? Character->GetMesh()->GetAnimInstance() : nullptr;
+
+    if (IsValid(AnimInstance))
+    {
+        AnimInstance->Montage_Resume(GrapplingMontage);
+    }
 }

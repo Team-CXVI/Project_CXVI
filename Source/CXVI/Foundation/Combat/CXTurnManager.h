@@ -9,9 +9,9 @@
 
 #include "CXTurnManager.generated.h"
 
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerInputEnabledChanged, bool);
-DECLARE_MULTICAST_DELEGATE(FCXOnBattleEnded);
-DECLARE_MULTICAST_DELEGATE_OneParam(FCXOnBattleEnded_V2, bool /*bVictory*/);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerInputEnabledChanged, ECXCombatInputMode);
+//DECLARE_MULTICAST_DELEGATE(FCXOnBattleEnded);
+DECLARE_MULTICAST_DELEGATE_OneParam(FCXOnBattleEnded, bool /*bVictory*/);
 
 class ACXCombatCharacterBase;
 
@@ -49,7 +49,6 @@ public:
 	FOnPlayerInputEnabledChanged OnPlayerInputEnabledChanged;
 
 	FCXOnBattleEnded OnBattleEnded;
-	FCXOnBattleEnded_V2 OnBattleEnded_V2;
 
 	void StopBattle() { ResetBattle(); }
 
@@ -81,7 +80,10 @@ private:
 	bool ShouldEndBattle();
 	// 전투 종료
 	void EndBattle();
-	void EndBattle_V2();
+
+	bool CheckAllActionEnded();
+	bool CheckAllReturnEnded() const;
+	void ResetDefenseTargets();
 
 	// 페이즈 변경 함수
 	void NextTurnPhase(ECXCombatPhase& PreviousPhase);
@@ -121,4 +123,13 @@ protected:
 private:
 
 	float BaseActionCost = 100.f;
+
+	// 현재 패링동작중인 객체 수
+	int32 PendingReactionCount = 0;
+
+	// 현재 공격총 타격 수
+	int32 CurrentAttackTotalHitCount = 0;
+
+	// 이번 공격에 대한 캐릭터별 패링 성공 횟수
+	TMap<TWeakObjectPtr<ACXCombatCharacterBase>, int32> ParrySuccessCounts;
 };
