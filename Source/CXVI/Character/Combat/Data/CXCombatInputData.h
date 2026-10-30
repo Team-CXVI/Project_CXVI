@@ -37,35 +37,22 @@ enum class ECXInputContext : uint8
     Reaction
 };
 
-USTRUCT()
-struct FCXInputActionData
-{
-    GENERATED_BODY()
 
-    UPROPERTY(EditAnywhere, Category = "Input")
-    TObjectPtr<class UInputAction> Action = nullptr;
 
-    UPROPERTY(EditAnywhere, Category = "Input")
-    ECXInputCommand Command = ECXInputCommand::Confirm;
-
-    UPROPERTY(EditAnywhere, Category = "Input")
-    ETriggerEvent TriggerEvent = ETriggerEvent::Started;
-};
-
-USTRUCT()
-struct FInputData
-{
-	GENERATED_BODY()
-
-	UPROPERTY(EditAnywhere, Category = "Input")
-    ECXInputContext Context = ECXInputContext::Unassigned;
-
-	UPROPERTY(EditAnywhere, Category = "IMC")
-    TObjectPtr<class UInputMappingContext> IMC = nullptr;
-
-	UPROPERTY(EditAnywhere, Category = "IA")
-	TArray<FCXInputActionData> Actions;
-};
+//USTRUCT()
+//struct FInputData
+//{
+//	GENERATED_BODY()
+//
+//	UPROPERTY(EditAnywhere, Category = "Input")
+//    ECXInputContext Context = ECXInputContext::Unassigned;
+//
+//	UPROPERTY(EditAnywhere, Category = "IMC")
+//    TObjectPtr<class UInputMappingContext> IMC = nullptr;
+//
+//	UPROPERTY(EditAnywhere, Category = "IA")
+//	TArray<FCXInputActionData> Actions;
+//};
 
 /**
  * 
@@ -77,9 +64,9 @@ class CXVI_API UCXCombatInputData : public UPrimaryDataAsset
 
 
 public:
-    const TArray<FInputData>& GetInputData() const { return InputData; }
+    /*const TArray<FInputData>& GetInputData() const { return InputData; }
 
 	UPROPERTY(EditAnywhere, Category = "Input")
-	TArray<FInputData> InputData;
+	TArray<FInputData> InputData;*/
 
 };

@@ -32,7 +32,7 @@ bool ACXCombatAIController::RequestCombatAction(AActor* Target, const FVector& A
 
 	if (BB->GetValueAsBool(TEXT("HasAction")))
 	{
-		return true;
+		return false;
 	}
 
 	BB->SetValueAsObject(TEXT("TargetActor"), Target);
@@ -40,6 +40,7 @@ bool ACXCombatAIController::RequestCombatAction(AActor* Target, const FVector& A
 	BB->SetValueAsVector(TEXT("OriginLocation"), OriginLocation);
 	BB->SetValueAsBool(TEXT("ShouldApproach"), bShouldApproach);
 
+	BB->SetValueAsBool(TEXT("CanReturn"), false);
 	BB->SetValueAsBool(TEXT("HasAction"), true);
 
 	return true;
@@ -59,6 +60,21 @@ bool ACXCombatAIController::EndCombatAction()
 
 	StopMovement();
 	ClearFocus(EAIFocusPriority::Gameplay);
+
+	return true;
+}
+
+bool ACXCombatAIController::RequestCombatReturn()
+{
+	UBlackboardComponent* BB = GetBlackboardComponent();
+
+	if (!BB || BB->GetKeyID(TEXT("CanReturn")) == FBlackboard::InvalidKey ||
+		!BB->GetValueAsBool(TEXT("HasAction")))
+	{
+		return false;
+	}
+
+	BB->SetValueAsBool(TEXT("CanReturn"), true);
 
 	return true;
 }

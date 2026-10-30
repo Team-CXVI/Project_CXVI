@@ -66,6 +66,8 @@ void UCXTurnManager::ResetBattle()
 	EnemyCharacters.Reset();
 	TurnOrderArray.Reset();
 	CurrentTurnPlayer = nullptr;
+	CurrentAttackTotalHitCount = 0;
+	ParrySuccessCounts.Reset();
 	CurrentPhase = ECXCombatPhase::BeginPhase;
 }
 
@@ -110,6 +112,9 @@ void UCXTurnManager::StartTurn()
 		return;
 	}
 
+	CurrentAttackTotalHitCount = 0;
+	ParrySuccessCounts.Reset();
+
 	CurrentPhase = ECXCombatPhase::BeginPhase;
 
 	SavedMessage.Phase = CurrentPhase;
@@ -124,7 +129,7 @@ void UCXTurnManager::CompleteTurn()
 		return;
 	}
 
-	OnPlayerInputEnabledChanged.Broadcast(false);
+	OnPlayerInputEnabledChanged.Broadcast(ECXCombatInputMode::Disabled);
 
 	for (auto& TurnOrder : TurnOrderArray)
 	{
@@ -155,9 +160,10 @@ void UCXTurnManager::HandleTurnResponse(const FCXCombatMessageData& Response)
 	if (Sender != CurrentTurnPlayer)
 	{
 		// 메시지가 왔는데 현재 턴플레이어가 아닌데 오는경우는 플레이어가 반격을 하는 상태
+
 	}
 
-	SavedMessage.Character = Sender;
+	//SavedMessage.Character = Sender;
 	SavedMessage.Targets.Reset();
 
 	if (!ProcessTurnResponse(Response, SavedMessage))
@@ -312,14 +318,29 @@ bool UCXTurnManager::ProcessTurnResponse(const FCXCombatMessageData& Response, F
 
 	case ECXCombatMessageType::Action:
 	{
+		// 행동 종료 통지는 액션 진행중에만 전환 판단에 사용
+		if (CurrentPhase != ECXCombatPhase::ActionPhase)
+		{
+			return false;
+		}
+
 		if (ShouldEndBattle())
 		{
 			EndBattle();
 			return false;
 		}
 
-		// 리액션 페이즈로 이동
-		NextTurnPhase(CurrentPhase);
+		// 여기서 복귀페이즈로 가도되나 계속 검사
+		if (!CheckAllActionEnded())
+		{
+			return false;
+		}
+
+		// 공격받는 상태 초기화
+		ResetDefenseTargets();
+
+		// 복귀 페이즈로 이동
+		CurrentPhase = CheckAllReturnEnded() ? ECXCombatPhase::EndPhase : ECXCombatPhase::ReturnPhase;
 		OutNextPhaseRequest.Phase = CurrentPhase;
 		break;
 	}
@@ -353,8 +374,77 @@ bool UCXTurnManager::ProcessTurnResponse(const FCXCombatMessageData& Response, F
 		return false;
 	}
 
+	case ECXCombatMessageType::AttackStarted:
+	{
+		ACXCombatCharacterBase* Attacker = Cast<ACXCombatCharacterBase>(Response.Character.Get());
+		if (!IsValid(Attacker) || Attacker != CurrentTurnPlayer || CurrentPhase != ECXCombatPhase::ActionPhase)
+		{
+			return false;
+		}
+
+		if (Response.TotalHitCount <= 0)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("%s : 공격의 타격 데이터가 비어있습니다"), *Attacker->GetName());
+			return false;
+		}
+
+		CurrentAttackTotalHitCount = Response.TotalHitCount;
+
+		// 새로운 공격이므로 이전 성공 기록 초기화.
+		ParrySuccessCounts.Reset();
+
+		UE_LOG(LogTemp, Display, TEXT("[공격등록] 공격자=%s, 총타격 수 =%d"), *Attacker->GetName(), CurrentAttackTotalHitCount);
+		return false;
+	}
+
+	case ECXCombatMessageType::ParrySucceeded:
+	{
+		ACXCombatCharacterBase* Defender = Cast<ACXCombatCharacterBase>(Response.Character.Get());
+		if (CurrentPhase != ECXCombatPhase::ActionPhase || CurrentAttackTotalHitCount <= 0 ||
+			!IsValid(CurrentTurnPlayer) || Response.Attacker.Get() != CurrentTurnPlayer.Get() ||
+			!IsValid(Defender) || !Defender->GetIsCharacterAlive() || !Defender->GetIsDefenseTarget())
+		{
+			return false;
+		}
+
+		const TWeakObjectPtr<ACXCombatCharacterBase> Key(Defender);
+
+		int32& SuccessCount = ParrySuccessCounts.FindOrAdd(Key);
+		++SuccessCount;
+
+		UE_LOG(LogTemp, Display, TEXT("[패링 성공] %s: %d/%d"), *Defender->GetName(), SuccessCount, CurrentAttackTotalHitCount);
+		// 집계만 하고 페이즈는 진행X
+
+		if (SuccessCount == CurrentAttackTotalHitCount)
+		{
+			// 모든 공격을 패리했으므로 보상.
+			Defender->SetCounterAttackPending(true);
+		}
+
+		return false;
+	}
+	case ECXCombatMessageType::ReturnCompleted:
+	{
+		if (CurrentPhase != ECXCombatPhase::ReturnPhase || Response.Phase != ECXCombatPhase::ReturnPhase)
+		{
+			return false;
+		}
+
+		if (!CheckAllReturnEnded())
+		{
+			// 다른 캐릭터 복귀중
+			return false;
+		}
+
+		CurrentPhase = ECXCombatPhase::EndPhase;
+		OutNextPhaseRequest.Phase = CurrentPhase;
+
+		break;
+	}
 
 	}
+
+	
 	return true;
 }
 
@@ -408,22 +498,9 @@ bool UCXTurnManager::ShouldEndBattle()
 	}
 
 	return !bIsAlivePlayer || !bIsAliveEnemy;
-}
+}                                                                                        
 
 void UCXTurnManager::EndBattle()
-{
-	ResetBattle();
-
-	OnBattleEnded.Broadcast();
-	// 다시 필드로 돌아가야함
-	// 배틀 매니저에게 요청
-	/*if (AGASGameMode* GameMode = GetWorld()->GetAuthGameMode<AGASGameMode>())
-	{
-		GameMode->RequestEndBattle();
-	}*/
-}
-
-void UCXTurnManager::EndBattle_V2()
 {
 	// TODO : 전투 결과 조건 정립
 	// ResetBattle이 전투원 배열을 비우므로 그 전에 결과 판정
@@ -452,7 +529,81 @@ void UCXTurnManager::EndBattle_V2()
 
 	ResetBattle();
 
-	OnBattleEnded_V2.Broadcast(bVictory);
+	OnBattleEnded.Broadcast(bVictory);
+}
+
+bool UCXTurnManager::CheckAllActionEnded()
+{
+	if (!IsValid(CurrentTurnPlayer))
+	{
+		// 현재 턴 주체자가 없다? 그럴수가 있나 일단 모든 턴이 끝났다고 가정
+		return true;
+	}
+
+	if (CurrentTurnPlayer->GetDoingAction())
+	{
+		// 현재 턴 주체자가 행동중 
+		return false;
+	}
+
+	for (int32 Index = 0; Index < PlayerCharacters.Num(); ++Index)
+	{
+		if (IsValid(PlayerCharacters[Index]) && PlayerCharacters[Index]->GetIsCharacterAlive() && PlayerCharacters[Index]->GetDoingAction())
+		{
+			return false;
+		}
+	}
+
+	for (int32 Index = 0; Index < EnemyCharacters.Num(); ++Index)
+	{
+		if (IsValid(EnemyCharacters[Index]) && EnemyCharacters[Index]->GetIsCharacterAlive() && EnemyCharacters[Index]->GetDoingAction())
+		{
+			return false;
+		}
+	}
+
+	// 여기 까지왔으면 모든 행동하는 사람이 없다
+	return true;
+}
+
+bool UCXTurnManager::CheckAllReturnEnded() const
+{
+	for (const auto& Character : PlayerCharacters)
+	{
+		if (IsValid(Character) && Character->GetWaitingForReturn())
+		{
+			return false;
+		}
+	}
+
+	for (const auto& Character : EnemyCharacters)
+	{
+		if (IsValid(Character) && Character->GetWaitingForReturn())
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
+void UCXTurnManager::ResetDefenseTargets()
+{
+	for (int32 Index = 0; Index < PlayerCharacters.Num(); ++Index)
+	{
+		if (IsValid(PlayerCharacters[Index]) && PlayerCharacters[Index]->GetIsDefenseTarget())
+		{
+			PlayerCharacters[Index]->SetIsDefenseTarget(false);
+		}
+	}
+
+	for (int32 Index = 0; Index < EnemyCharacters.Num(); ++Index)
+	{
+		if (IsValid(EnemyCharacters[Index]) && EnemyCharacters[Index]->GetIsDefenseTarget())
+		{
+			EnemyCharacters[Index]->SetIsDefenseTarget(false);
+		}
+	}
 }
 
 void UCXTurnManager::NextTurnPhase(ECXCombatPhase& PreviousPhase)
@@ -464,16 +615,60 @@ void UCXTurnManager::NextTurnPhase(ECXCombatPhase& PreviousPhase)
 
 void UCXTurnManager::SendPhaseRequest(const FCXCombatMessageData& OutMessage)
 {
-	const bool bSelecting =
-		OutMessage.Phase == ECXCombatPhase::SelectActionPhase ||
-		OutMessage.Phase == ECXCombatPhase::SelectTargetPhase;
+	ECXCombatInputMode InputMode = ECXCombatInputMode::Disabled;
 
-	const bool bAllowInput =
-		IsValid(CurrentTurnPlayer) &&
-		PlayerCharacters.Contains(CurrentTurnPlayer) &&
-		bSelecting;
+	if (IsValid(CurrentTurnPlayer))
+	{
+		const bool bSelecting =
+			OutMessage.Phase == ECXCombatPhase::SelectActionPhase ||
+			OutMessage.Phase == ECXCombatPhase::SelectTargetPhase;
 
-	OnPlayerInputEnabledChanged.Broadcast(bAllowInput);
+		if (PlayerCharacters.Contains(CurrentTurnPlayer) && bSelecting)
+		{
+			InputMode = ECXCombatInputMode::Command;
+		}
+		else if (EnemyCharacters.Contains(CurrentTurnPlayer) && OutMessage.Phase == ECXCombatPhase::ActionPhase)
+		{
+			ResetDefenseTargets();
+
+			ACXCombatCharacterBase* Target = Cast<ACXCombatCharacterBase>(CurrentTurnPlayer->GetSelectedCombatTarget());
+
+			if (IsValid(Target) && Target->GetIsCharacterAlive() && PlayerCharacters.Contains(Target))
+			{
+				Target->SetIsDefenseTarget(true);
+
+				UE_LOG(LogTemp, Display, TEXT("방어 대상 지정 : %s"), *Target->GetName());
+			}
+
+			InputMode = ECXCombatInputMode::Reaction;
+		}
+	}
+
+	OnPlayerInputEnabledChanged.Broadcast(InputMode);
+
+	if (OutMessage.Phase == ECXCombatPhase::ReturnPhase)
+	{
+		// 콜백중 SavedMessage가 바뀔수 있으므로 복사해서 사용.
+		const FCXCombatMessageData ReturnMessage = OutMessage;
+
+		for (const auto& Character : PlayerCharacters)
+		{
+			if (IsValid(Character) && Character->GetWaitingForReturn())
+			{
+				Character->CombatMessageRequest(ReturnMessage);
+			}
+		}
+
+		for (const auto& Character : EnemyCharacters)
+		{
+			if (IsValid(Character) && Character->GetWaitingForReturn())
+			{
+				Character->CombatMessageRequest(ReturnMessage);
+			}
+		}
+
+		return;
+	}
 
 	if (IsValid(CurrentTurnPlayer))
 	{
