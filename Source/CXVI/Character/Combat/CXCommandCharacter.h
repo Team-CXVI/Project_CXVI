@@ -5,25 +5,14 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Pawn.h"
 
+#include "CXVI/Tags/CXGameplayTags.h"
 #include "CXVI/Foundation/Combat/CombatMessage/CXCombatMessageData.h"
 #include "CXVI/Character/Combat/Data/CXCombatInputData.h"
+#include "Subsystems/CXInputControlSubsystem.h"
+
 #include <InputActionValue.h>
 
 #include "CXCommandCharacter.generated.h"
-
-UENUM()
-enum class ECombatInputMode : uint8
-{
-	Disabled,
-	Command,
-	Reaction
-};
-
-UENUM()
-enum class ECommandKey : uint8
-{
-	Q, W, E, F, A, D, ESC
-};
 
 UENUM()
 enum class ECommandMenuState :uint8
@@ -46,13 +35,10 @@ public:
 	void AddCommandCharacter(class ACXCombatCharacterPlayer* NewPlayer);
 
 	// Setter
-	void SetCombatInputMode(ECombatInputMode NewMode);
+	void SetCombatInputMode(ECXCombatInputMode NewMode);
 	void SetMenuState(ECommandMenuState NewState);
 
-private:
-	void UpdateCommandCharacter();
-	void RefreshInputMappingContexts();
-	void RemoveInputMappingContexts();
+
 
 protected:
 	virtual void BeginPlay() override;
@@ -64,22 +50,29 @@ protected:
 
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 
+private:
+	void UpdateCommandCharacter();
+	void RemoveInputMappingContexts();
 
 	// 키 입력 함수
 private:
+	void HandleInputConfirm();
+	void HandleInputCancel();
+	void HandleInputSlot1();
+	void HandleInputSlot2();
+	void HandleInputSlot3();
+	void HandleInputSelectLeft();
+	void HandleInputSelectRight();
+	void HandleInputParry();
+	void HandleInputDodge();
+	void HandleInputFire();
+	void HandleInputToggleAimMode();
+	void HandleInputLook(const FInputActionValue& Value);
 
-	void HandleMenuInput(ECommandKey Key);
-
-	void HandleActionMenuInput(ECommandKey Key);
-	void HandleItemMenuInput(ECommandKey Key);
-	void HandleSkillMenuInput(ECommandKey Key);
-	void HandleTargetSelectInput(ECommandKey Key);
+	void HandleInputRunaway();
+	void HandleInputSkipTurn();
 
 	void SubmitActionToPlayer(const FCXActionSelection& Selection);
-
-	void HandleInputAction(const struct FInputActionInstance& Instance, ETriggerEvent TriggerEvent);
-	void HandleInputCommand(const FInputActionValue& Value, ECXInputCommand Command);
-
 
 	void OnAimModeInput();
 
@@ -98,45 +91,58 @@ protected:
 
 
 private:
-	/*UPROPERTY(EditDefaultsOnly, Category = "Input")
-	TObjectPtr<class UInputAction> AimModeAction;
+	UPROPERTY(EditDefaultsOnly, Category = "Input|MyTurn")
+	TObjectPtr<class UInputMappingContext> ActionMappingContext;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Input|EnemyTurn")
+	TObjectPtr<class UInputMappingContext> ReactionMappingContext;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Input")
-	TObjectPtr<class UInputAction> LookAction;
+	UPROPERTY(EditDefaultsOnly, Category = "Input|MyTurn")
+	TObjectPtr<class UInputAction> ConfirmAction;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	UPROPERTY(EditDefaultsOnly, Category = "Input|MyTurn")
+	TObjectPtr<class UInputAction> CancelAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input|MyTurn")
+	TObjectPtr<class UInputAction> Slot1Action;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input|MyTurn")
+	TObjectPtr<class UInputAction> Slot2Action;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input|MyTurn")
+	TObjectPtr<class UInputAction> Slot3Action;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input|EnemyTurn")
+	TObjectPtr<class UInputAction> ParryAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input|EnemyTurn")
+	TObjectPtr<class UInputAction> DodgeAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input|MyTurn")
+	TObjectPtr<class UInputAction> LeftSelectAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input|MyTurn")
+	TObjectPtr<class UInputAction> RightSelectAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input|MyTurn")
+	TObjectPtr<class UInputAction> ToggleAimModeAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input|MyTurn")
 	TObjectPtr<class UInputAction> FireAction;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Input")
-	TObjectPtr<class UInputAction> QKeyAction;
+	UPROPERTY(EditDefaultsOnly, Category = "Input|MyTurn")
+	TObjectPtr<class UInputAction> LookAction;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Input")
-	TObjectPtr<class UInputAction> WKeyAction;
+	UPROPERTY(EditDefaultsOnly, Category = "Input|MyTurn")
+	TObjectPtr<class UInputAction> SkipTurnAction;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Input")
-	TObjectPtr<class UInputAction> EKeyAction;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Input")
-	TObjectPtr<class UInputAction> FKeyAction;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Input")
-	TObjectPtr<class UInputAction> AKeyAction;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Input")
-	TObjectPtr<class UInputAction> DKeyAction;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Input")
-	TObjectPtr<class UInputAction> ESCKeyAction;*/
-
-	UPROPERTY(EditDefaultsOnly, Category = "Input")
-	TObjectPtr<UCXCombatInputData> CombatInputData;
+	UPROPERTY(EditDefaultsOnly, Category = "Input|MyTurn")
+	TObjectPtr<class UInputAction> RunawayAction;
 
 	TWeakObjectPtr<class UEnhancedInputLocalPlayerSubsystem> InputSubsystem;
-	TArray<TWeakObjectPtr<class UInputMappingContext>> ActiveMappingContexts;
-
 private:
 	// 현재 입력상태
-	ECombatInputMode CombatInputMode = ECombatInputMode::Disabled;
+	ECXCombatInputMode CombatInputMode = ECXCombatInputMode::Disabled;
 	ECommandMenuState MenuState = ECommandMenuState::ActionMenu;
 	ECommandMenuState TargetReturnMenu = ECommandMenuState::ActionMenu;
 
@@ -147,7 +153,12 @@ private:
 
 	TArray<TWeakObjectPtr<class ACXCombatCharacterPlayer>> CommandCharacters;
 
+
 	TArray<TWeakObjectPtr<APawn>> TargetCandidates;
 	int32 SelectedTargetIndex = INDEX_NONE;
+
+	// 인풋 핸들
+	//FCXInputModeHandle ActionModeHandle;
+	FCXInputModeHandle ReactionModeHandle;
 
 };

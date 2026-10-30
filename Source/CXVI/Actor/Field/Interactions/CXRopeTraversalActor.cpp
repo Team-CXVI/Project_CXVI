@@ -29,13 +29,13 @@ ACXRopeTraversalActor::ACXRopeTraversalActor()
 	TopExitPoint->SetupAttachment(SceneRoot);
 
 	BottomInteractionBox = CreateDefaultSubobject<UBoxComponent>(TEXT("BottomInteractionBox"));
-	BottomInteractionBox->SetupAttachment(BottomExitPoint);
+	BottomInteractionBox->SetupAttachment(BottomRopePoint);
 
 	TopInteractionBox = CreateDefaultSubobject<UBoxComponent>(TEXT("TopInteractionBox"));
-	TopInteractionBox->SetupAttachment(TopExitPoint);
+	TopInteractionBox->SetupAttachment(TopRopePoint);
 
 	BottomInteractionBox->SetRelativeLocation(FVector(0.0f, 0.0f, 90.0f));
-	BottomInteractionBox->SetBoxExtent(FVector(80.0f, 80.0f, 90.0f));
+	BottomInteractionBox->SetBoxExtent(FVector(50.0f, 50.0f, 90.0f));
 
 	BottomInteractionBox->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	BottomInteractionBox->SetCollisionResponseToAllChannels(ECR_Ignore);
@@ -43,7 +43,7 @@ ACXRopeTraversalActor::ACXRopeTraversalActor()
 	BottomInteractionBox->SetGenerateOverlapEvents(true);
 
 	TopInteractionBox->SetRelativeLocation(FVector(0.0f, 0.0f, 90.0f));
-	TopInteractionBox->SetBoxExtent(FVector(80.0f, 80.0f, 90.0f));
+	TopInteractionBox->SetBoxExtent(FVector(50.0f, 50.0f, 90.0f));
 
 	TopInteractionBox->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	TopInteractionBox->SetCollisionResponseToAllChannels(ECR_Ignore);
@@ -116,6 +116,35 @@ bool ACXRopeTraversalActor::GetApproachPoint(ECXRopeTraversalDirection Direction
 
 	OutApproach = ApproachPoint->GetComponentLocation();
 	return true;
+}
+
+bool ACXRopeTraversalActor::IsFacingRopePoint(const AActor* Player, ECXRopeTraversalDirection Direciton)
+{
+	if (!IsValid(Player))
+	{
+		return false;
+	}
+
+	FVector Entry, Destination, Exit;
+	if (!GetTraversalPoints(Direciton, Entry, Destination, Exit))
+	{
+		return false;
+	}
+
+	const FVector ToPoint = (Entry - Player->GetActorLocation()).GetSafeNormal2D();
+
+	// 포인트 바로 위에 있으면 수평 방향을 구분하지 않음.
+	if (ToPoint.IsNearlyZero())
+	{
+		return true;
+	}
+
+	const FVector Forward = Player->GetActorForwardVector().GetSafeNormal2D();
+
+	const float FacingDot = FVector::DotProduct(Forward, ToPoint);
+
+	// 정면을 중심으로 좌우 45도 이내.
+	return FacingDot >= 0.7071f;
 }
 
 // Called when the game starts or when spawned

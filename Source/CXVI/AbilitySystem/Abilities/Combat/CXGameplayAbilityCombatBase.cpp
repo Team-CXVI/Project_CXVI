@@ -48,6 +48,16 @@ void UCXGameplayAbilityCombatBase::ActivateAbility(const FGameplayAbilitySpecHan
 		return;
 	}
 
+	ACXCombatCharacterBase* Character = Cast<ACXCombatCharacterBase>(GetAvatarActorFromActorInfo());
+	if (!IsValid(Character))
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
+
+	Character->NotifyAttackStarted(AbilityData->HitDamageMultipilers.Num());
+
+
 	RegisterMontageTask();
 }
 

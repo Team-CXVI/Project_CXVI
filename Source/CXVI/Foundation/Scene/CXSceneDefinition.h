@@ -10,6 +10,7 @@
 
 class UCXGameScene;
 class APawn;
+class UCXActivatableWidget;
 
 /**
  * 
@@ -36,6 +37,11 @@ public:
 	// - None이면 빙의를 바꾸지 않음 (아래 Scene의 Pawn 유지)
 	UPROPERTY(EditDefaultsOnly, Category = "Scene")
 	TSubclassOf<APawn> PawnClass;
+
+	// 이 Scene이 활성일 때 UI.Layer.Game에 띄울 HUD (None이면 HUD 없음)
+	// Enter / Resume에서 Push, Suspend / Exit에서 닫음
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	TSubclassOf<UCXActivatableWidget> HUDClass;
 
 	// Persistant Level 창에 등록된 SubLevel (Streaming Method = Blueprint, 초기 언로드)
 	// [0]이 Primary Level (SpawnSceneActor의 Spawn 대상)

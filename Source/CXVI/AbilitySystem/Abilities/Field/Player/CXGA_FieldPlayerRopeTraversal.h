@@ -12,6 +12,27 @@
  */
 class ACXFieldPlayerCharacter;
 class UAbilityTask_ApplyRootMotionMoveToForce;
+class UAbilityTask_PlayMontageAndWait;
+class UAbilityTask_WaitDelay;
+class UAnimMontage;
+
+USTRUCT(BlueprintType)
+struct FCXRopeTraversalMontageSet
+{
+	GENERATED_BODY()
+
+	// 로프에 붙을 떄.
+	UPROPERTY(EditDefaultsOnly)
+	TObjectPtr<UAnimMontage> AttachMontage;
+
+	// 로프에서 이동중.
+	UPROPERTY(EditDefaultsOnly)
+	TObjectPtr<UAnimMontage> TraversalMontage;
+	
+	// 로프에 착지.
+	UPROPERTY(EditDefaultsOnly)
+	TObjectPtr<UAnimMontage> ExitMontage;
+};
 
 UCLASS()
 class CXVI_API UCXGA_FieldPlayerRopeTraversal : public UGameplayAbility
@@ -93,6 +114,18 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Rope")
 	float LandingTimeOut = 3.0f;
 
+	UPROPERTY(Transient)
+	TObjectPtr<UAbilityTask_WaitDelay> LandingTimeoutTask;
+
+	// 착지 몽타주가 끝날 때까지 어빌리티를 유지합니다.
+	UFUNCTION()
+	void OnExitMontageFinished();
+
+	void TryFinishExit();
+
+	bool bExitLanded = false;
+	bool bExitMontageFinished = false;
+
 	// 발판 위 접근점에서 로프에 붙는 이동.
 	void StartMoveToRopeAttachment();
 
@@ -105,6 +138,12 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Rope")
 	float AttachmentMoveDuration = 0.3f;
 
+	const FCXRopeTraversalMontageSet& GetMontageSet() const
+	{
+		return TraversalDirection == ECXRopeTraversalDirection::Up ? UpMontages : DownMontages;
+	}
+	
+	UAbilityTask_PlayMontageAndWait* PlayTraversalMontage(UAnimMontage* Montage, FName TaskName, bool bStopWhenAbilityEnds = true);
 
 protected:
 	UPROPERTY(Transient)
@@ -133,5 +172,18 @@ protected:
 
 	bool bControlsTraversalMovement = false;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Rope")
+	TObjectPtr<class UCurveVector> ExitUpCurvePath;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Rope")
+	TObjectPtr<class UCurveVector> ExitDownCurvePath;
+
+	// 상승.
+	UPROPERTY(EditDefaultsOnly, Category = "Rope|Montage")
+	FCXRopeTraversalMontageSet UpMontages;
+
+	// 하강.
+	UPROPERTY(EditDefaultsOnly, Category = "Rope|Montage")
+	FCXRopeTraversalMontageSet DownMontages;
 
 };

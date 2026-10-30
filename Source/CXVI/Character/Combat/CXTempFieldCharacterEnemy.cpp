@@ -45,5 +45,5 @@ void ACXTempFieldCharacterEnemy::OnTriggerBeginOverlap(UPrimitiveComponent* Over
 		return;
 	}
 	
-	CombatManager->RequestStartBattle(Player->GetCharacterData(), PartyData->CharacterArray, PlayerController);
+	//CombatManager->RequestStartBattle(Player->GetCharacterData(), PartyData->CharacterArray, PlayerController);
 }

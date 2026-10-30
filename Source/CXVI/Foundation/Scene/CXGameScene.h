@@ -11,6 +11,7 @@
 
 class UCXSceneDefinition;
 class UCXSceneSubsystem;
+class UCXActivatableWidget;
 class UInputAction;
 class APawn;
 class APlayerController;
@@ -85,6 +86,11 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, Category = "Scene", meta = (DisplayName = "On Resume"))
 	void K2_OnResume(const FCXSceneContext& InContext);
 
+	// Scene HUD
+protected:
+	// Definition의 HUDClass가 Push된 직후 호출 (Enter / Resume마다 새 인스턴스) → ViewModel 주입 등
+	virtual void InitializeSceneHUD(UCXActivatableWidget& InHUD) {}
+
 	// Scene Input
 protected:
 	virtual void SetupSceneInput() {}
@@ -123,6 +129,12 @@ protected:
 	}
 
 private:
+	// UI.Layer.Game에 Definition의 HUD 위젯을 Push
+	void ShowSceneHUD();
+
+	// HUD를 닫음 (Stack에서 자동 제거)
+	void HideSceneHUD();
+
 	APlayerController* GetPlayerController() const;
 
 	UEnhancedInputComponent* GetPlayerInputComponent() const;
@@ -174,4 +186,7 @@ private:
 	bool bSpawnedScenePawn = false;
 
 	TArray<uint32> InputBindingHandles;
+
+	// Scene의 HUD 약참조 (소유 객체는 루트 레이아웃의 Layer Stack)
+	TWeakObjectPtr<UCXActivatableWidget> SceneHUD;
 };

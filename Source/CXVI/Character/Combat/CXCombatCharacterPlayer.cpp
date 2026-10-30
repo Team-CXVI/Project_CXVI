@@ -215,6 +215,16 @@ bool ACXCombatCharacterPlayer::CanActivateSelectSkill(int32 SlotIndex) const
 	return true;
 }
 
+void ACXCombatCharacterPlayer::SkipTurn()
+{
+	EndTurnPhase();
+}
+
+void ACXCombatCharacterPlayer::TryRunaway()
+{
+	
+}
+
 void ACXCombatCharacterPlayer::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
@@ -256,6 +266,9 @@ bool ACXCombatCharacterPlayer::ExecuteCombatAbility()
 
 	case ECXActionType::Skill:
 		return ActivateSelectedSkill(Action.SlotIndex);
+
+	case ECXActionType::CounterAttack:
+		return CounterAbility();
 
 	default:
 		return false;
