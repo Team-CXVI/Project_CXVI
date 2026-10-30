@@ -9,6 +9,7 @@ namespace CXVIFieldTag
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_CanAssassination, "State.CanAssassination","플레이어 몬스터 기습 공격 가능 상태");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_CanUseExpeditionFlag, "State.CanUseExpeditionFlag","플레이어 원정대 깃발 사용 가능 상태");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_CanUseRope, "State.CanUseRope","플레이어 로프 사용 가능 상태");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_InMenu, "State.InMenu","메뉴가 열려 상호작용 안내를 숨기는 상태 (임시: 깃발 사용 시 부여, 깃발 범위 이탈 시 해제)");
 
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Input_Field_Sprint, "Input.Field.Sprint","플레이어 스프린트 입력");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Input_Field_Attack, "Input.Field.Attack","플레이어 공격");

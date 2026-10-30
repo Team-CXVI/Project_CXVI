@@ -15,8 +15,6 @@
 #include "Components/SphereComponent.h"
 #include "Components/WidgetComponent.h"
 #include "Components/CapsuleComponent.h"
-#include "Components/SkeletalMeshComponent.h"
-#include "Animation/AnimInstance.h"
 #include "Blueprint/UserWidget.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "TimerManager.h"
@@ -167,6 +165,9 @@ void ACXExpeditionFlag::HandleInteractionEndOverlap(UPrimitiveComponent* Overlap
         // 그래플링 훅 처럼해당 타겟에 UI.
 
         ASC->RemoveLooseGameplayTag(CXVIFieldTag::State_CanUseExpeditionFlag);
+
+        // 임시: 메뉴가 생기기 전까지는 깃발 범위를 벗어날 때 메뉴 태그를 뗀다.
+        ASC->SetLooseGameplayTagCount(CXVIFieldTag::State_InMenu, 0);
     }
 
     ACXExpeditionFlag* Flag = this;
@@ -218,7 +219,7 @@ void ACXExpeditionFlag::UpdateFlagUI(ACXFieldPlayerCharacter* Player, bool bInRa
         return;
     }
 
-    // 범위 안에서 조건이 깨지면(점프·스프린트 등 어빌리티·사용 중·시선 이탈) 페이드 없이 바로 숨긴다.
+    // 범위 안에서 조건이 깨지면(점프·스프린트 등 어빌리티·메뉴 열림·시선 이탈) 페이드 없이 바로 숨긴다.
     Widget->StopAllAnimations();
     Widget->SetVisibility(ESlateVisibility::Collapsed);
 }
@@ -232,7 +233,7 @@ bool ACXExpeditionFlag::CanShowFlagUI(const ACXFieldPlayerCharacter* Player) con
         return false;
     }
 
-    // 공통 조건(그래플링과 동일): 점프·낙하, 어빌리티 사용 중(스프린트 등), 이동 제한(깃발 앉기 등).
+    // 공통 조건(그래플링과 동일): 점프·낙하, 어빌리티 사용 중(스프린트 등), 이동 제한.
     if (ASC->HasMatchingGameplayTag(CXVIFieldTag::State_Airborne) ||
         ASC->HasMatchingGameplayTag(CXVIFieldTag::State_BlockInteractionUI) ||
         ASC->HasMatchingGameplayTag(CXVIFieldTag::State_MovingBlock))
@@ -240,10 +241,8 @@ bool ACXExpeditionFlag::CanShowFlagUI(const ACXFieldPlayerCharacter* Player) con
         return false;
     }
 
-    // 깃발 고유 조건: 앉아 있는 동안(SitIdle 포함)은 몽타주가 재생 중이므로 숨긴다.
-    const USkeletalMeshComponent* Mesh = Player->GetMesh();
-    const UAnimInstance* AnimInstance = IsValid(Mesh) ? Mesh->GetAnimInstance() : nullptr;
-    if (IsValid(AnimInstance) && AnimInstance->IsAnyMontagePlaying())
+    // 깃발 고유 조건: 깃발 메뉴가 열려 있는 동안은 숨긴다.
+    if (ASC->HasMatchingGameplayTag(CXVIFieldTag::State_InMenu))
     {
         return false;
     }
@@ -279,8 +278,11 @@ void ACXExpeditionFlag::ObserveUIState(ACXFieldPlayerCharacter* Player)
     MovingBlockTagHandle = ASC->RegisterGameplayTagEvent(
         CXVIFieldTag::State_MovingBlock, EGameplayTagEventType::NewOrRemoved)
         .AddUObject(this, &ThisClass::HandleUIStateTagChanged);
+    InMenuTagHandle = ASC->RegisterGameplayTagEvent(
+        CXVIFieldTag::State_InMenu, EGameplayTagEventType::NewOrRemoved)
+        .AddUObject(this, &ThisClass::HandleUIStateTagChanged);
 
-    // 시선·몽타주는 이벤트가 없어서 주기적으로 확인한다.
+    // 시선은 이벤트가 없어서 주기적으로 확인한다.
     GetWorldTimerManager().SetTimer(
         UIRefreshTimerHandle, this, &ThisClass::RefreshFlagUI, 0.05f, true);
 }
@@ -295,6 +297,8 @@ void ACXExpeditionFlag::StopObservingUIState()
             EGameplayTagEventType::NewOrRemoved).Remove(AbilityUITagHandle);
         ASC->RegisterGameplayTagEvent(CXVIFieldTag::State_MovingBlock,
             EGameplayTagEventType::NewOrRemoved).Remove(MovingBlockTagHandle);
+        ASC->RegisterGameplayTagEvent(CXVIFieldTag::State_InMenu,
+            EGameplayTagEventType::NewOrRemoved).Remove(InMenuTagHandle);
     }
     GetWorldTimerManager().ClearTimer(UIRefreshTimerHandle);
     ObservedPlayer.Reset();
@@ -302,6 +306,7 @@ void ACXExpeditionFlag::StopObservingUIState()
     AirborneTagHandle.Reset();
     AbilityUITagHandle.Reset();
     MovingBlockTagHandle.Reset();
+    InMenuTagHandle.Reset();
 }
 
 void ACXExpeditionFlag::HandleUIStateTagChanged(const FGameplayTag Tag, int32 NewCount)
