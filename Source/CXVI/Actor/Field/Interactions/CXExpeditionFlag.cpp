@@ -110,6 +110,18 @@ void ACXExpeditionFlag::BeginPlay()
     {
         Widget->SetVisibility(ESlateVisibility::Collapsed);
     }
+
+    // 세이브 로드 등으로 깃발 범위 안에서 시작하면, 플레이어가 BeginPlay보다 먼저 스폰돼 진입 이벤트를 놓친다.
+    // 한 틱 뒤(빙의·ASC 초기화 이후) 이미 겹쳐 있는 플레이어를 진입 처리한다.
+    GetWorldTimerManager().SetTimerForNextTick(FTimerDelegate::CreateWeakLambda(this, [this]()
+    {
+        TArray<UPrimitiveComponent*> OverlappingComponents;
+        ExpeditionInteractionSphere->GetOverlappingComponents(OverlappingComponents);
+        for (UPrimitiveComponent* OtherComp : OverlappingComponents)
+        {
+            HandleInteractionBeginOverlap(ExpeditionInteractionSphere, OtherComp->GetOwner(), OtherComp, 0, false, FHitResult());
+        }
+    }));
 }
 
 void ACXExpeditionFlag::EndPlay(const EEndPlayReason::Type EndPlayReason)
