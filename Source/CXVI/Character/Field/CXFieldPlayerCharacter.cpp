@@ -484,7 +484,7 @@ void ACXFieldPlayerCharacter::StartJumpOrParkour()
 		&& AnimInstance->Montage_IsActive(ActiveParkourMontage.Get());
 
 	// 진행 중의 재입력을 버린다. 파쿠르 실패로 간주해 일반 점프를 호출하지 않는다.
-	if (!IsValid(Movement) || !Movement->IsMovingOnGround()
+	if (!IsValid(Movement)
 		|| HasAnyRootMotion() || bParkourMontageActive
 		|| (ASC && ASC->HasMatchingGameplayTag(CXVIFieldTag::State_MovingBlock)))
 	{
