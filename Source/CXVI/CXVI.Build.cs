@@ -28,6 +28,7 @@ public class CXVI : ModuleRules
             "NavigationSystem",
 			"Slate",
 			"SlateCore",
+			"ModelViewViewModel",
 			// Field 기능을 위한 모듈
 			"Chooser",
 			"ProxyTable",

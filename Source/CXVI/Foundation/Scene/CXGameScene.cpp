@@ -6,6 +6,9 @@
 #include "CXSceneDefinition.h"
 #include "CXSceneSubsystem.h"
 #include "CXSceneSuspendable.h"
+#include "UI/CXActivatableWidget.h"
+#include "UI/CXUIManagerSubsystem.h"
+#include "Tags/CXGameplayTags.h"
 
 #include <EnhancedInputSubsystems.h>
 #include <InputMappingContext.h>
@@ -89,12 +92,18 @@ void UCXGameScene::OnEnter(const FCXSceneContext& InContext)
 
 	ApplyInputMappings();
 	SetupSceneInput();
+	ShowSceneHUD();
+
+	// BP에서 정의한 처리 호출
 	K2_OnEnter(InContext);
 }
 
 void UCXGameScene::OnExit()
 {
+	// 자식 BP에서 정의한 처리 먼저 호출
 	K2_OnExit();
+
+	HideSceneHUD();
 	ClearSceneInput();
 	ReleaseScenePawn();
 	DestroySpawnedActors();
@@ -104,7 +113,10 @@ void UCXGameScene::OnExit()
 void UCXGameScene::OnSuspend()
 {
 	K2_OnSuspend();
+
+	HideSceneHUD();
 	ClearSceneInput();
+
 	ReleasePossessionBeforeHide();
 	NotifySuspendables(true);
 	RemoveInputMappings();
@@ -118,7 +130,46 @@ void UCXGameScene::OnResume(const FCXSceneContext& InContext)
 
 	ApplyInputMappings();
 	SetupSceneInput();
+	ShowSceneHUD();
+
 	K2_OnResume(InContext);
+}
+
+void UCXGameScene::ShowSceneHUD()
+{
+	if (nullptr == Definition || nullptr == Definition->HUDClass)
+	{
+		return;
+	}
+
+	UCXUIManagerSubsystem* UIManager = UCXUIManagerSubsystem::TryGet(this);
+	if (nullptr == UIManager)
+	{
+		UE_LOG(LogCXScene, Warning, TEXT("[%s] UIManager가 없어 HUD를 띄우지 못했습니다."), *GetName());
+		return;
+	}
+
+	// Lambda는 Layer Stack에 추가될 때 전달 될 초기화 로직
+	SceneHUD = UIManager->PushWidgetToLayer<UCXActivatableWidget>(CXVIGameplayTags::UI_Layer_Game, Definition->HUDClass,
+		[this](UCXActivatableWidget& InHUD)
+		{
+			InitializeSceneHUD(InHUD);
+		});
+
+	if (false == SceneHUD.IsValid())
+	{
+		UE_LOG(LogCXScene, Warning, TEXT("[%s] HUD(%s) Push 실패 (PrimaryLayout 확인)"), *GetName(), *GetNameSafe(Definition->HUDClass));
+	}
+}
+
+void UCXGameScene::HideSceneHUD()
+{
+	if (UCXActivatableWidget* HUD = SceneHUD.Get())
+	{
+		HUD->DeactivateWidget();
+	}
+
+	SceneHUD.Reset();
 }
 
 APlayerController* UCXGameScene::GetPlayerController() const

@@ -44,6 +44,11 @@ namespace CXVIGameplayTags
 	// Ability
 	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Basic_Attack);
 	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Fire);
+
+	// Character
+	// TODO : 추후에 태그 맞추기
+	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Character_Type_Boss);
+
 	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Dodge);
 	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Parry);
 	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Counter_Attack);

@@ -33,6 +33,9 @@ namespace CXVIGameplayTags
 	
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Basic_Attack, "Character.Ability.BasicAttack", "캐릭터 기본 공격");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Fire, "Character.Ability.Fire", "캐릭터 레이 발사");
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Character_Type_Boss, "Character.Type.Boss", "보스 몬스터 (전투 HUD 보스 HP UI 표시 대상)");
+	
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Dodge, "Character.Ability.Dodge", "캐릭터 회피 스킬");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Parry, "Character.Ability.Parry", "캐릭터 패리 스킬");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Counter_Attack, "Character.Ability.CounterAttack", "캐릭터 반격 스킬");
