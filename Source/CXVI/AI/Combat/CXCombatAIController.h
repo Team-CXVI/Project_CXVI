@@ -25,6 +25,9 @@ public:
 
 	bool EndCombatAction();
 
+	// 현재 행동의 복귀를 허가함.
+	bool RequestCombatReturn();
+
 protected:
 	virtual void OnPossess(APawn* InPawn) override;
 

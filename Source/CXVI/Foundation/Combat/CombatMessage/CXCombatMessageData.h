@@ -11,7 +11,7 @@ enum class ECXCombatPhase : uint8
 	SelectActionPhase,		// 선택지
 	SelectTargetPhase,		// 추가 선택지가 있다면
 	ActionPhase,			// 행동
-	ReactionPhase,			// 리액션
+	ReturnPhase,			// 리액션
 	EndPhase,				// 턴 끝
 	PhaseCount
 };
@@ -27,7 +27,10 @@ enum class ECXCombatMessageType : uint8
 	SkippedTurn,			// 자기 턴을 스킵함.
 	Runaway,				// 도망
 	Action,					// 행동
-	TurnCompleted
+	TurnCompleted,
+	AttackStarted,
+	ParrySucceeded,
+	ReturnCompleted
 };
 
 enum class ECXActionType : uint8
@@ -35,7 +38,8 @@ enum class ECXActionType : uint8
 	None,
 	BasicAttack,
 	Skill,
-	Item
+	Item,
+	CounterAttack,
 };
 
 enum class ECXTargetTeam : uint8
@@ -44,7 +48,13 @@ enum class ECXTargetTeam : uint8
 	Player
 };
 
-
+UENUM()
+enum class ECXCombatInputMode : uint8
+{
+	Disabled,
+	Command,
+	Reaction
+};
 
 USTRUCT()
 struct FCXCombatMessageData
@@ -54,8 +64,14 @@ struct FCXCombatMessageData
 	ECXCombatPhase Phase = ECXCombatPhase::BeginPhase;
 	ECXCombatMessageType MessageType = ECXCombatMessageType::None;
 
+	// 현재 메시지를 보낸 캐릭터
 	TWeakObjectPtr<APawn> Character;
+	// 공격한 폰
+	TWeakObjectPtr<APawn> Attacker;
 	TArray<TWeakObjectPtr<APawn>> Targets;
+
+	// 총 타격수
+	int32 TotalHitCount = 0;
 
 };
 

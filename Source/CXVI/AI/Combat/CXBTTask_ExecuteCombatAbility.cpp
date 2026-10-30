@@ -41,10 +41,13 @@ EBTNodeResult::Type UCXBTTask_ExecuteCombatAbility::ExecuteTask(UBehaviorTreeCom
 
 	if (!Character->ExecuteCombatAbility())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("공격 활성화 실패"));
+		UE_LOG(LogTemp, Warning, TEXT("%s : 공격 활성화 실패"), *Character->GetName());
 
 		Cleanup();
-		return EBTNodeResult::Failed;
+
+		Character->SetDoingAction(false);
+		Character->FinishAction();
+		return EBTNodeResult::Succeeded;
 	}
 
 	if (bAbilityFinished)
