@@ -4,9 +4,14 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Engine/EngineTypes.h"
+#include "GameplayTagContainer.h"
 #include "CXExpeditionFlag.generated.h"
 
 class ACXFieldPlayerCharacter;
+class UAbilitySystemComponent;
+class UUserWidget;
+
 UCLASS()
 class CXVI_API ACXExpeditionFlag : public AActor
 {
@@ -25,7 +30,7 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 protected:
 	UFUNCTION()
@@ -46,6 +51,26 @@ protected:
 		int32 OtherBodyIndex
 	);
 
+protected:
+	// bInRange가 false면 범위 이탈로 보고 위젯에 숨김을 요청하고, 범위 안의 숨김 조건은 여기서 즉시 숨긴다.
+	void UpdateFlagUI(ACXFieldPlayerCharacter* Player, bool bInRange);
+	bool CanShowFlagUI(const ACXFieldPlayerCharacter* Player) const;
+	void ObserveUIState(ACXFieldPlayerCharacter* Player);
+	void StopObservingUIState();
+	void RefreshFlagUI();
+
+	TWeakObjectPtr<ACXFieldPlayerCharacter> ObservedPlayer;
+	TWeakObjectPtr<UUserWidget> LastPromptWidget;
+	bool bPromptShown = false;
+
+	// 시선·점프·스프린트처럼 태그 이벤트가 없는 조건을 주기적으로 확인한다.
+	FTimerHandle UIRefreshTimerHandle;
+
+	// 플레이어 정면 기준으로 깃발이 이 각도 안에 있을 때만 UI를 표시한다.
+	UPROPERTY(EditAnywhere, Category = "ExpeditionFlag|UI", meta = (ClampMin = "0.0", ClampMax = "180.0"))
+	float PromptFacingAngle = 45.0f;
+
+
 
 protected:
 
@@ -53,9 +78,11 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ExpeditionFlag")
 	TObjectPtr<UStaticMeshComponent> ExpeditionFlag;
 
-
 	// 상호작용 가능하게 할 트리거 스피어.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ExpeditionFlag")
 	TObjectPtr<class USphereComponent> ExpeditionInteractionSphere;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ExpeditionFlag|UI")
+	TObjectPtr<class UWidgetComponent> FlagPromptUI;
 	
 };

@@ -4,11 +4,17 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Engine/EngineTypes.h"
+#include "GameplayTagContainer.h"
 #include "CXRopeTraversalActor.generated.h"
 
 class USceneComponent;
 class UBoxComponent;
 class UPrimitiveComponent;
+class UWidgetComponent;
+class UAbilitySystemComponent;
+class UUserWidget;
+class ACXFieldPlayerCharacter;
 
 UENUM(BlueprintType)
 enum class ECXRopeTraversalDirection :uint8
@@ -36,6 +42,7 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 protected:
 	UFUNCTION()
@@ -56,6 +63,23 @@ protected:
 		int32 OtherBodyIndex
 	);
 
+protected:
+	// bInRange가 false면 범위 이탈로 보고 위젯에 숨김을 요청하고, 범위 안의 숨김 조건은 여기서 즉시 숨긴다.
+	void UpdateRopeUI(ACXFieldPlayerCharacter* Player, bool bInRange);
+	bool CanShowRopeUI(ACXFieldPlayerCharacter* Player);
+	void ObserveUIState(ACXFieldPlayerCharacter* Player);
+	void StopObservingUIState();
+	void RefreshRopeUI();
+
+	TWeakObjectPtr<ACXFieldPlayerCharacter> ObservedPlayer;
+	TWeakObjectPtr<UUserWidget> LastPromptWidget;
+	bool bPromptShown = false;
+
+	// 시선·점프·스프린트처럼 태그 이벤트가 없는 조건을 주기적으로 확인한다.
+	FTimerHandle UIRefreshTimerHandle;
+
+	// 플레이어가 들어와 있는 쪽(하단/상단)의 UI.
+	TWeakObjectPtr<UWidgetComponent> RopePromptUI;
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Rope")
@@ -78,4 +102,12 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Rope")
 	TObjectPtr<UBoxComponent> TopInteractionBox;
+
+	// 하단 진입 지점에 표시할 UI.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Rope|UI")
+	TObjectPtr<UWidgetComponent> BottomPromptUI;
+
+	// 상단 진입 지점에 표시할 UI.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Rope|UI")
+	TObjectPtr<UWidgetComponent> TopPromptUI;
 };

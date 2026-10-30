@@ -5,6 +5,7 @@
 #include "CXVI/Foundation/Field/FieldEnemySpawning/CXFieldEnemySubsystem.h"
 #include "CXVI/Character/Field/CXFieldPlayerCharacter.h"
 #include "CXVI/Tags/CXFieldTags.h"
+#include "CXVI/UI/Field/CXFieldGrapplingUIInterface.h"
 
 #include "Engine/World.h"
 #include "AbilitySystemComponent.h"
@@ -12,7 +13,13 @@
 #include "Components/StaticMeshComponent.h"
 #include "Components/ChildActorComponent.h"
 #include "Components/SphereComponent.h"
-
+#include "Components/WidgetComponent.h"
+#include "Components/CapsuleComponent.h"
+#include "Components/SkeletalMeshComponent.h"
+#include "Animation/AnimInstance.h"
+#include "Blueprint/UserWidget.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "TimerManager.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXExpeditionFlag)
 
@@ -44,6 +51,14 @@ ACXExpeditionFlag::ACXExpeditionFlag()
     ExpeditionInteractionSphere->SetRelativeLocation(FVector::ZeroVector);
     ExpeditionInteractionSphere->SetSphereRadius(100.0f);
     ExpeditionInteractionSphere->SetGenerateOverlapEvents(true);
+
+    FlagPromptUI =
+        CreateDefaultSubobject<UWidgetComponent>(TEXT("FlagPrompt"));
+
+    FlagPromptUI->SetupAttachment(GetRootComponent());
+    FlagPromptUI->SetWidgetSpace(EWidgetSpace::Screen);
+    FlagPromptUI->SetDrawSize(FVector2D(100.0f, 40.0f));
+    FlagPromptUI->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
 
 bool ACXExpeditionFlag::CanFlag(const ACXFieldPlayerCharacter* Player) const
@@ -81,13 +96,41 @@ void ACXExpeditionFlag::BeginPlay()
 	
     ExpeditionInteractionSphere->OnComponentBeginOverlap.AddUniqueDynamic(this, &ThisClass::HandleInteractionBeginOverlap);
     ExpeditionInteractionSphere->OnComponentEndOverlap.AddUniqueDynamic(this, &ThisClass::HandleInteractionEndOverlap);
+
+    FlagPromptUI->AttachToComponent(GetRootComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+
+    FlagPromptUI->SetRelativeLocation(FVector(0.0f, 0.0f, 100.0f));
+
+    // 트리거나 타깃의 크기 때문에 UI가 확대되지 않는다.
+    FlagPromptUI->SetWorldScale3D(FVector::OneVector);
+
+    // 컴포넌트를 처음부터 화면에 올려 두고 위젯만 접어 둔다.
+    // 숨긴 컴포넌트를 켜는 프레임에 FadeIn을 재생하면 위젯이 화면에 붙기 전이라 첫 표시가 보이지 않는다.
+    FlagPromptUI->SetVisibility(true);
+    FlagPromptUI->InitWidget();
+    if (UUserWidget* Widget = FlagPromptUI->GetUserWidgetObject())
+    {
+        Widget->SetVisibility(ESlateVisibility::Collapsed);
+    }
+}
+
+void ACXExpeditionFlag::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    if (ACXFieldPlayerCharacter* Player = ObservedPlayer.Get())
+    {
+        UpdateFlagUI(Player, false);
+    }
+
+    StopObservingUIState();
+    Super::EndPlay(EndPlayReason);
 }
 
 void ACXExpeditionFlag::HandleInteractionBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
     ACXFieldPlayerCharacter* Player = Cast<ACXFieldPlayerCharacter>(OtherActor);
 
-    if (!IsValid(Player))
+    // 플레이어의 메시 등 다른 컴포넌트 오버랩은 무시한다. 같은 플레이어의 중복 진입도 무시한다.
+    if (!IsValid(Player) || OtherComp != Player->GetCapsuleComponent() || ObservedPlayer.Get() == Player)
     {
         return;
     }
@@ -106,13 +149,15 @@ void ACXExpeditionFlag::HandleInteractionBeginOverlap(UPrimitiveComponent* Overl
     }
 
     Player->RegisterNearByFlag(Flag);
+    ObserveUIState(Player);
+    UpdateFlagUI(Player, true);
 }
 
 void ACXExpeditionFlag::HandleInteractionEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
     ACXFieldPlayerCharacter* Player = Cast<ACXFieldPlayerCharacter>(OtherActor);
 
-    if (!IsValid(Player))
+    if (!IsValid(Player) || OtherComp != Player->GetCapsuleComponent() || ObservedPlayer.Get() != Player)
     {
         return;
     }
@@ -131,7 +176,111 @@ void ACXExpeditionFlag::HandleInteractionEndOverlap(UPrimitiveComponent* Overlap
     }
 
     Player->UnregisterNearByFlag(Flag);
+    UpdateFlagUI(Player, false);
+    StopObservingUIState();
 }
 
+void ACXExpeditionFlag::UpdateFlagUI(ACXFieldPlayerCharacter* Player, bool bInRange)
+{
+    if (!IsValid(Player) || !IsValid(FlagPromptUI))
+    {
+        return;
+    }
 
+    FlagPromptUI->InitWidget();
 
+    UUserWidget* Widget = FlagPromptUI->GetUserWidgetObject();
+
+    if (!IsValid(Widget) || !Widget->GetClass()->ImplementsInterface(
+        UCXFieldGrapplingUIInterface::StaticClass()
+    ))
+    {
+        return;
+    }
+
+    const bool bShow = bInRange && CanShowFlagUI(Player);
+
+    // 표시 상태가 같으면 FadeIn을 다시 시작하지 않습니다.
+    if (LastPromptWidget.Get() == Widget && bPromptShown == bShow)
+    {
+        return;
+    }
+    LastPromptWidget = Widget;
+    bPromptShown = bShow;
+
+    if (bShow || !bInRange)
+    {
+        // 표시는 위젯이 FadeIn, 범위 이탈은 위젯이 바로 숨긴다.
+        ICXFieldGrapplingUIInterface::Execute_UpdateInteractionUI(
+            Widget,
+            bShow,
+            bShow ? this : nullptr);
+        return;
+    }
+
+    // 범위 안에서 조건이 깨지면(점프·스프린트·사용 중·시선 이탈) 페이드 없이 바로 숨긴다.
+    Widget->StopAllAnimations();
+    Widget->SetVisibility(ESlateVisibility::Collapsed);
+}
+
+bool ACXExpeditionFlag::CanShowFlagUI(const ACXFieldPlayerCharacter* Player) const
+{
+    const UCharacterMovementComponent* Movement = Player->GetCharacterMovement();
+    const UAbilitySystemComponent* ASC = Player->GetAbilitySystemComponent();
+    if (!IsValid(Movement) || !Movement->IsMovingOnGround() || !IsValid(ASC))
+    {
+        return false;
+    }
+
+    // 점프·낙하, 스프린트 중, 깃발 앉기처럼 이동이 막힌 상태에서는 숨긴다.
+    if (ASC->HasMatchingGameplayTag(CXVIFieldTag::State_Airborne) ||
+        ASC->HasMatchingGameplayTag(CXVIFieldTag::Input_Field_Sprint) ||
+        ASC->HasMatchingGameplayTag(CXVIFieldTag::State_MovingBlock))
+    {
+        return false;
+    }
+
+    // 앉아 있는 동안(SitIdle 포함)은 몽타주가 재생 중이므로 숨긴다.
+    const USkeletalMeshComponent* Mesh = Player->GetMesh();
+    const UAnimInstance* AnimInstance = IsValid(Mesh) ? Mesh->GetAnimInstance() : nullptr;
+    if (IsValid(AnimInstance) && AnimInstance->IsAnyMontagePlaying())
+    {
+        return false;
+    }
+
+    // 플레이어 정면 기준 PromptFacingAngle 안에 깃발이 있어야 한다.
+    const FVector ToFlag = (GetActorLocation() - Player->GetActorLocation()).GetSafeNormal2D();
+    if (ToFlag.IsNearlyZero())
+    {
+        return true;
+    }
+    const FVector Forward = Player->GetActorForwardVector().GetSafeNormal2D();
+    return FVector::DotProduct(Forward, ToFlag) >= FMath::Cos(FMath::DegreesToRadians(PromptFacingAngle));
+}
+
+void ACXExpeditionFlag::ObserveUIState(ACXFieldPlayerCharacter* Player)
+{
+    StopObservingUIState();
+    if (!IsValid(Player))
+    {
+        return;
+    }
+    ObservedPlayer = Player;
+
+    GetWorldTimerManager().SetTimer(
+        UIRefreshTimerHandle, this, &ThisClass::RefreshFlagUI, 0.05f, true);
+}
+
+void ACXExpeditionFlag::StopObservingUIState()
+{
+    GetWorldTimerManager().ClearTimer(UIRefreshTimerHandle);
+    ObservedPlayer.Reset();
+}
+
+void ACXExpeditionFlag::RefreshFlagUI()
+{
+    if (ACXFieldPlayerCharacter* Player = ObservedPlayer.Get())
+    {
+        UpdateFlagUI(Player, true);
+    }
+}
