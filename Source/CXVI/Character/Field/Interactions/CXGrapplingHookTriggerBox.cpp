@@ -240,10 +240,17 @@ void ACXGrapplingHookTriggerBox::UpdateGrapplingUI(ACXFieldPlayerCharacter* Play
 	LastPromptWidget = Widget;
 	bPromptShown = bShow;
 
-	ICXFieldGrapplingUIInterface::Execute_UpdateInteractionUI(
-		Widget,
-		bShow,
-		bShow ? GrapplingTarget.Get() : nullptr);
+	if (bShow || !bCanInteract)
+	{
+		// 표시는 위젯이 FadeIn, 범위 이탈은 위젯이 바로 숨긴다.
+		ICXFieldGrapplingUIInterface::Execute_UpdateInteractionUI(
+			Widget,
+			bShow,
+			bShow ? GrapplingTarget.Get() : nullptr);
+		return;
+	}
 
-
+	// 범위 안에서 조건이 깨지면(그래플링 시도·점프·스프린트) 페이드 없이 바로 숨긴다.
+	Widget->StopAllAnimations();
+	Widget->SetVisibility(ESlateVisibility::Collapsed);
 }
