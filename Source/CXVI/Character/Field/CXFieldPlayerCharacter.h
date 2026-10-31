@@ -15,6 +15,7 @@ class UAnimInstance;
 class UAnimMontage;
 class UCableComponent;
 class ACXExpeditionFlag;
+class ACXGrapplingHookTriggerBox;
 struct FInputActionValue;
 
 
@@ -37,10 +38,11 @@ public:
 
 public:
 	// Grappling Target 위치 확인.
-	void SetGrapplingTarget(AActor* TargetActor, AActor* LandingActor = nullptr);
+	void SetGrapplingTarget(AActor* TargetActor, AActor* LandingActor = nullptr, ACXGrapplingHookTriggerBox* TriggerBox = nullptr);
 
 	AActor* GetGrapplingTargetActor() const { return CurrentGrapplingTarget.Get(); }
 	AActor* GetLandingSurfaceActor() const { return CurrentLandingSurface.Get(); }
+	ACXGrapplingHookTriggerBox* GetGrapplingTriggerBox() const { return CurrentGrapplingTrigger.Get(); }
 
 	void ShowCable(AActor* Target);
 	void HideCable();
@@ -159,6 +161,10 @@ protected:
 	// 그래플링 착지 액터.
 	UPROPERTY()
 	TWeakObjectPtr<AActor> CurrentLandingSurface;
+
+	// 그래플링 대상을 지정한 트리거. 어빌리티가 UI와 같은 조건으로 사용 가능 여부를 확인한다.
+	UPROPERTY()
+	TWeakObjectPtr<ACXGrapplingHookTriggerBox> CurrentGrapplingTrigger;
 
 	// 그래플링 훅 스펙을 관리할 핸들.
 	FGameplayAbilitySpecHandle GrapplingHookHandle;

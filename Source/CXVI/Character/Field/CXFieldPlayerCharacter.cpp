@@ -4,6 +4,7 @@
 #include "InputActionValue.h"
 #include "CXVI/Tags/CXFieldTags.h"
 #include "CXVI/Actor/Field/Interactions/CXExpeditionFlag.h"
+#include "CXVI/Character/Field/Interactions/CXGrapplingHookTriggerBox.h"
 
 #include "Components/SkeletalMeshComponent.h"
 #include "EnhancedInputSubsystems.h"
@@ -168,11 +169,12 @@ void ACXFieldPlayerCharacter::HandleInteractionUIAbilityEnded(UGameplayAbility* 
 	}
 }
 
-void ACXFieldPlayerCharacter::SetGrapplingTarget(AActor* TargetActor, AActor* LandingActor)
+void ACXFieldPlayerCharacter::SetGrapplingTarget(AActor* TargetActor, AActor* LandingActor, ACXGrapplingHookTriggerBox* TriggerBox)
 {
 	// 그래플링 대상과 착지 위치를 저장한다.
 	CurrentGrapplingTarget = TargetActor;
 	CurrentLandingSurface = IsValid(TargetActor) ? LandingActor : nullptr;
+	CurrentGrapplingTrigger = IsValid(TargetActor) ? TriggerBox : nullptr;
 }
 
 void ACXFieldPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
