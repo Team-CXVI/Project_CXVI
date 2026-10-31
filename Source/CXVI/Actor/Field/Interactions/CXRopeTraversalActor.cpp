@@ -332,7 +332,7 @@ void ACXRopeTraversalActor::UpdateRopeUI(ACXFieldPlayerCharacter* Player, bool b
 	Widget->SetVisibility(ESlateVisibility::Collapsed);
 }
 
-bool ACXRopeTraversalActor::CanShowRopeUI(ACXFieldPlayerCharacter* Player)
+bool ACXRopeTraversalActor::CanShowRopeUI(const ACXFieldPlayerCharacter* Player)
 {
 	const UCharacterMovementComponent* Movement = Player->GetCharacterMovement();
 	const UAbilitySystemComponent* ASC = Player->GetAbilitySystemComponent();

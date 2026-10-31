@@ -318,6 +318,12 @@ void ACXFieldPlayerCharacter::Look(const FInputActionValue& InValue)
 
 void ACXFieldPlayerCharacter::StartUseRope()
 {
+	if (IsCrouched())
+	{
+		UnCrouch();
+		GetCharacterMovement()->UnCrouch(false);
+	}
+
 	if (IsValid(ASC) && RopeTraversalAbilityHandle.IsValid())
 	{
 		ASC->TryActivateAbility(RopeTraversalAbilityHandle);
@@ -577,6 +583,11 @@ void ACXFieldPlayerCharacter::StartUseFlag()
 		return;
 	}
 
+	if (GetCharacterMovement()->IsCrouching())
+	{
+		UnCrouch();
+	}
+
 	UE_LOG(
 		LogTemp,
 		Log,
@@ -649,6 +660,11 @@ void ACXFieldPlayerCharacter::GrapplingHook()
 	if (!IsValid(ASC) || !GrapplingHookHandle.IsValid())
 	{
 		return;
+	}
+
+	if (GetCharacterMovement()->IsCrouching())
+	{
+		UnCrouch();
 	}
 
 	if (ASC->HasMatchingGameplayTag(CXVIFieldTag::State_CanGrapplingHook)

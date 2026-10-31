@@ -65,6 +65,11 @@ bool ACXExpeditionFlag::CanFlag(const ACXFieldPlayerCharacter* Player) const
     {
         return false;
     }
+    
+    if (!CanShowFlagUI(Player))
+    {
+        return false;
+    }
 
     return true;
 }
