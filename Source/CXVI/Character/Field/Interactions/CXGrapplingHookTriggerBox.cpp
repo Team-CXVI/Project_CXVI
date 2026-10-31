@@ -2,7 +2,6 @@
 #include "CXGrapplingHookTriggerBox.h"
 #include "CXVI/Character/Field/CXFieldPlayerCharacter.h"
 #include "CXVI/Tags/CXFieldTags.h"
-#include "CXVI/UI/Field/CXFieldGrapplingUIInterface.h"
 
 #include "AbilitySystemComponent.h"
 #include "Components/ShapeComponent.h"
@@ -34,7 +33,7 @@ ACXGrapplingHookTriggerBox::ACXGrapplingHookTriggerBox(const FObjectInitializer&
 
 	GrapplingUI->SetupAttachment(GetRootComponent());
 	GrapplingUI->SetWidgetSpace(EWidgetSpace::Screen);
-	GrapplingUI->SetDrawSize(FVector2D(100.0f, 40.0f));
+	GrapplingUI->SetDrawSize(FVector2D(48.0f, 48.0f));
 	GrapplingUI->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	// 연결이 끝나기 전까지 새 UI는 숨겨 둡니다.
@@ -70,8 +69,6 @@ void ACXGrapplingHookTriggerBox::BeginPlay()
 
 	// 트리거나 타깃의 크기 때문에 UI가 확대되지 않는다.
 	GrapplingUI->SetWorldScale3D(FVector::OneVector);
-
-	GrapplingUI->InitWidget();
 }
 
 void ACXGrapplingHookTriggerBox::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -194,26 +191,6 @@ void ACXGrapplingHookTriggerBox::UpdateGrapplingUI(ACXFieldPlayerCharacter* Play
 	{
 		return;
 	}
-
-	APlayerController* PC =
-		Cast<APlayerController>(Player->GetController());
-
-	if (!IsValid(PC) || !PC->GetLocalPlayer())
-	{
-		return;
-	}
-
-	GrapplingUI->SetOwnerPlayer(PC->GetLocalPlayer());
-	GrapplingUI->InitWidget();
-
-	UUserWidget* Widget = GrapplingUI->GetUserWidgetObject();
-
-	if (!IsValid(Widget) ||
-		!Widget->GetClass()->ImplementsInterface(
-			UCXFieldGrapplingUIInterface::StaticClass()))
-	{
-		return;
-	}
 	
 	UCharacterMovementComponent* Movement = Player->GetCharacterMovement();
 	UAbilitySystemComponent* ASC = Player->GetAbilitySystemComponent();
@@ -229,28 +206,5 @@ void ACXGrapplingHookTriggerBox::UpdateGrapplingUI(ACXFieldPlayerCharacter* Play
 		!ASC->HasMatchingGameplayTag(CXVIFieldTag::State_BlockInteractionUI) &&
 		!ASC->HasMatchingGameplayTag(CXVIFieldTag::State_MovingBlock);
 
-	// 컴포넌트는 켜두고, 내부 위젯이 표시/숨김을 처리합니다.
-	GrapplingUI->SetVisibility(true);
-
-	// 표시 상태가 같으면 FadeIn을 다시 시작하지 않습니다.
-	if (LastPromptWidget.Get() == Widget && bPromptShown == bShow)
-	{
-		return;
-	}
-	LastPromptWidget = Widget;
-	bPromptShown = bShow;
-
-	if (bShow || !bCanInteract)
-	{
-		// 표시는 위젯이 FadeIn, 범위 이탈은 위젯이 바로 숨긴다.
-		ICXFieldGrapplingUIInterface::Execute_UpdateInteractionUI(
-			Widget,
-			bShow,
-			bShow ? GrapplingTarget.Get() : nullptr);
-		return;
-	}
-
-	// 범위 안에서 조건이 깨지면(그래플링 시도·점프·스프린트) 페이드 없이 바로 숨긴다.
-	Widget->StopAllAnimations();
-	Widget->SetVisibility(ESlateVisibility::Collapsed);
+	GrapplingUI->SetVisibility(bShow);
 }
