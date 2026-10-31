@@ -56,6 +56,11 @@ public:
 	// 벗어난 깃발을 사용 후보에서 제거.
 	void UnregisterNearByFlag(ACXExpeditionFlag* Flag);
 
+	// 깃발 메뉴 구간. 메뉴 동안은 State.InMenu + State.MovingBlock으로 이동을 막는다.
+	// 메뉴 UI가 들어오면 닫기(ESC·나가기 버튼)에서 ExitFlagMenu를 호출한다.
+	void EnterFlagMenu();
+	void ExitFlagMenu();
+
 	// 로프 섹션.
 public:
 	ACXRopeTraversalActor* GetRopeTraversalTarget() const { return CurrentRopeTraversalTarget.Get(); }
