@@ -657,3 +657,42 @@ void ACXFieldPlayerCharacter::GrapplingHook()
 		ASC->TryActivateAbility(GrapplingHookHandle);
 	}
 }
+
+bool ACXFieldPlayerCharacter::CanInteract_Implementation() const
+{
+	return GetCharacterMovement()->IsMovingOnGround() &&
+		!ASC->HasMatchingGameplayTag(CXVIFieldTag::State_Airborne) &&
+		!ASC->HasMatchingGameplayTag(CXVIFieldTag::State_BlockInteractionUI) &&
+		!ASC->HasMatchingGameplayTag(CXVIFieldTag::State_MovingBlock);
+}
+
+void ACXFieldPlayerCharacter::StartInteractAction_Implementation(EInteractActionType InActionType, const FCXInteractActionParam& InActionParam)
+{
+	switch (InActionType)
+	{
+	case EInteractActionType::None:
+		break;
+	case EInteractActionType::GrapplingHook:
+	{
+		if (const FCXGrapplingHookActionParams* GrapplingHookParams = InActionParam.GetPayload<FCXGrapplingHookActionParams>())
+		{
+			if (!IsValid(ASC) || !GrapplingHookHandle.IsValid())
+			{
+				return;
+			}
+
+			CurrentGrapplingTarget = GrapplingHookParams->GrapplingTarget;
+			CurrentLandingSurface = GrapplingHookParams->LandingTarget;
+
+			ASC->TryActivateAbility(GrapplingHookHandle);
+		}
+		break;
+	}
+	case EInteractActionType::RopeTraversal:
+		break;
+	default:
+		break;
+	}
+
+}
+

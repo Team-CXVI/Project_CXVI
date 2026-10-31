@@ -6,6 +6,7 @@
 #include "CXFieldCharacterBase.h"
 #include "CXVI/Foundation/Scene/CXSceneSuspendable.h"
 #include "CXVI/Actor/Field/Interactions/CXRopeTraversalActor.h"
+#include "Interface/CXInteractActionInterface.h"
 
 #include "CXFieldPlayerCharacter.generated.h"
 
@@ -20,7 +21,7 @@ struct FInputActionValue;
 
 
 UCLASS()
-class CXVI_API ACXFieldPlayerCharacter : public ACXFieldCharacterBase, public ICXSceneSuspendable
+class CXVI_API ACXFieldPlayerCharacter : public ACXFieldCharacterBase, public ICXSceneSuspendable, public ICXInteractActionInterface
 {
 	GENERATED_BODY()
 
@@ -228,5 +229,15 @@ private:
 	int32 ActiveInteractionUIAbilityCount = 0;
 	FDelegateHandle InteractionUIAbilityActivatedHandle;
 	FDelegateHandle InteractionUIAbilityEndedHandle;
+
+
+// TODO : 기믹 구조 변경 테스트 용 함수
+public:
+	virtual bool CanInteract_Implementation() const override;
+	virtual void StartInteractAction_Implementation(EInteractActionType InActionType, const FCXInteractActionParam& InActionParam) override;
+
+protected:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input)
+	TObjectPtr<UInputAction> InteractiveTestAction;
 };
 
