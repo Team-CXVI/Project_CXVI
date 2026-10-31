@@ -65,6 +65,11 @@ bool ACXExpeditionFlag::CanFlag(const ACXFieldPlayerCharacter* Player) const
     {
         return false;
     }
+    
+    if (!CanShowFlagUI(Player))
+    {
+        return false;
+    }
 
     return true;
 }
@@ -177,9 +182,6 @@ void ACXExpeditionFlag::HandleInteractionEndOverlap(UPrimitiveComponent* Overlap
         // 그래플링 훅 처럼해당 타겟에 UI.
 
         ASC->RemoveLooseGameplayTag(CXVIFieldTag::State_CanUseExpeditionFlag);
-
-        // 임시: 메뉴가 생기기 전까지는 깃발 범위를 벗어날 때 메뉴 태그를 뗀다.
-        ASC->SetLooseGameplayTagCount(CXVIFieldTag::State_InMenu, 0);
     }
 
     ACXExpeditionFlag* Flag = this;
