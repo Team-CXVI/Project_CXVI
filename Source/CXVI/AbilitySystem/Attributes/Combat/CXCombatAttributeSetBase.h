@@ -10,7 +10,7 @@
 #include "CXCombatAttributeSetBase.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FCXAttributeDataChanged, float, OldValue, float, NewValue);
-DECLARE_MULTICAST_DELEGATE_OneParam(FCXOutOfHealth, AActor*);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FCXOutOfHealth, AActor*, InInstigator);
 DECLARE_MULTICAST_DELEGATE_TwoParams(FCXDamageApplied, AActor*, float);
 DECLARE_MULTICAST_DELEGATE_OneParam(FCXParrySucceeded, AActor*);
 
@@ -49,6 +49,7 @@ protected:
 	float CalculateFinalDamage(const FGameplayEffectModCallbackData& Data, float IncomingDamage) const;
 
 public:
+	UPROPERTY(BlueprintAssignable, Category = "Attribute")
 	mutable FCXOutOfHealth OnOutOfHealth;
 
 	mutable FCXDamageApplied OnDamageApplied;

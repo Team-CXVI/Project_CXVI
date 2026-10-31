@@ -79,17 +79,17 @@ void ACXCombatCharacterBase::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
 
-	/*if (!IsValid(ASC) || !IsValid(CharacterAttributeSet))
+	if (!IsValid(ASC) || !IsValid(CharacterAttributeSet))
 	{
-		UE_LOG(LogTemp, Error, TEXT("초기화 실패"));
+		UE_LOG(LogTemp, Error, TEXT("%s : 초기화 실패, ASC=%s, Attribute=%s"), *GetName(), *GetNameSafe(ASC), *GetNameSafe(CharacterAttributeSet));
 		return;
-	}*/
+	}
 
 	CXPostInitializeComponents();
 
-	ASC->GetSet<UCXCombatAttributeSetBase>()->OnOutOfHealth.AddUObject(this, &ACXCombatCharacterBase::OnOutOfHealthCpp);
+	CharacterAttributeSet->OnOutOfHealth.AddUniqueDynamic(this, &ACXCombatCharacterBase::OnOutOfHealthCpp);
 
-	CharacterAttributeSet->OnDamageApplied.AddUObject(this, &ACXCombatCharacterBase::HandleDamageApplied);
+	//CharacterAttributeSet->OnDamageApplied.AddUObject(this, &ACXCombatCharacterBase::HandleDamageApplied);
 	CharacterAttributeSet->OnParrySucceeded.AddUObject(this, &ACXCombatCharacterBase::HandleParrySucceeded);
 }
 

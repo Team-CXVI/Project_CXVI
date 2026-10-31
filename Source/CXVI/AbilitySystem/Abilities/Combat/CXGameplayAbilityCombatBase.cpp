@@ -25,12 +25,12 @@ UCXGameplayAbilityCombatBase::UCXGameplayAbilityCombatBase()
 
 float UCXGameplayAbilityCombatBase::GetAPCost() const
 {
-	return AbilityData ? FMath::Max(0.f, AbilityData->APCost) : 0.f;;
+	return AbilityData ? AbilityData->APCost : 0.f;
 }
 
 void UCXGameplayAbilityCombatBase::ApplyCost(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) const
 {
-	if (IsValid(AbilityData) || !ActorInfo)
+	if (!IsValid(AbilityData) || !ActorInfo)
 	{
 		return;
 	}
