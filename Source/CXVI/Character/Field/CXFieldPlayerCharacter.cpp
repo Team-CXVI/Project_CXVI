@@ -358,35 +358,19 @@ void ACXFieldPlayerCharacter::HideCable()
 
 bool ACXFieldPlayerCharacter::CanStartFlag() const
 {
-	if (!IsValid(ASC) || !IsValid(FlagMontage))
+	if (!IsValid(ASC))
 	{
 		return false;
 	}
 
-	// 이미 앉기 처리 중이거나, 다른 행동으로 이동이 제한된 상태.
-	if (bFlagMovementBlocked || ASC->HasMatchingGameplayTag(CXVIFieldTag::State_MovingBlock))
+	// 다른 행동으로 이동이 제한됐거나, 이미 깃발 메뉴가 열린 상태.
+	if (ASC->HasMatchingGameplayTag(CXVIFieldTag::State_MovingBlock) ||
+		ASC->HasMatchingGameplayTag(CXVIFieldTag::State_InMenu))
 	{
 		return false;
 	}
 
-	if (!ASC->HasMatchingGameplayTag(CXVIFieldTag::State_CanUseExpeditionFlag))
-	{
-		return false;
-	}
-
-	if (!IsValid(GetMesh()))
-	{
-		return false;
-	}
-
-	UAnimInstance* AnimInstace = GetMesh()->GetAnimInstance();
-	if (!IsValid(AnimInstace))
-	{
-		return false;
-	}
-
-	// SitIdle에서는 이동 제한이 풀리므로 몽타주 재생 여부도 확인.
-	return !AnimInstace->Montage_IsActive(FlagMontage);
+	return ASC->HasMatchingGameplayTag(CXVIFieldTag::State_CanUseExpeditionFlag);
 }
 
 void ACXFieldPlayerCharacter::RegisterNearByFlag(ACXExpeditionFlag* Flag)
@@ -599,29 +583,11 @@ void ACXFieldPlayerCharacter::StartUseFlag()
 		TEXT("[깃발 휴식] 접근한 깃발: %s"),
 		*GetNameSafe(Flag));
 
-	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
-	if (!IsValid(AnimInstance))
-	{
-		return;
-	}
-
-	// 재생 실패 시 이동 제한을 추가하지 않음.
-	if (PlayAnimMontage(FlagMontage, 1.0f) <= 0.0f)
-	{
-		return;
-	}
-
-	// 재생에 성공했으므로 이번 휴식을 시작한 깃발로 확정.
+	// 임시: 앉기 몽타주 대신 바로 휴식 처리하고 메뉴 태그를 붙인다.
+	// 카메라 연출·메뉴가 들어오면 이 자리에서 시작하고, 메뉴가 닫힐 때 태그를 뗀다.
 	ActiveExpeditionFlag = Flag;
-
-	// 재생 후 해당 몽타주 인스턴스에 종료 콜백 연결.
-	FOnMontageSectionChanged SectionDelegate;
-	SectionDelegate.BindUObject(this, &ThisClass::OnFlagMontageChanged);
-	AnimInstance->Montage_SetSectionChangedDelegate(SectionDelegate, FlagMontage);
-
-	bFlagMovementBlocked = true;
-	ASC->AddLooseGameplayTag(CXVIFieldTag::State_MovingBlock);
-	
+	ASC->AddLooseGameplayTag(CXVIFieldTag::State_InMenu);
+	Flag->CompleteFlag();
 }
 
 void ACXFieldPlayerCharacter::OnFlagMontageChanged(UAnimMontage* Montage, FName SectionName, bool bLooped)
