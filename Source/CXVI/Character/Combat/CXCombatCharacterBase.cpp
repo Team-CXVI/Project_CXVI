@@ -5,7 +5,7 @@
 
 #include "CXVI/Tags/CXGameplayTags.h"
 
-#include "CXVI/AbilitySystem/Attributes/Combat/CXCombatAttributeSet.h"
+#include "CXVI/AbilitySystem/Attributes/Combat/CXCombatAttributeSetBase.h"
 
 #include "AI/Combat/CXCombatAIController.h"
 
@@ -55,8 +55,8 @@ ACXCombatCharacterBase::ACXCombatCharacterBase()
 	ASC = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("ASC"));
 
 	// AttributeSet
-	CharacterAttributeSet = CreateDefaultSubobject<UCXCombatAttributeSet>(TEXT("CharacterAttributeSet"));
-	ASC->AddAttributeSetSubobject<UCXCombatAttributeSet>(CharacterAttributeSet);
+	//CharacterAttributeSet = CreateDefaultSubobject<UCXCombatAttributeSet>(TEXT("CharacterAttributeSet"));
+	//ASC->AddAttributeSetSubobject<UCXCombatAttributeSet>(CharacterAttributeSet);
 
 	// 캐릭터 기본변수 초기화
 	bIsCharacterAlive = true;
@@ -79,12 +79,18 @@ void ACXCombatCharacterBase::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
 
+	if (!IsValid(ASC) || !IsValid(CharacterAttributeSet))
+	{
+		UE_LOG(LogTemp, Error, TEXT("%s : 초기화 실패, ASC=%s, Attribute=%s"), *GetName(), *GetNameSafe(ASC), *GetNameSafe(CharacterAttributeSet));
+		return;
+	}
+
 	CXPostInitializeComponents();
 
-	ASC->GetSet<UCXCombatAttributeSet>()->OnOutOfHealth.AddDynamic(this, &ACXCombatCharacterBase::OnOutOfHealthCpp);
+	CharacterAttributeSet->OnOutOfHealth.AddUniqueDynamic(this, &ACXCombatCharacterBase::OnOutOfHealthCpp);
 
-	CharacterAttributeSet->OnDamageApplied.AddUniqueDynamic(this, &ACXCombatCharacterBase::HandleDamageApplied);
-	CharacterAttributeSet->OnParrySucceeded.AddUniqueDynamic(this, &ACXCombatCharacterBase::HandleParrySucceeded);
+	//CharacterAttributeSet->OnDamageApplied.AddUObject(this, &ACXCombatCharacterBase::HandleDamageApplied);
+	CharacterAttributeSet->OnParrySucceeded.AddUObject(this, &ACXCombatCharacterBase::HandleParrySucceeded);
 }
 
 void ACXCombatCharacterBase::InitializeGAS()

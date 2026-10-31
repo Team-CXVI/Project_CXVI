@@ -23,4 +23,6 @@ protected:
 	virtual void SelectTargetPhase() override;
 
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Attribute")
+	TObjectPtr<class UCXCombatEnemyAttributeSet> AttributeSet;
 };

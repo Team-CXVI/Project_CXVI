@@ -9,10 +9,10 @@
 
 #include "CXCombatAttributeSet.generated.h"
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FAttributeDataChanged, float, OldValue, float, NewValue);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOutOfHealth, AActor*, InInstigator);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FDamageApplied, AActor*, InInstigator, float, AppliedDamage);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FCXParrySucceeded, AActor*, InInstigator);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FAttributeDataChanged_V2, float, OldValue, float, NewValue);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOutOfHealth_V2, AActor*, InInstigator);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FDamageApplied_V2, AActor*, InInstigator, float, AppliedDamage);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FCXParrySucceeded_V2, AActor*, InInstigator);
 
 
 /**
@@ -29,8 +29,8 @@ public:
 	ATTRIBUTE_ACCESSORS_BASIC(ThisClass, MaxHealth);
 	ATTRIBUTE_ACCESSORS_BASIC(ThisClass, Health);
 	ATTRIBUTE_ACCESSORS_BASIC(ThisClass, Damage);
-	ATTRIBUTE_ACCESSORS_BASIC(ThisClass, Mana);
-	ATTRIBUTE_ACCESSORS_BASIC(ThisClass, MaxMana);
+	ATTRIBUTE_ACCESSORS_BASIC(ThisClass, AP);
+	ATTRIBUTE_ACCESSORS_BASIC(ThisClass, MaxAP);
 	ATTRIBUTE_ACCESSORS_BASIC(ThisClass, CombatSpeed);
 	ATTRIBUTE_ACCESSORS_BASIC(ThisClass, AttackRange);
 	ATTRIBUTE_ACCESSORS_BASIC(ThisClass, AttackRadius);
@@ -45,21 +45,21 @@ protected:
 
 public:
 	UPROPERTY(BlueprintAssignable, Category = "Attribute")
-	mutable FOutOfHealth OnOutOfHealth;
+	mutable FOutOfHealth_V2 OnOutOfHealth;
 
 	UPROPERTY(BlueprintAssignable, Category = "Attribute")
-	mutable FDamageApplied OnDamageApplied;
+	mutable FDamageApplied_V2 OnDamageApplied;
 
 	UPROPERTY(BlueprintAssignable, Category = "Combat|Parry")
-	FCXParrySucceeded OnParrySucceeded;
+	FCXParrySucceeded_V2 OnParrySucceeded;
 
 protected:
 
 	UPROPERTY(BlueprintAssignable, Category = "Attribute")
-	mutable FAttributeDataChanged OnMaxHealthChanged;
+	mutable FAttributeDataChanged_V2 OnMaxHealthChanged;
 
 	UPROPERTY(BlueprintAssignable, Category = "Attribute")
-	mutable FAttributeDataChanged OnHealthChanged;
+	mutable FAttributeDataChanged_V2 OnHealthChanged;
 
 protected:
 
@@ -73,10 +73,10 @@ protected:
 	FGameplayAttributeData Damage;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attirbutes")
-	FGameplayAttributeData Mana;
+	FGameplayAttributeData AP;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attirbutes")
-	FGameplayAttributeData MaxMana;
+	FGameplayAttributeData MaxAP;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attirbutes")
 	FGameplayAttributeData CombatSpeed;
