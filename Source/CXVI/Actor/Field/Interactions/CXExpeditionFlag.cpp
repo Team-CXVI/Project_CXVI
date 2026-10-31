@@ -5,7 +5,6 @@
 #include "CXVI/Foundation/Field/FieldEnemySpawning/CXFieldEnemySubsystem.h"
 #include "CXVI/Character/Field/CXFieldPlayerCharacter.h"
 #include "CXVI/Tags/CXFieldTags.h"
-#include "CXVI/UI/Field/CXFieldGrapplingUIInterface.h"
 
 #include "Engine/World.h"
 #include "AbilitySystemComponent.h"
@@ -55,8 +54,7 @@ ACXExpeditionFlag::ACXExpeditionFlag()
 
     FlagPromptUI->SetupAttachment(GetRootComponent());
     FlagPromptUI->SetWidgetSpace(EWidgetSpace::Screen);
-    FlagPromptUI->SetDrawSize(FVector2D(100.0f, 40.0f));
-    FlagPromptUI->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    FlagPromptUI->SetDrawSize(FVector2D(48.0f, 48.0f));
 }
 
 bool ACXExpeditionFlag::CanFlag(const ACXFieldPlayerCharacter* Player) const
@@ -102,14 +100,7 @@ void ACXExpeditionFlag::BeginPlay()
     // 트리거나 타깃의 크기 때문에 UI가 확대되지 않는다.
     FlagPromptUI->SetWorldScale3D(FVector::OneVector);
 
-    // 컴포넌트를 처음부터 화면에 올려 두고 위젯만 접어 둔다.
-    // 숨긴 컴포넌트를 켜는 프레임에 FadeIn을 재생하면 위젯이 화면에 붙기 전이라 첫 표시가 보이지 않는다.
-    FlagPromptUI->SetVisibility(true);
-    FlagPromptUI->InitWidget();
-    if (UUserWidget* Widget = FlagPromptUI->GetUserWidgetObject())
-    {
-        Widget->SetVisibility(ESlateVisibility::Collapsed);
-    }
+    FlagPromptUI->SetVisibility(false);
 
     // 세이브 로드 등으로 깃발 범위 안에서 시작하면, 플레이어가 BeginPlay보다 먼저 스폰돼 진입 이벤트를 놓친다.
     // 한 틱 뒤(빙의·ASC 초기화 이후) 이미 겹쳐 있는 플레이어를 진입 처리한다.
@@ -200,40 +191,9 @@ void ACXExpeditionFlag::UpdateFlagUI(ACXFieldPlayerCharacter* Player, bool bInRa
         return;
     }
 
-    FlagPromptUI->InitWidget();
-
-    UUserWidget* Widget = FlagPromptUI->GetUserWidgetObject();
-
-    if (!IsValid(Widget) || !Widget->GetClass()->ImplementsInterface(
-        UCXFieldGrapplingUIInterface::StaticClass()
-    ))
-    {
-        return;
-    }
 
     const bool bShow = bInRange && CanShowFlagUI(Player);
-
-    // 표시 상태가 같으면 FadeIn을 다시 시작하지 않습니다.
-    if (LastPromptWidget.Get() == Widget && bPromptShown == bShow)
-    {
-        return;
-    }
-    LastPromptWidget = Widget;
-    bPromptShown = bShow;
-
-    if (bShow || !bInRange)
-    {
-        // 표시는 위젯이 FadeIn, 범위 이탈은 위젯이 바로 숨긴다.
-        ICXFieldGrapplingUIInterface::Execute_UpdateInteractionUI(
-            Widget,
-            bShow,
-            bShow ? this : nullptr);
-        return;
-    }
-
-    // 범위 안에서 조건이 깨지면(점프·스프린트 등 어빌리티·메뉴 열림·시선 이탈) 페이드 없이 바로 숨긴다.
-    Widget->StopAllAnimations();
-    Widget->SetVisibility(ESlateVisibility::Collapsed);
+	FlagPromptUI->SetVisibility(bShow);
 }
 
 bool ACXExpeditionFlag::CanShowFlagUI(const ACXFieldPlayerCharacter* Player) const

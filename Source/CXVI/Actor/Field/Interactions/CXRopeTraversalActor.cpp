@@ -4,7 +4,6 @@
 #include "CXRopeTraversalActor.h"
 #include "CXVI/Character/Field/CXFieldPlayerCharacter.h"
 #include "CXVI/Tags/CXFieldTags.h"
-#include "CXVI/UI/Field/CXFieldGrapplingUIInterface.h"
 
 #include "AbilitySystemComponent.h"
 #include "Components/SceneComponent.h"
@@ -61,14 +60,14 @@ ACXRopeTraversalActor::ACXRopeTraversalActor()
 	BottomPromptUI = CreateDefaultSubobject<UWidgetComponent>(TEXT("BottomRopePrompt"));
 	BottomPromptUI->SetupAttachment(BottomRopePoint);
 	BottomPromptUI->SetWidgetSpace(EWidgetSpace::Screen);
-	BottomPromptUI->SetDrawSize(FVector2D(100.0f, 40.0f));
+	BottomPromptUI->SetDrawSize(FVector2D(48.0f, 48.0f));
 	BottomPromptUI->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	BottomPromptUI->SetRelativeLocation(FVector(0.0f, 0.0f, 10.0f));
 
 	TopPromptUI = CreateDefaultSubobject<UWidgetComponent>(TEXT("TopRopePrompt"));
 	TopPromptUI->SetupAttachment(TopRopePoint);
 	TopPromptUI->SetWidgetSpace(EWidgetSpace::Screen);
-	TopPromptUI->SetDrawSize(FVector2D(100.0f, 40.0f));
+	TopPromptUI->SetDrawSize(FVector2D(48.0f, 48.0f));
 	TopPromptUI->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	TopPromptUI->SetRelativeLocation(FVector(0.0f, 0.0f, 10.0f));
 }
@@ -182,16 +181,10 @@ void ACXRopeTraversalActor::BeginPlay()
 	BottomPromptUI->SetWorldScale3D(FVector::OneVector);
 	TopPromptUI->SetWorldScale3D(FVector::OneVector);
 
-	// 컴포넌트를 처음부터 화면에 올려 두고 위젯만 접어 둔다.
-	// 숨긴 컴포넌트를 켜는 프레임에 FadeIn을 재생하면 위젯이 화면에 붙기 전이라 첫 표시가 보이지 않는다.
 	for (UWidgetComponent* PromptUI : { BottomPromptUI.Get(), TopPromptUI.Get() })
 	{
-		PromptUI->SetVisibility(true);
 		PromptUI->InitWidget();
-		if (UUserWidget* Widget = PromptUI->GetUserWidgetObject())
-		{
-			Widget->SetVisibility(ESlateVisibility::Collapsed);
-		}
+		PromptUI->SetVisibility(false);
 	}
 }
 
@@ -233,15 +226,8 @@ void ACXRopeTraversalActor::HandleInteractionBeginOverlap(
 		return;
 	}
 
-	UWidgetComponent* PromptUI = OverlappedComponent == BottomInteractionBox.Get() ? BottomPromptUI.Get() : TopPromptUI.Get();
+	RopePromptUI = OverlappedComponent == BottomInteractionBox.Get() ? BottomPromptUI.Get() : TopPromptUI.Get();
 
-	// 반대쪽 UI가 켜져 있으면 먼저 끈다.
-	if (RopePromptUI.IsValid() && RopePromptUI.Get() != PromptUI)
-	{
-		UpdateRopeUI(Player, false);
-	}
-
-	RopePromptUI = PromptUI;
 	ObserveUIState(Player);
 	UpdateRopeUI(Player, true);
 }
@@ -282,54 +268,13 @@ void ACXRopeTraversalActor::HandleInteractionEndOverlap(
 void ACXRopeTraversalActor::UpdateRopeUI(ACXFieldPlayerCharacter* Player, bool bInRange)
 {
 	UWidgetComponent* PromptUI = RopePromptUI.Get();
-
 	if (!IsValid(Player) || !IsValid(PromptUI))
 	{
 		return;
 	}
 
-	APlayerController* PC = Cast<APlayerController>(Player->GetController());
-
-	if (!IsValid(PC) || !PC->GetLocalPlayer())
-	{
-		return;
-	}
-
-	PromptUI->SetOwnerPlayer(PC->GetLocalPlayer());
-	PromptUI->InitWidget();
-
-	UUserWidget* Widget = PromptUI->GetUserWidgetObject();
-
-	if (!IsValid(Widget) ||
-		!Widget->GetClass()->ImplementsInterface(
-			UCXFieldGrapplingUIInterface::StaticClass()))
-	{
-		return;
-	}
-
 	const bool bShow = bInRange && CanShowRopeUI(Player);
-
-	// 표시 상태가 같으면 FadeIn을 다시 시작하지 않습니다.
-	if (LastPromptWidget.Get() == Widget && bPromptShown == bShow)
-	{
-		return;
-	}
-	LastPromptWidget = Widget;
-	bPromptShown = bShow;
-
-	if (bShow || !bInRange)
-	{
-		// 표시는 위젯이 FadeIn, 범위 이탈은 위젯이 바로 숨긴다.
-		ICXFieldGrapplingUIInterface::Execute_UpdateInteractionUI(
-			Widget,
-			bShow,
-			bShow ? this : nullptr);
-		return;
-	}
-
-	// 범위 안에서 조건이 깨지면(점프·스프린트 등 어빌리티·로프 사용 중·시선 이탈) 페이드 없이 바로 숨긴다.
-	Widget->StopAllAnimations();
-	Widget->SetVisibility(ESlateVisibility::Collapsed);
+	PromptUI->SetVisibility(bShow);
 }
 
 bool ACXRopeTraversalActor::CanShowRopeUI(ACXFieldPlayerCharacter* Player)
