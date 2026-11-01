@@ -24,6 +24,7 @@ namespace CXVIGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Message_Combat_End, "Message.Combat.End", "전투 종료 알림 채널");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Message_UserData_PartyChanged, "Message.UserData.PartyChanged", "파티 데이터 변경 (UI 갱신용)");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Message_UserData_InventoryChanged, "Message.UserData.InventoryChanged", "인벤토리 변경 (UI 갱신용)");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Message_UserData_RequestAutoSave, "Message.UserData.RequestAutoSave", "자동 저장 요청 (데이터 반영이 끝난 뒤 방송)");
 
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Data_Damage, "Data.Damage", "GE에 전달하는 데미지 값(SetByCaller)");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Data_AP, "Data.AP", "GE에 전달하는 AP 값(SetByCaller)");

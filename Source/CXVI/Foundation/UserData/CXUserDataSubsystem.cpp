@@ -60,12 +60,20 @@ void UCXUserDataSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
 	Super::Initialize(Collection);
 
+	// 자동 저장 메시지 처리 바인딩
+	if (UCXGameplayMessageSubsystem* Messages = GetGameInstance()->GetSubsystem<UCXGameplayMessageSubsystem>())
+	{
+		AutoSaveRequestListener = Messages->RegisterListener(CXVIGameplayTags::Message_UserData_RequestAutoSave, this, &ThisClass::HandleAutoSaveRequested);
+	}
+
 	// 타이틀을 거치지 않고 인게임 레벨을 바로 실행해도(PIE) 데이터가 있도록 새 게임 데이터로 시작
 	StartNewGame();
 }
 
 void UCXUserDataSubsystem::Deinitialize()
 {
+	AutoSaveRequestListener.Unregister();
+
 	CharacterDefinitions.Reset();
 
 	Super::Deinitialize();
@@ -190,6 +198,14 @@ bool UCXUserDataSubsystem::GetSlotHeader(int32 InSlotIndex, FCXSaveHeader& OutHe
 double UCXUserDataSubsystem::GetPlayTimeSeconds() const
 {
 	return PlayTimeBaseSeconds + (FPlatformTime::Seconds() - SessionStartSeconds);
+}
+
+void UCXUserDataSubsystem::HandleAutoSaveRequested(const FGameplayTag& InChannel, const FCXAutoSaveRequestMessage& InMessage)
+{
+	if (false == AutoSave())
+	{
+		UE_LOG(LogCXUserData, Error, TEXT("자동 저장 요청 처리 실패"));
+	}
 }
 
 const UCXCharacterDefinition* UCXUserDataSubsystem::GetCharacterDefinition(const FPrimaryAssetId& InCharacterId) const

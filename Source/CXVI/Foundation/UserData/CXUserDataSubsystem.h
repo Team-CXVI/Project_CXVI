@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "CXUserDataTypes.h"
+#include "Foundation/GameplayMessage/CXGameplayMessageSubsystem.h"
 
 #include "CXUserDataSubsystem.generated.h"
 
@@ -19,6 +20,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogCXUserData, Log, All);
  * - 저장은 호출 시점의 UserData 스냅샷. 저장 시점 판단(전투 중 금지 등)은 호출하는 쪽 책임
  * - 레벨만 저장하고 스탯은 저장하지 않음 (정의 데이터 + 커브로 계산)
  * - 변경 시 Message.UserData.PartyChanged / InventoryChanged 방송 (UI 갱신용)
+ * - Message.UserData.RequestAutoSave를 받으면 자동 저장 (요청하는 쪽이 데이터 반영 후 방송)
  */
 UCLASS()
 class CXVI_API UCXUserDataSubsystem : public UGameInstanceSubsystem
@@ -60,6 +62,8 @@ public:
 	int32 GetCurrentSlotIndex() const { return CurrentSlotIndex; }
 
 	double GetPlayTimeSeconds() const;
+
+	void HandleAutoSaveRequested(const FGameplayTag& InChannel, const FCXAutoSaveRequestMessage& InMessage);
 
 	// Party
 public:
@@ -143,6 +147,8 @@ private:
 	double SessionStartSeconds = 0.0;
 
 	bool bSaveInProgress = false;
+
+	FCXGameplayMessageListenerHandle AutoSaveRequestListener;
 
 	// 비동기 저장 진행 중에 들어온 저장 요청 (슬롯별 1개. 실제 저장 시점의 최신 데이터로 저장)
 	TSet<int32> QueuedSaveSlotIndices;

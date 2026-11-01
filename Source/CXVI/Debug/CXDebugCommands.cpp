@@ -441,6 +441,94 @@ namespace CXUserDataDebug
 
 				UE_LOG(LogCXUserData, Display, TEXT("%s -%d -> %d"), *ItemId.ToString(), Count, Subsystem->GetItemCount(ItemId));
 			}));
+
+
+	// <SlotIndex> 파싱. 숫자가 아니면 false
+	static bool ParseSlotArg(const TArray<FString>& InArgs, int32& OutSlotIndex)
+	{
+		if (InArgs.IsEmpty() || false == InArgs[0].IsNumeric())
+		{
+			return false;
+		}
+
+		OutSlotIndex = FCString::Atoi(*InArgs[0]);
+		return true;
+	}
+
+	// CXVI.Save.Manual <SlotIndex>
+	static FAutoConsoleCommandWithWorldAndArgs SaveManualCommand(
+		TEXT("CXVI.Save.Manual"),
+		TEXT("수동 슬롯에 저장합니다. 사용법: CXVI.Save.Manual <슬롯>"),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& InArgs, UWorld* InWorld)
+			{
+				int32 SlotIndex = INDEX_NONE;
+				if (false == ParseSlotArg(InArgs, SlotIndex))
+				{
+					UE_LOG(LogCXUserData, Warning, TEXT("사용법: CXVI.Save.Manual <슬롯>"));
+					return;
+				}
+
+				UCXUserDataSubsystem* Subsystem = GetSubsystem(InWorld);
+				if (nullptr == Subsystem)
+				{
+					return;
+				}
+
+				// 슬롯 범위 검사는 SaveGame이 처리. 완료 결과는 비동기로 "Saved: <슬롯 이름>" 로그 출력
+				Subsystem->SaveGame(SlotIndex);
+			}));
+
+	// CXVI.Save.Auto
+	static FAutoConsoleCommandWithWorldAndArgs SaveAutoCommand(
+		TEXT("CXVI.Save.Auto"),
+		TEXT("자동 저장 요청 메시지를 방송합니다."),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& InArgs, UWorld* InWorld)
+			{
+				if (nullptr == GetSubsystem(InWorld))
+				{
+					return;
+				}
+
+				// 실제 요청과 같은 경로를 확인하기 위해 AutoSave를 직접 호출하지 않고 메시지로 요청
+				UCXGameplayMessageSubsystem::Get(InWorld).BroadcastMessage(CXVIGameplayTags::Message_UserData_RequestAutoSave, FCXAutoSaveRequestMessage());
+			}));
+
+	// CXVI.Save.Load <SlotIndex>
+	static FAutoConsoleCommandWithWorldAndArgs SaveLoadCommand(
+		TEXT("CXVI.Save.Load"),
+		TEXT("슬롯을 불러와 저장된 레벨로 이동합니다. 사용법: CXVI.Save.Load <슬롯> (0 = 자동 저장)"),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& InArgs, UWorld* InWorld)
+			{
+				int32 SlotIndex = INDEX_NONE;
+				if (false == ParseSlotArg(InArgs, SlotIndex))
+				{
+					UE_LOG(LogCXUserData, Warning, TEXT("사용법: CXVI.Save.Load <슬롯> (0 = 자동 저장)"));
+					return;
+				}
+
+				UCXUserDataSubsystem* Subsystem = GetSubsystem(InWorld);
+				UCXLevelTransitionSubsystem* LevelTransition = UCXLevelTransitionSubsystem::TryGet(InWorld);
+				if (nullptr == Subsystem || nullptr == LevelTransition)
+				{
+					return;
+				}
+
+				// 이동이 거부될 상태라면 데이터를 덮어쓰기 전에 중단
+				if (LevelTransition->IsTransitioning())
+				{
+					UE_LOG(LogCXUserData, Warning, TEXT("레벨 전환 중에는 불러올 수 없습니다."));
+					return;
+				}
+
+				const FCXSaveLocation& SaveLocation = Subsystem->GetSaveLocation();
+				if (false == LevelTransition->TravelToLevel(SaveLocation.LevelId, SaveLocation.EntryTag))
+				{
+					UE_LOG(LogCXUserData, Warning, TEXT("불러온 위치로 이동하지 못했습니다: %s"), *SaveLocation.LevelId.ToString());
+					return;
+				}
+
+				Subsystem->LoadGame(SlotIndex);
+			}));
 }
 
 #endif // !UE_BUILD_SHIPPING

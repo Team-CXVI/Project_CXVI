@@ -31,6 +31,7 @@ namespace CXVIGameplayTags
 	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Message_Combat_End);
 	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Message_UserData_PartyChanged);
 	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Message_UserData_InventoryChanged);
+	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Message_UserData_RequestAutoSave);
 
 	// Data
 	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_Damage);
@@ -59,4 +60,5 @@ namespace CXVIGameplayTags
 	
 	//Item
 	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Item_Type_Potion);
+
 }
