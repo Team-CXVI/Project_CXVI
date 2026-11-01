@@ -3,6 +3,7 @@
 
 #include "AbilitySystem/Abilities/Combat/CXGameplayAbilityCombatBase.h"
 #include "CXVI/Character/Combat/CXCombatCharacterBase.h"
+#include "Character/Combat/Components/CXJustTimingComponent.h"
 
 #include "CXVI/Tags/CXGameplayTags.h"
 
@@ -100,6 +101,11 @@ void UCXGameplayAbilityCombatBase::ActivateAbility(const FGameplayAbilitySpecHan
 		return;
 	}
 
+	if (UCXJustTimingComponent* Timing = Character->FindComponentByClass<UCXJustTimingComponent>())
+	{
+		Timing->ResetTiming();
+	}
+
 	Character->NotifyAttackStarted(AbilityData->HitDamageMultipilers.Num());
 
 
@@ -127,6 +133,11 @@ void UCXGameplayAbilityCombatBase::EndAbility(const FGameplayAbilitySpecHandle H
 	if (!Character)
 	{
 		return;
+	}
+
+	if (UCXJustTimingComponent* Timing = Character->FindComponentByClass<UCXJustTimingComponent>())
+	{
+		Timing->ResetTiming();
 	}
 
 	Character->NotifyBattleAbilityEnded(Handle, bWasCancelled);

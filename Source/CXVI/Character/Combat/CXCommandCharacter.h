@@ -72,6 +72,8 @@ private:
 	void HandleInputRunaway();
 	void HandleInputSkipTurn();
 
+	void HandleInputJustTiming();
+
 	void SubmitActionToPlayer(const FCXActionSelection& Selection);
 
 	void OnAimModeInput();
@@ -138,6 +140,9 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Input|MyTurn")
 	TObjectPtr<class UInputAction> RunawayAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input|EnemyTurn")
+	TObjectPtr<class UInputAction> JustTimingAction;
 
 	TWeakObjectPtr<class UEnhancedInputLocalPlayerSubsystem> InputSubsystem;
 private:
