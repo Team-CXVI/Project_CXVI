@@ -54,6 +54,14 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Hint")
 	FMargin IconPadding;
 	
+	// 아이콘 크기 (0이면 Controller Data의 브러시 크기 사용)
+	UPROPERTY(EditAnywhere, Category = "Hint", meta = (ClampMin = "0"))
+	FVector2D IconSize = FVector2D::ZeroVector;
+
+	// 설명 폰트 크기 (0이면 WBP의 LabelText에 지정한 크기 사용)
+	UPROPERTY(EditAnywhere, Category = "Hint", meta = (ClampMin = "0"))
+	float FontSize = 0.f;
+
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> LabelText;
 
