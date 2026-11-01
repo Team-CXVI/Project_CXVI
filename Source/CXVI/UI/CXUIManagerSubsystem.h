@@ -88,6 +88,11 @@ private:
 
 	void DestroyPartyViewModel();
 
+	// 포션 ViewModel 생성 후 MVVM 전역 Viewmodel Collection에 등록 / Collection에서 찾아 정리 후 등록 해제
+	void CreatePotionViewModel();
+
+	void DestroyPotionViewModel();
+
 private:
 	UPROPERTY(Transient)
 	TObjectPtr<UCXPrimaryGameLayout> PrimaryLayout;

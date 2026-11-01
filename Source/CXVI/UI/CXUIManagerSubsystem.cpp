@@ -6,6 +6,7 @@
 #include "CXUISettings.h"
 #include "CXNavigationConfig.h"
 #include "UI/ViewModel/CXPartyViewModel.h"
+#include "UI/ViewModel/CXPotionViewModel.h"
 
 #include <CommonActivatableWidget.h>
 #include <Engine/LocalPlayer.h>
@@ -252,6 +253,49 @@ void UCXUIManagerSubsystem::DestroyPartyViewModel()
 	// 구독 해제 후 Collection에서 제거 (Collection의 참조가 사라지면 GC 대상)
 	PartyViewModel->Reset();
 	Collection->RemoveAllViewModelInstance(PartyViewModel);
+}
+
+void UCXUIManagerSubsystem::CreatePotionViewModel()
+{
+	// LocalPlayer Subsystem의 Initialize 시점에는 월드가 없을 수 있으므로 GameInstance에서 직접 가져옴
+	UGameInstance* GameInstance = GetLocalPlayer() ? GetLocalPlayer()->GetGameInstance() : nullptr;
+	const UMVVMGameSubsystem* MVVMSubsystem = GameInstance ? GameInstance->GetSubsystem<UMVVMGameSubsystem>() : nullptr;
+	UMVVMViewModelCollectionObject* Collection = MVVMSubsystem ? MVVMSubsystem->GetViewModelCollection() : nullptr;
+	if (nullptr == Collection)
+	{
+		UE_LOG(LogCXUI, Error, TEXT("MVVM 전역 Viewmodel Collection이 없어 PotionViewModel을 등록하지 못했습니다."));
+		return;
+	}
+
+	UCXPotionViewModel* PotionViewModel = NewObject<UCXPotionViewModel>(GameInstance);
+	PotionViewModel->Initialize(*GameInstance);
+
+	if (false == Collection->AddViewModelInstance(UCXPotionViewModel::MakeGlobalContext(), PotionViewModel))
+	{
+		UE_LOG(LogCXUI, Error, TEXT("PotionViewModel을 전역 Viewmodel Collection에 등록하지 못했습니다."));
+		PotionViewModel->Reset();
+	}
+}
+
+void UCXUIManagerSubsystem::DestroyPotionViewModel()
+{
+	const UGameInstance* GameInstance = GetLocalPlayer() ? GetLocalPlayer()->GetGameInstance() : nullptr;
+	const UMVVMGameSubsystem* MVVMSubsystem = GameInstance ? GameInstance->GetSubsystem<UMVVMGameSubsystem>() : nullptr;
+	UMVVMViewModelCollectionObject* Collection = MVVMSubsystem ? MVVMSubsystem->GetViewModelCollection() : nullptr;
+	if (nullptr == Collection)
+	{
+		return;
+	}
+
+	UCXPotionViewModel* PotionViewModel = Cast<UCXPotionViewModel>(Collection->FindFirstViewModelInstanceOfType(UCXPotionViewModel::StaticClass()));
+	if (nullptr == PotionViewModel)
+	{
+		return;
+	}
+
+	// 구독 해제 후 Collection에서 제거 (Collection의 참조가 사라지면 GC 대상)
+	PotionViewModel->Reset();
+	Collection->RemoveAllViewModelInstance(PotionViewModel);
 }
 
 #if WITH_EDITOR
