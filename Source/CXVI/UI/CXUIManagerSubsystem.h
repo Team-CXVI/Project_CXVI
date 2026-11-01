@@ -21,6 +21,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogCXUI, Log, All);
  * 루트 레이아웃 생성/제거. 레이아웃은 맵마다 다시 생성됨
  * 화면 Push / Remove 진입점
  * 레이아웃이 있는 동안 UI 공통 IMC 적용
+ * 게임 전체 수명의 ViewModel을 생성해서 MVVM 전역 Viewmodel Collection에 등록 / 해제 (VM 보관은 Collection)
  * 
  * *화면이 스스로 닫힐 때는 RemoveWidget 보다는 개별 위젯의 DeactivateWidget()을 호출(Stack이 자동 제거)
  */
@@ -79,6 +80,13 @@ private:
 	// 새 레벨 시작 시 이전 레벨 화면이 남긴 입력 설정을 버리고 게임 기본 입력으로 초기화
 	// (CommonUI는 활성 화면이 없어져도 입력 설정을 되돌리지 않고, Action Router는 레벨이 바뀌어도 유지됨)
 	void ResetInputConfigToGameDefault() const;
+
+private:
+	// ViewModel
+	// 파티 ViewModel 생성 후 MVVM 전역 Viewmodel Collection에 등록 / Collection에서 찾아 정리 후 등록 해제
+	void CreatePartyViewModel();
+
+	void DestroyPartyViewModel();
 
 private:
 	UPROPERTY(Transient)
