@@ -4,6 +4,7 @@
 #include "CXCombatCharacterPlayer.h"
 
 #include "CXVI/Tags/CXGameplayTags.h"
+#include "Foundation/Combat/CXCollisionChannels.h"
 
 #include "CXVI/AbilitySystem/Attributes/Combat/CXCombatPlayerAttributeSet.h"
 
@@ -15,8 +16,6 @@
 #include "Components/PrimitiveComponent.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXCombatCharacterPlayer)
-
-#define CX_TRACE_COMBAT_AIM ECC_GameTraceChannel1
 
 ACXCombatCharacterPlayer::ACXCombatCharacterPlayer()
 {

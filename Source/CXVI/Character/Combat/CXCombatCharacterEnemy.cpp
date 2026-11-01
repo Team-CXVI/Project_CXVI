@@ -6,13 +6,14 @@
 #include "CXVI/AbilitySystem/Attributes/Combat/CXCombatEnemyAttributeSet.h"
 #include "Foundation/Combat/CombatMessage/CXCombatMessageData.h"
 
+#include "Foundation/Combat/CXCollisionChannels.h"
+
 #include "Components/CapsuleComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "AbilitySystemComponent.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXCombatCharacterEnemy)
 
-
-#define CX_TRACE_COMBAT_AIM ECC_GameTraceChannel1
 
 ACXCombatCharacterEnemy::ACXCombatCharacterEnemy()
 {
@@ -27,7 +28,7 @@ ACXCombatCharacterEnemy::ACXCombatCharacterEnemy()
 		GetMesh()->SetSkeletalMesh(CharacterMeshRef.Object);
 	}
 
-	GetCapsuleComponent()->SetCollisionResponseToChannel(CX_TRACE_COMBAT_AIM, ECR_Block);
+	//GetCapsuleComponent()->SetCollisionResponseToChannel(CX_TRACE_COMBAT_AIM, ECR_Block);
 
 	AttributeSet = CreateDefaultSubobject<UCXCombatEnemyAttributeSet>(TEXT("AttributeSet"));
 	ASC->AddAttributeSetSubobject<UCXCombatEnemyAttributeSet>(AttributeSet);
@@ -61,6 +62,14 @@ void ACXCombatCharacterEnemy::PostInitializeComponents()
 	ASC->SetNumericAttributeBase(AttributeSet->GetCriticalChanceAttribute(), 20.f);
 	ASC->SetNumericAttributeBase(AttributeSet->GetCriticalDamageMultiplierAttribute(), 2.f);
 	ASC->SetNumericAttributeBase(AttributeSet->GetDodgeChanceAttribute(), 30.f);
+
+	// 이동용 캡슐은 자유조준 레이를 통과시킨다.
+	GetCapsuleComponent()->SetCollisionResponseToChannel(CX_TRACE_COMBAT_AIM, ECR_Ignore);
+
+	// Mesh는 자유조준 피격 판정에 사용한다.
+	GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	GetMesh()->SetCollisionResponseToAllChannels(ECR_Ignore);
+	GetMesh()->SetCollisionResponseToChannel(CX_TRACE_COMBAT_AIM, ECR_Block);
 }
 
 void ACXCombatCharacterEnemy::SelectTargetPhase()
