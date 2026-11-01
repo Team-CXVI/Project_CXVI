@@ -3,7 +3,7 @@
 
 #include "CXVI/Character/Combat/CXCombatCharacterEnemy.h"
 
-#include "CXVI/AbilitySystem/Attributes/Combat/CXCombatAttributeSet.h"
+#include "CXVI/AbilitySystem/Attributes/Combat/CXCombatEnemyAttributeSet.h"
 #include "Foundation/Combat/CombatMessage/CXCombatMessageData.h"
 
 #include "AbilitySystemComponent.h"
@@ -23,6 +23,10 @@ ACXCombatCharacterEnemy::ACXCombatCharacterEnemy()
 		GetMesh()->SetSkeletalMesh(CharacterMeshRef.Object);
 	}
 
+	AttributeSet = CreateDefaultSubobject<UCXCombatEnemyAttributeSet>(TEXT("AttributeSet"));
+	ASC->AddAttributeSetSubobject<UCXCombatEnemyAttributeSet>(AttributeSet);
+	//CharacterAttributeSet = AttributeSet;
+
 	/*static ConstructorHelpers::FClassFinder<UAnimInstance> CharacterAnimRef(
 		TEXT("/Game/CXVI/Characters/Combat/Animation/ABP_Combat_Character.ABP_Combat_Character_C")
 	);
@@ -35,13 +39,20 @@ ACXCombatCharacterEnemy::ACXCombatCharacterEnemy()
 
 void ACXCombatCharacterEnemy::PostInitializeComponents()
 {
+	CharacterAttributeSet = AttributeSet;
+
 	Super::PostInitializeComponents();
 
 	InitializeGAS();
 
-	ASC->SetNumericAttributeBase(CharacterAttributeSet->GetMaxHealthAttribute(), 300.f);
-	ASC->SetNumericAttributeBase(CharacterAttributeSet->GetHealthAttribute(), 300.f);
-	ASC->SetNumericAttributeBase(CharacterAttributeSet->GetCombatSpeedAttribute(), 100.f);
+	ASC->SetNumericAttributeBase(AttributeSet->GetMaxHealthAttribute(), 300.f);
+	ASC->SetNumericAttributeBase(AttributeSet->GetHealthAttribute(), 300.f);
+	ASC->SetNumericAttributeBase(AttributeSet->GetCombatSpeedAttribute(), 100.f);
+	ASC->SetNumericAttributeBase(AttributeSet->GetAttackPowerAttribute(), 40.f);
+	ASC->SetNumericAttributeBase(AttributeSet->GetDefenseAttribute(), 20.f);
+	ASC->SetNumericAttributeBase(AttributeSet->GetCriticalChanceAttribute(), 20.f);
+	ASC->SetNumericAttributeBase(AttributeSet->GetCriticalDamageMultiplierAttribute(), 2.f);
+	ASC->SetNumericAttributeBase(AttributeSet->GetDodgeChanceAttribute(), 30.f);
 }
 
 void ACXCombatCharacterEnemy::SelectTargetPhase()

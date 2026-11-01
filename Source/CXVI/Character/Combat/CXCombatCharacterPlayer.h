@@ -64,6 +64,9 @@ protected:
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Combat|Skills")
 	TArray<TSubclassOf<class UGameplayAbility>> SkillAbilities;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Attribute")
+	TObjectPtr<class UCXCombatPlayerAttributeSet> AttributeSet;
 private:
 
 	bool bIsAimMode = false;

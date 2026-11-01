@@ -18,7 +18,12 @@ class CXVI_API UCXGameplayAbilityCombatBase : public UGameplayAbility
 public:
 	UCXGameplayAbilityCombatBase();
 
-	float GetManaCost() const;
+	float GetAPCost() const;
+
+	virtual void ApplyCost(const FGameplayAbilitySpecHandle Handle,
+		const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayAbilityActivationInfo ActivationInfo
+	) const override;
 
 	virtual bool CheckCost(
 		const FGameplayAbilitySpecHandle Handle,
