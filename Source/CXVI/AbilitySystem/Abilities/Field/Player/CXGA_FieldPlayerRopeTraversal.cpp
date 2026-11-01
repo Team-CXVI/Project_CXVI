@@ -43,7 +43,8 @@ bool UCXGA_FieldPlayerRopeTraversal::CanActivateAbility(
 	
 
 	return IsValid(Player)&&IsValid(Player->GetRopeTraversalTarget()) && Player->GetRopeTraversalDirection() != ECXRopeTraversalDirection::None 
-		&& Player->GetRopeTraversalTarget()->IsFacingRopePoint(Player,Player->GetRopeTraversalDirection());
+		&& Player->GetRopeTraversalTarget()->IsFacingRopePoint(Player,Player->GetRopeTraversalDirection())
+		&& Player->GetRopeTraversalTarget()->CanShowRopeUI(Player);
 }
 
 void UCXGA_FieldPlayerRopeTraversal::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)

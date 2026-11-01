@@ -4,6 +4,7 @@
 #include "CXPlayerGrapplingHookAbility.h"
 #include "CXVI/Tags/CXFieldTags.h"
 #include "CXVI/Character/Field/CXFieldPlayerCharacter.h"
+#include "CXVI/Character/Field/Interactions/CXGrapplingHookTriggerBox.h"
 
 
 #include "Animation/AnimMontage.h"
@@ -46,11 +47,15 @@ bool UCXPlayerGrapplingHookAbility::CanActivateAbility(const FGameplayAbilitySpe
     const ACXFieldPlayerCharacter* Character = ActorInfo ? Cast<ACXFieldPlayerCharacter>(ActorInfo->AvatarActor.Get()) : nullptr;
   
 
-    // 캐릭터의 존재여부, 어트리뷰트.스태미나의 여분, 그래플링 타겟 액터와 착지지점이 있는지 확인 하나라도 존재하지 않으면 실패/그리고 땅에 있는가.
+    // 캐릭터의 존재여부, 그래플링 타겟 액터와 착지지점이 있는지 확인 하나라도 존재하지 않으면 실패.
+    // 나머지(땅 위·점프·스프린트 등 어빌리티 사용 중·이동 제한·시선)는 UI 표시 조건과 같게 트리거에서 확인.
+    const ACXGrapplingHookTriggerBox* TriggerBox = IsValid(Character) ? Character->GetGrapplingTriggerBox() : nullptr;
+
     return IsValid(Character)
         && IsValid(Character->GetGrapplingTargetActor())
         && IsValid(Character->GetLandingSurfaceActor())
-        && Character->GetCharacterMovement()->IsMovingOnGround();
+        && IsValid(TriggerBox)
+        && TriggerBox->CanShowGrapplingUI(Character);
 }
 
 void UCXPlayerGrapplingHookAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
@@ -126,15 +131,6 @@ void UCXPlayerGrapplingHookAbility::ActivateAbility(const FGameplayAbilitySpecHa
 
     Movement->StopMovementImmediately();
 
-    GrapplingFacingRotation = FRotator(0.0f, Character->GetActorRotation().Yaw, 0.0f);
-    FVector ToTarget = Target->GetActorLocation() - Character->GetActorLocation();
-    ToTarget.Z = 0.0f;
-
-    if (!ToTarget.IsNearlyZero())
-    {
-        GrapplingFacingRotation = FRotator(FRotator(0.0f, ToTarget.Rotation().Yaw,0.0f));
-    }
-
     Character->HideCable();
 
     Character->LandedDelegate.AddUniqueDynamic(this, &ThisClass::HandleGrapplingLanded);
@@ -155,8 +151,8 @@ void UCXPlayerGrapplingHookAbility::ActivateAbility(const FGameplayAbilitySpecHa
     TimeoutTask->OnFinish.AddDynamic(this, &ThisClass::OnGrapplingInterrupted);
     TimeoutTask->ReadyForActivation();
 
-   
-    UpdateGrapplingFacing();
+    // 정면을 볼 때만 시작하므로 타겟 쪽으로 돌지 않고 바로 몽타주를 재생.
+    StartGrapplingMontage();
 
 }
 
@@ -192,7 +188,6 @@ void UCXPlayerGrapplingHookAbility::EndAbility(
 
     if (UWorld* World = GetWorld())
     {
-        World->GetTimerManager().ClearTimer(GrapplingFacingTimerHandle);
         World->GetTimerManager().ClearTimer(GrapplingAirHoldTimerHandle);
     }
 
@@ -289,44 +284,6 @@ void UCXPlayerGrapplingHookAbility::HandleGrapplingLanded(const FHitResult& Hit)
 
     ASC->CurrentMontageJumpToSection(FName(TEXT("Land")));
 
-}
-
-void UCXPlayerGrapplingHookAbility::UpdateGrapplingFacing()
-{
-    if (!IsActive() || GrapplingPhase != ECXGrapplingPhase::Preparing)
-    {
-        return;
-    }
-
-    UWorld* World = GetWorld();
-    ACXFieldPlayerCharacter* Character = GrapplingCharacter.Get();
-
-    if (!IsValid(World) || !IsValid(Character) ||
-        !GrapplingTarget.IsValid() || !LandingSurface.IsValid())
-    {
-        OnGrapplingInterrupted();
-        return;
-    }
-
-    const FRotator NewRotation = FMath::RInterpConstantTo(
-        Character->GetActorRotation(),
-        GrapplingFacingRotation,
-        World->GetDeltaSeconds(),
-        GrapplingTurnSpeed);
-
-    Character->SetActorRotation(NewRotation);
-
-    if (NewRotation.Equals(GrapplingFacingRotation, 1.0f))
-    {
-        World->GetTimerManager().ClearTimer(GrapplingFacingTimerHandle);
-        Character->SetActorRotation(GrapplingFacingRotation);
-        StartGrapplingMontage();
-        return;
-    }
-
-    GrapplingFacingTimerHandle =
-        World->GetTimerManager().SetTimerForNextTick(
-            this, &ThisClass::UpdateGrapplingFacing);
 }
 
 void UCXPlayerGrapplingHookAbility::OnGrapplingInterrupted()

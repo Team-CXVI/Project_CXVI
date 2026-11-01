@@ -10,6 +10,7 @@
 #include "Blueprint/UserWidget.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "TimerManager.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXGrapplingHookTriggerBox) 
 
@@ -111,6 +112,10 @@ void ACXGrapplingHookTriggerBox::ObserveUIState(ACXFieldPlayerCharacter* Player)
 	MovingBlockTagHandle = ASC->RegisterGameplayTagEvent(
 		CXVIFieldTag::State_MovingBlock, EGameplayTagEventType::NewOrRemoved)
 		.AddUObject(this, &ThisClass::HandleUIStateTagChanged);
+
+	// 시선은 이벤트가 없어서 주기적으로 확인한다.
+	GetWorldTimerManager().SetTimer(
+		UIRefreshTimerHandle, this, &ThisClass::RefreshGrapplingUI, 0.05f, true);
 }
 
 void ACXGrapplingHookTriggerBox::StopObservingUIState()
@@ -124,6 +129,7 @@ void ACXGrapplingHookTriggerBox::StopObservingUIState()
 		ASC->RegisterGameplayTagEvent(CXVIFieldTag::State_MovingBlock,
 			EGameplayTagEventType::NewOrRemoved).Remove(MovingBlockTagHandle);
 	}
+	GetWorldTimerManager().ClearTimer(UIRefreshTimerHandle);
 	ObservedPlayer.Reset();
 	ObservedASC.Reset();
 	AirborneTagHandle.Reset();
@@ -132,6 +138,14 @@ void ACXGrapplingHookTriggerBox::StopObservingUIState()
 }
 
 void ACXGrapplingHookTriggerBox::HandleUIStateTagChanged(const FGameplayTag Tag, int32 NewCount)
+{
+	if (ACXFieldPlayerCharacter* Player = ObservedPlayer.Get())
+	{
+		UpdateGrapplingUI(Player, true);
+	}
+}
+
+void ACXGrapplingHookTriggerBox::RefreshGrapplingUI()
 {
 	if (ACXFieldPlayerCharacter* Player = ObservedPlayer.Get())
 	{
@@ -179,7 +193,7 @@ void ACXGrapplingHookTriggerBox::HandleActorBeginOverlap(AActor* OverlappedActor
 	if (UAbilitySystemComponent* ASC = PlayerCharacter->GetAbilitySystemComponent())
 	{
 		// 태그 변경 보다 먼저 대상 지정.
-		PlayerCharacter->SetGrapplingTarget(GrapplingTarget.Get(), LandingSurface.Get());
+		PlayerCharacter->SetGrapplingTarget(GrapplingTarget.Get(), LandingSurface.Get(), this);
 
 		ASC->AddLooseGameplayTag(CXVIFieldTag::State_CanGrapplingHook);
 		ObserveUIState(PlayerCharacter);
@@ -215,19 +229,7 @@ void ACXGrapplingHookTriggerBox::UpdateGrapplingUI(ACXFieldPlayerCharacter* Play
 		return;
 	}
 	
-	UCharacterMovementComponent* Movement = Player->GetCharacterMovement();
-	UAbilitySystemComponent* ASC = Player->GetAbilitySystemComponent();
-
-	const bool bShow =
-		bCanInteract &&
-		IsValid(GrapplingTarget) &&
-		IsValid(LandingSurface) &&
-		IsValid(Movement) &&
-		Movement->IsMovingOnGround() &&
-		IsValid(ASC) &&
-		!ASC->HasMatchingGameplayTag(CXVIFieldTag::State_Airborne) &&
-		!ASC->HasMatchingGameplayTag(CXVIFieldTag::State_BlockInteractionUI) &&
-		!ASC->HasMatchingGameplayTag(CXVIFieldTag::State_MovingBlock);
+	const bool bShow = bCanInteract && CanShowGrapplingUI(Player);
 
 	// 컴포넌트는 켜두고, 내부 위젯이 표시/숨김을 처리합니다.
 	GrapplingUI->SetVisibility(true);
@@ -250,7 +252,39 @@ void ACXGrapplingHookTriggerBox::UpdateGrapplingUI(ACXFieldPlayerCharacter* Play
 		return;
 	}
 
-	// 범위 안에서 조건이 깨지면(그래플링 시도·점프·스프린트) 페이드 없이 바로 숨긴다.
+	// 범위 안에서 조건이 깨지면(그래플링 시도·점프·스프린트·시선 이탈) 페이드 없이 바로 숨긴다.
 	Widget->StopAllAnimations();
 	Widget->SetVisibility(ESlateVisibility::Collapsed);
+}
+
+bool ACXGrapplingHookTriggerBox::CanShowGrapplingUI(const ACXFieldPlayerCharacter* Player) const
+{
+	if (!IsValid(Player) || !IsValid(GrapplingTarget) || !IsValid(LandingSurface))
+	{
+		return false;
+	}
+
+	const UCharacterMovementComponent* Movement = Player->GetCharacterMovement();
+	const UAbilitySystemComponent* ASC = Player->GetAbilitySystemComponent();
+	if (!IsValid(Movement) || !Movement->IsMovingOnGround() || !IsValid(ASC))
+	{
+		return false;
+	}
+
+	// 공통 조건: 점프·낙하, 어빌리티 사용 중(스프린트·그래플링 등), 이동 제한.
+	if (ASC->HasMatchingGameplayTag(CXVIFieldTag::State_Airborne) ||
+		ASC->HasMatchingGameplayTag(CXVIFieldTag::State_BlockInteractionUI) ||
+		ASC->HasMatchingGameplayTag(CXVIFieldTag::State_MovingBlock))
+	{
+		return false;
+	}
+
+	// 그래플링 고유 조건: 플레이어 정면 기준 PromptFacingAngle 안에 그래플링 타겟이 있어야 한다.
+	const FVector ToTarget = (GrapplingTarget->GetActorLocation() - Player->GetActorLocation()).GetSafeNormal2D();
+	if (ToTarget.IsNearlyZero())
+	{
+		return true;
+	}
+	const FVector Forward = Player->GetActorForwardVector().GetSafeNormal2D();
+	return FVector::DotProduct(Forward, ToTarget) >= FMath::Cos(FMath::DegreesToRadians(PromptFacingAngle));
 }
