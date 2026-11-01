@@ -28,7 +28,7 @@ void UCXAnimNotifyState_TimingWindow::NotifyBegin(USkeletalMeshComponent* MeshCo
 
 	if (UCXJustTimingComponent* Timing = Owner->FindComponentByClass<UCXJustTimingComponent>())
 	{
-		Timing->BeginWindow(MeshComp, Montage, HitNumber, NotifyEvent->GetTriggerTime(), TotalDuration, SuccessStartRatio, SuccessEndRatio);
+		Timing->BeginWindow(MeshComp, Montage, HitNumber, TimingIndex, NotifyEvent->GetTriggerTime(), TotalDuration, SuccessStartRatio, SuccessEndRatio);
 	}
 }
 
@@ -45,6 +45,6 @@ void UCXAnimNotifyState_TimingWindow::NotifyEnd(USkeletalMeshComponent* MeshComp
 
 	if (UCXJustTimingComponent* Timing = Owner->FindComponentByClass<UCXJustTimingComponent>())
 	{
-		Timing->EndWindow(HitNumber);
+		Timing->EndWindow(HitNumber, TimingIndex);
 	}
 }

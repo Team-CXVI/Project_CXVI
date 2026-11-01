@@ -30,6 +30,9 @@ private:
     UPROPERTY(EditAnywhere, Category = "JustTiming", meta = (ClampMin = "1"))
     int32 HitNumber = 1;
 
+    UPROPERTY(EditAnywhere, Category = "JustTiming", meta = (ClampMin = "1"))
+    int32 TimingIndex = 1;
+
     UPROPERTY(EditAnywhere, Category = "JustTiming", meta = (ClampMin = "0.0", ClampMax = "1.0"))
     float SuccessStartRatio = 0.7f;
 

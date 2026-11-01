@@ -6,6 +6,13 @@
 #include "Engine/DataAsset.h"
 #include "CXAbilityData.generated.h"
 
+UENUM(BlueprintType)
+enum class ECXJustTimingType : uint8
+{
+	None,
+	DamageBoost
+};
+
 /**
  * 
  */
@@ -25,13 +32,19 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Cost")
 	float APCost = 0.f;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Animation|Prefix")
-	FString MontageSectionNamePrefix;
+	UPROPERTY(EditDefaultsOnly, Category = "JustTiming")
+	ECXJustTimingType JustTimingType = ECXJustTimingType::None;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Animation|MaxCombo")
-	uint32 MaxComboCount;
+	UPROPERTY(EditDefaultsOnly, Category = "JustTiming",
+		meta = (ClampMin = "1.0"))
+	float JustTimingDamageMultiplier = 1.5f;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Animation|FrameRate")
-	float FrameRate;
+	UPROPERTY(EditDefaultsOnly, Category = "JustTiming")
+	bool bJustTimingCannotBeDodged = false;
+
+	// 배열 0번은 1타, 1번은 2타.
+// 항목이 없으면 필요한 판정 수는 1개로 처리.
+	UPROPERTY(EditDefaultsOnly, Category = "JustTiming", meta = (ClampMin = "1"))
+	TArray<int32> RequiredTimingCounts;
 
 };

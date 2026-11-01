@@ -263,9 +263,25 @@ void UCXGameplayAbilityCombatBase::OnAttackEvent(FGameplayEventData Payload)
 
 	const float AttackPower = FMath::Max(0.f, SourceASC->GetNumericAttribute(UCXCombatAttributeSetBase::GetAttackPowerAttribute()));
 
-	const float Multiplier = FMath::Max(0.f, AbilityData->HitDamageMultipilers[HitIndex]);
+	const float BaseMultiplier = FMath::Max(0.f, AbilityData->HitDamageMultipilers[HitIndex]);
 
-	const float Damage = AttackPower * Multiplier;
+	bool bJustTimingSuccess = false;
+
+	if (AbilityData->JustTimingType == ECXJustTimingType::DamageBoost)
+	{
+		if (UCXJustTimingComponent* Timing = Attacker->FindComponentByClass<UCXJustTimingComponent>())
+		{
+			const int32 RequiredCount = AbilityData->RequiredTimingCounts.IsValidIndex(HitIndex)
+				? FMath::Max(1, AbilityData->RequiredTimingCounts[HitIndex]) : 1;
+
+			bJustTimingSuccess = Timing->ConsumeSuccess(HitNumber, RequiredCount);
+
+		}
+	}
+
+	const float JustMultiplier = bJustTimingSuccess ? FMath::Max(1.f, AbilityData->JustTimingDamageMultiplier) : 1.f;
+
+	const float Damage = AttackPower * BaseMultiplier * JustMultiplier;
 	if (Damage <= 0.f)
 	{
 		return;
@@ -281,17 +297,27 @@ void UCXGameplayAbilityCombatBase::OnAttackEvent(FGameplayEventData Payload)
 
 	Spec.Data->SetSetByCallerMagnitude(CXVIGameplayTags::Data_Damage, Damage);
 
+	if (bJustTimingSuccess && AbilityData->bJustTimingCannotBeDodged)
+	{
+		Spec.Data->AddDynamicAssetTag(CXVIGameplayTags::Damage_CannotBeDodged);
+	}
+
+
 	// GE적용 중 콜백이 발생해도 중복 처리 되지 않도록 먼저 기록.
 	ProcessedHitIndices.Add(HitIndex);
 
-	SourceASC->ApplyGameplayEffectSpecToTarget(*Spec.Data.Get(), TargetASC);
-
-	UE_LOG(LogTemp, Display, TEXT("%s -> %s: %d타, 배율 %.2f, 요청 데미지: %.1f"), 
+	UE_LOG(LogTemp, Display, TEXT("[공격] %s -> %s: %d타, 기본 배율 %.2f, 저스트 %s, 저스트 배율 %.2f, 요청 데미지: %.1f"), 
 		*Attacker->GetName(),
 		*Target->GetName(),
 		HitNumber,
-		Multiplier,
+		BaseMultiplier,
+		bJustTimingSuccess ? TEXT("성공") : TEXT("실패"),
+		JustMultiplier,
 		Damage);
+
+	SourceASC->ApplyGameplayEffectSpecToTarget(*Spec.Data.Get(), TargetASC);
+
+
 }
 
 bool UCXGameplayAbilityCombatBase::RegisterHitEventTask()
