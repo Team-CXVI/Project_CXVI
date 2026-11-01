@@ -29,7 +29,7 @@ public:
 	float GetMaxAP() const { return MaxAP; }
 
 	// "현재 / 최대" (HP 수치 TextBlock 바인딩용)
-	UFUNCTION(BlueprintPure, FieldNotify, Category = "CXVI|Party")
+	UFUNCTION(BlueprintPure, FieldNotify, Category = "CXVI|Combat")
 	FText GetHealthText() const;
 
 	// 0 ~ 1 (ProgressBar.Percent 바인딩용)
