@@ -55,8 +55,6 @@ protected:
 	UFUNCTION()
 	void HandleGrapplingLanded(const FHitResult& Hit);
 
-	void UpdateGrapplingFacing();
-
 protected:
 	// 애니메이션.
 	UFUNCTION()
@@ -128,15 +126,9 @@ protected:
 	// 이번 어빌리티가 이동 모드를 변경했는지.
 	bool bControlsGrapplingMovement = false;
 
-	FTimerHandle GrapplingFacingTimerHandle;
-	FRotator GrapplingFacingRotation = FRotator::ZeroRotator;
-
 	FTimerHandle GrapplingAirHoldTimerHandle;
 
 	// 착지 대기로 몽타주를 멈췄는지.
 	bool bGrapplingMontagePaused = false;
-
-	UPROPERTY(EditDefaultsOnly,Category="Grappling")
-	float GrapplingTurnSpeed = 500.0f;
 
 };

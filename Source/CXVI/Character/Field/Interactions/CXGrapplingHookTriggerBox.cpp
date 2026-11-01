@@ -2,7 +2,6 @@
 #include "CXGrapplingHookTriggerBox.h"
 #include "CXVI/Character/Field/CXFieldPlayerCharacter.h"
 #include "CXVI/Tags/CXFieldTags.h"
-#include "CXVI/UI/Field/CXFieldGrapplingUIInterface.h"
 
 #include "AbilitySystemComponent.h"
 #include "Components/ShapeComponent.h"
@@ -10,6 +9,7 @@
 #include "Blueprint/UserWidget.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "TimerManager.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXGrapplingHookTriggerBox) 
 
@@ -34,7 +34,7 @@ ACXGrapplingHookTriggerBox::ACXGrapplingHookTriggerBox(const FObjectInitializer&
 
 	GrapplingUI->SetupAttachment(GetRootComponent());
 	GrapplingUI->SetWidgetSpace(EWidgetSpace::Screen);
-	GrapplingUI->SetDrawSize(FVector2D(100.0f, 40.0f));
+	GrapplingUI->SetDrawSize(FVector2D(48.0f, 48.0f));
 	GrapplingUI->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	// 연결이 끝나기 전까지 새 UI는 숨겨 둡니다.
@@ -70,8 +70,6 @@ void ACXGrapplingHookTriggerBox::BeginPlay()
 
 	// 트리거나 타깃의 크기 때문에 UI가 확대되지 않는다.
 	GrapplingUI->SetWorldScale3D(FVector::OneVector);
-
-	GrapplingUI->InitWidget();
 }
 
 void ACXGrapplingHookTriggerBox::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -111,6 +109,10 @@ void ACXGrapplingHookTriggerBox::ObserveUIState(ACXFieldPlayerCharacter* Player)
 	MovingBlockTagHandle = ASC->RegisterGameplayTagEvent(
 		CXVIFieldTag::State_MovingBlock, EGameplayTagEventType::NewOrRemoved)
 		.AddUObject(this, &ThisClass::HandleUIStateTagChanged);
+
+	// 시선은 이벤트가 없어서 주기적으로 확인한다.
+	GetWorldTimerManager().SetTimer(
+		UIRefreshTimerHandle, this, &ThisClass::RefreshGrapplingUI, 0.05f, true);
 }
 
 void ACXGrapplingHookTriggerBox::StopObservingUIState()
@@ -124,6 +126,7 @@ void ACXGrapplingHookTriggerBox::StopObservingUIState()
 		ASC->RegisterGameplayTagEvent(CXVIFieldTag::State_MovingBlock,
 			EGameplayTagEventType::NewOrRemoved).Remove(MovingBlockTagHandle);
 	}
+	GetWorldTimerManager().ClearTimer(UIRefreshTimerHandle);
 	ObservedPlayer.Reset();
 	ObservedASC.Reset();
 	AirborneTagHandle.Reset();
@@ -132,6 +135,14 @@ void ACXGrapplingHookTriggerBox::StopObservingUIState()
 }
 
 void ACXGrapplingHookTriggerBox::HandleUIStateTagChanged(const FGameplayTag Tag, int32 NewCount)
+{
+	if (ACXFieldPlayerCharacter* Player = ObservedPlayer.Get())
+	{
+		UpdateGrapplingUI(Player, true);
+	}
+}
+
+void ACXGrapplingHookTriggerBox::RefreshGrapplingUI()
 {
 	if (ACXFieldPlayerCharacter* Player = ObservedPlayer.Get())
 	{
@@ -179,7 +190,7 @@ void ACXGrapplingHookTriggerBox::HandleActorBeginOverlap(AActor* OverlappedActor
 	if (UAbilitySystemComponent* ASC = PlayerCharacter->GetAbilitySystemComponent())
 	{
 		// 태그 변경 보다 먼저 대상 지정.
-		PlayerCharacter->SetGrapplingTarget(GrapplingTarget.Get(), LandingSurface.Get());
+		PlayerCharacter->SetGrapplingTarget(GrapplingTarget.Get(), LandingSurface.Get(), this);
 
 		ASC->AddLooseGameplayTag(CXVIFieldTag::State_CanGrapplingHook);
 		ObserveUIState(PlayerCharacter);
@@ -194,63 +205,40 @@ void ACXGrapplingHookTriggerBox::UpdateGrapplingUI(ACXFieldPlayerCharacter* Play
 	{
 		return;
 	}
-
-	APlayerController* PC =
-		Cast<APlayerController>(Player->GetController());
-
-	if (!IsValid(PC) || !PC->GetLocalPlayer())
-	{
-		return;
-	}
-
-	GrapplingUI->SetOwnerPlayer(PC->GetLocalPlayer());
-	GrapplingUI->InitWidget();
-
-	UUserWidget* Widget = GrapplingUI->GetUserWidgetObject();
-
-	if (!IsValid(Widget) ||
-		!Widget->GetClass()->ImplementsInterface(
-			UCXFieldGrapplingUIInterface::StaticClass()))
-	{
-		return;
-	}
 	
-	UCharacterMovementComponent* Movement = Player->GetCharacterMovement();
-	UAbilitySystemComponent* ASC = Player->GetAbilitySystemComponent();
+	const bool bShow = bCanInteract && CanShowGrapplingUI(Player);
 
-	const bool bShow =
-		bCanInteract &&
-		IsValid(GrapplingTarget) &&
-		IsValid(LandingSurface) &&
-		IsValid(Movement) &&
-		Movement->IsMovingOnGround() &&
-		IsValid(ASC) &&
-		!ASC->HasMatchingGameplayTag(CXVIFieldTag::State_Airborne) &&
-		!ASC->HasMatchingGameplayTag(CXVIFieldTag::State_BlockInteractionUI) &&
-		!ASC->HasMatchingGameplayTag(CXVIFieldTag::State_MovingBlock);
+	GrapplingUI->SetVisibility(bShow);
+}
 
-	// 컴포넌트는 켜두고, 내부 위젯이 표시/숨김을 처리합니다.
-	GrapplingUI->SetVisibility(true);
-
-	// 표시 상태가 같으면 FadeIn을 다시 시작하지 않습니다.
-	if (LastPromptWidget.Get() == Widget && bPromptShown == bShow)
+bool ACXGrapplingHookTriggerBox::CanShowGrapplingUI(const ACXFieldPlayerCharacter* Player) const
+{
+	if (!IsValid(Player) || !IsValid(GrapplingTarget) || !IsValid(LandingSurface))
 	{
-		return;
-	}
-	LastPromptWidget = Widget;
-	bPromptShown = bShow;
-
-	if (bShow || !bCanInteract)
-	{
-		// 표시는 위젯이 FadeIn, 범위 이탈은 위젯이 바로 숨긴다.
-		ICXFieldGrapplingUIInterface::Execute_UpdateInteractionUI(
-			Widget,
-			bShow,
-			bShow ? GrapplingTarget.Get() : nullptr);
-		return;
+		return false;
 	}
 
-	// 범위 안에서 조건이 깨지면(그래플링 시도·점프·스프린트) 페이드 없이 바로 숨긴다.
-	Widget->StopAllAnimations();
-	Widget->SetVisibility(ESlateVisibility::Collapsed);
+	const UCharacterMovementComponent* Movement = Player->GetCharacterMovement();
+	const UAbilitySystemComponent* ASC = Player->GetAbilitySystemComponent();
+	if (!IsValid(Movement) || !Movement->IsMovingOnGround() || !IsValid(ASC))
+	{
+		return false;
+	}
+
+	// 공통 조건: 점프·낙하, 어빌리티 사용 중(스프린트·그래플링 등), 이동 제한.
+	if (ASC->HasMatchingGameplayTag(CXVIFieldTag::State_Airborne) ||
+		ASC->HasMatchingGameplayTag(CXVIFieldTag::State_BlockInteractionUI) ||
+		ASC->HasMatchingGameplayTag(CXVIFieldTag::State_MovingBlock))
+	{
+		return false;
+	}
+
+	// 그래플링 고유 조건: 플레이어 정면 기준 PromptFacingAngle 안에 그래플링 타겟이 있어야 한다.
+	const FVector ToTarget = (GrapplingTarget->GetActorLocation() - Player->GetActorLocation()).GetSafeNormal2D();
+	if (ToTarget.IsNearlyZero())
+	{
+		return true;
+	}
+	const FVector Forward = Player->GetActorForwardVector().GetSafeNormal2D();
+	return FVector::DotProduct(Forward, ToTarget) >= FMath::Cos(FMath::DegreesToRadians(PromptFacingAngle));
 }
