@@ -519,45 +519,46 @@ void ACXCommandCharacter::HandleInputFire()
 
 void ACXCommandCharacter::HandleInputToggleAimMode()
 {
-	if (CombatInputMode != ECXCombatInputMode::Command
-		|| MenuState != ECommandMenuState::ActionMenu)
-	{
-		return;
-	}
+	//if (CombatInputMode != ECXCombatInputMode::Command
+	//	|| MenuState != ECommandMenuState::ActionMenu)
+	//{
+	//	return;
+	//}
 
-	ACXCombatCharacterPlayer* CommandPlayer = CommandCharacter.Get();
-	APlayerController* PlayerController = Cast<APlayerController>(GetController());
-	UWorld* World = GetWorld();
+	//ACXCombatCharacterPlayer* CommandPlayer = CommandCharacter.Get();
+	//APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	//UWorld* World = GetWorld();
 
-	if (!IsValid(CommandPlayer) || !IsValid(PlayerController) || !World)
-	{
-		return;
-	}
+	//if (!IsValid(CommandPlayer) || !IsValid(PlayerController) || !World)
+	//{
+	//	return;
+	//}
 
-	UCXCombatManagerSubsystem* CombatManager = World->GetSubsystem<UCXCombatManagerSubsystem>();
+	//UCXCombatManagerSubsystem* CombatManager = World->GetSubsystem<UCXCombatManagerSubsystem>();
 
-	/*ACXTestCombatArena* Arena = CombatManager ? CombatManager->GetCombatArena() : nullptr;
+	///*ACXTestCombatArena* Arena = CombatManager ? CombatManager->GetCombatArena() : nullptr;
 
-	if (!IsValid(Arena))
-	{
-		return;
-	}*/
+	//if (!IsValid(Arena))
+	//{
+	//	return;
+	//}*/
 
-	if (CommandPlayer->ToggleAimMode())
-	{
-		//SwitchInputMappintContext(BattleLookMappingContext);
-		PlayerController->SetViewTargetWithBlend(CommandPlayer, 0.25f);
-	}
-	else
-	{
-		//PlayerController->SetViewTargetWithBlend(Arena, 0.25f);
-		//AGASGameMode* GameMode = Cast<AGASGameMode>(GetWorld()->GetAuthGameMode());
-		//if (GameMode)
-		//{
-		//	//SwitchInputMappintContext(BattleLookMappingContext);
-		//	SetViewTargetWithBlend(GameMode->GetBattleArena(), 0.25f);
-		//}
-	}
+	//if (CommandPlayer->ToggleAimMode())
+	//{
+	//	//SwitchInputMappintContext(BattleLookMappingContext);
+	//	PlayerController->SetViewTargetWithBlend(CommandPlayer, 0.25f);
+	//}
+	//else
+	//{
+	//	//PlayerController->SetViewTargetWithBlend(Arena, 0.25f);
+	//	//AGASGameMode* GameMode = Cast<AGASGameMode>(GetWorld()->GetAuthGameMode());
+	//	//if (GameMode)
+	//	//{
+	//	//	//SwitchInputMappintContext(BattleLookMappingContext);
+	//	//	SetViewTargetWithBlend(GameMode->GetBattleArena(), 0.25f);
+	//	//}
+	//}
+	OnAimModeInput();
 }
 
 void ACXCommandCharacter::HandleInputLook(const FInputActionValue& Value )

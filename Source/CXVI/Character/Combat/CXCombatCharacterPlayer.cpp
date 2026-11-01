@@ -11,8 +11,12 @@
 #include "Camera/CameraComponent.h"
 #include "AbilitySystemComponent.h"
 #include "Abilities/GameplayAbility.h"
+#include "DrawDebugHelpers.h"
+#include "Components/PrimitiveComponent.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXCombatCharacterPlayer)
+
+#define CX_TRACE_COMBAT_AIM ECC_GameTraceChannel1
 
 ACXCombatCharacterPlayer::ACXCombatCharacterPlayer()
 {
@@ -76,11 +80,9 @@ bool ACXCombatCharacterPlayer::PerformAimTrace(FHitResult& OutHit)
 		return false;
 	}
 
-	FVector ViewLocation = Camera->GetComponentLocation();
 
 	const float TraceDistance = 10000.f;
-
-	const FVector TraceStart = ViewLocation;
+	const FVector TraceStart = Camera->GetComponentLocation();
 	const FVector TraceEnd = TraceStart + Camera->GetForwardVector() * TraceDistance;
 
 	FCollisionQueryParams QueryParams;
@@ -90,7 +92,7 @@ bool ACXCombatCharacterPlayer::PerformAimTrace(FHitResult& OutHit)
 		OutHit,
 		TraceStart,
 		TraceEnd,
-		ECC_Visibility,
+		CX_TRACE_COMBAT_AIM,
 		QueryParams
 	);
 
@@ -109,6 +111,13 @@ bool ACXCombatCharacterPlayer::PerformAimTrace(FHitResult& OutHit)
 
 	if (bHit)
 	{
+		UE_LOG(LogTemp, Display, 
+			TEXT("[자유조준] 명중: Actor=%s, Component=%s, Bone=%s"), 
+			*GetNameSafe(OutHit.GetActor()), 
+			*GetNameSafe(OutHit.GetComponent()), 
+			*OutHit.BoneName.ToString());
+
+
 		DrawDebugSphere(
 			World,
 			OutHit.ImpactPoint,
@@ -118,6 +127,10 @@ bool ACXCombatCharacterPlayer::PerformAimTrace(FHitResult& OutHit)
 			false,
 			2.f
 		);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Display, TEXT("[자유조준] 명중 대상 없음"));
 	}
 
 
@@ -156,18 +169,24 @@ void ACXCombatCharacterPlayer::FireAbility()
 
 	for (FGameplayAbilitySpec* Spec : MatchingAbilities)
 	{
-		if (!Spec || !Spec->Ability)
+		if (!Spec || !Spec->Ability || Spec->IsActive())
 		{
 			continue;
 		}
 
 
 		// 스킬 사용중인건 배열에 저장
-		CurrentActivatingHandles.Add(Spec->Handle);
+		CurrentActivatingHandles.AddUnique(Spec->Handle);
 
 		// 첫 클릭
-		ASC->TryActivateAbility(Spec->Handle);
+		if (!ASC->TryActivateAbility(Spec->Handle))
+		{
+			CurrentActivatingHandles.Remove(Spec->Handle);
 
+			UE_LOG(LogTemp, Display, TEXT("[자유조준] 발사 불가: AP 또는 사용 조건 확인"));
+		}
+		// 입력 한번에 발사 어빌리티 하나만 시도
+		break;
 	}
 }
 

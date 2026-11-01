@@ -49,11 +49,23 @@ private:
 	// 몽타주 태스크 등록 함수
 	void RegisterMontageTask();
 
+	void ApplyAimDamage(const FHitResult& Hit);
+
+	
 private:
+	UPROPERTY(EditDefaultsOnly, Category = "Damage")
+	TSubclassOf<class UGameplayEffect> AimDamageEffect;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Damage", meta = (ClampMin = "0.0"))
+	float AimDamageMultiplier = 1.f;
+
 	UPROPERTY(EditDefaultsOnly, Category = "Montage")
 	TObjectPtr<class UAnimMontage> AbilityMontage;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Montage", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UAbilityTask_PlayMontageAndWait> MontageTask;
+
+private:
+
 
 };

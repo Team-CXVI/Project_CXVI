@@ -6,9 +6,13 @@
 #include "CXVI/AbilitySystem/Attributes/Combat/CXCombatEnemyAttributeSet.h"
 #include "Foundation/Combat/CombatMessage/CXCombatMessageData.h"
 
+#include "Components/CapsuleComponent.h"
 #include "AbilitySystemComponent.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXCombatCharacterEnemy)
+
+
+#define CX_TRACE_COMBAT_AIM ECC_GameTraceChannel1
 
 ACXCombatCharacterEnemy::ACXCombatCharacterEnemy()
 {
@@ -23,8 +27,12 @@ ACXCombatCharacterEnemy::ACXCombatCharacterEnemy()
 		GetMesh()->SetSkeletalMesh(CharacterMeshRef.Object);
 	}
 
+	GetCapsuleComponent()->SetCollisionResponseToChannel(CX_TRACE_COMBAT_AIM, ECR_Block);
+
 	AttributeSet = CreateDefaultSubobject<UCXCombatEnemyAttributeSet>(TEXT("AttributeSet"));
 	ASC->AddAttributeSetSubobject<UCXCombatEnemyAttributeSet>(AttributeSet);
+
+	
 	//CharacterAttributeSet = AttributeSet;
 
 	/*static ConstructorHelpers::FClassFinder<UAnimInstance> CharacterAnimRef(
