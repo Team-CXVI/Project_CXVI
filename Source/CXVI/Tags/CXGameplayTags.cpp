@@ -41,4 +41,6 @@ namespace CXVIGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Dodge, "Character.Ability.Dodge", "캐릭터 회피 스킬");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Parry, "Character.Ability.Parry", "캐릭터 패리 스킬");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Counter_Attack, "Character.Ability.CounterAttack", "캐릭터 반격 스킬");
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Item_Type_Potion, "Item.Type.Potion", "포션 아이템 타입");
 }
