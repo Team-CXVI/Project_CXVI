@@ -51,6 +51,9 @@ public:
 	void CompleteCombatBehavior();
 	void CancelCombatAbility();
 
+	UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+
+
 	// Getter / Setter
 	FORCEINLINE bool GetIsCharacterAlive() const { return bIsCharacterAlive; }
 	FORCEINLINE bool GetIsTurn() const { return bIsTurn; }
@@ -75,8 +78,7 @@ protected:
 	virtual FOnTurnPhaseFinished& GetPhaseFinishedDelegate() override;
 
 	// Inherited via IAbilitySystemInterface
-	UAbilitySystemComponent* GetAbilitySystemComponent() const override;
-
+	
 	UFUNCTION(BlueprintImplementableEvent)
 	void CXPostInitializeComponents();
 

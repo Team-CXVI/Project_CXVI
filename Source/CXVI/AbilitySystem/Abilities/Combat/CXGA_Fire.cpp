@@ -6,7 +6,12 @@
 #include "CXVI/Tags/CXGameplayTags.h"
 
 #include "CXVI/Character/Combat/CXCombatCharacterPlayer.h"
+#include "Character/Combat/CXCombatCharacterEnemy.h"
+#include "Character/Combat/Components/CXWeakPointComponent.h"
+#include "AbilitySystem/Attributes/Combat/CXCombatAttributeSetBase.h"
 
+#include "AbilitySystemComponent.h"
+#include "GameplayEffect.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXGA_Fire)
@@ -23,44 +28,63 @@ UCXGA_Fire::UCXGA_Fire()
 
 bool UCXGA_Fire::CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags, OUT FGameplayTagContainer* OptionalRelevantTags) const
 {
-	bool Result = Super::CanActivateAbility(Handle, ActorInfo, SourceTags, TargetTags, OptionalRelevantTags);
-
-	ACXCombatCharacterPlayer* CombatCharacter = Cast<ACXCombatCharacterPlayer>(ActorInfo->AvatarActor.Get());
-	if (!CombatCharacter)
+	if (!ActorInfo || !CostGameplayEffectClass)
 	{
-		Result = false;
-		return Result;
+		return false;
 	}
 
-	Result = CombatCharacter->GetIsAimMode();
+	// 비용 GE적용후 AP가 음수가 되는지 등을 엔진에서 검사
+	if (!Super::CanActivateAbility(Handle, ActorInfo, SourceTags, TargetTags, OptionalRelevantTags))
+	{
+		return false;
+	}
 
-	return Result;
+	ACXCombatCharacterPlayer* Character = Cast<ACXCombatCharacterPlayer>(ActorInfo->AvatarActor.Get());
+	
+	return IsValid(Character) && Character->GetIsCharacterAlive() && Character->GetIsTurn() && Character->GetIsAimMode();
 }
 
 void UCXGA_Fire::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
-	if (!AbilityMontage)
+	ACXCombatCharacterPlayer* Character = Cast<ACXCombatCharacterPlayer>(ActorInfo->AvatarActor.Get());
+
+	if (!IsValid(Character) || !AbilityMontage || !AimDamageEffect)
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true); // 마지막 인자 true -> 취소 됐다
 		return;
 	}
 
-	RegisterMontageTask();
-
-	ACXCombatCharacterPlayer* CombatCharacter = Cast<ACXCombatCharacterPlayer>(ActorInfo->AvatarActor.Get());
-	if (!CombatCharacter)
+	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
+		UE_LOG(LogTemp, Display, TEXT("[자유조준] 발사 실패: 비용 또는 쿨다운 확인"));
+
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
 
-	FHitResult Hit;
+	UE_LOG(LogTemp, Display, TEXT("[자유조준] 발사 확정"));
 
-	CombatCharacter->PerformAimTrace(Hit);
+	FHitResult Hit;
+	
+	
+	if (Character->PerformAimTrace(Hit))
+	{
+		ApplyAimDamage(Hit);
+	}
+
+	RegisterMontageTask();
 }
 
 void UCXGA_Fire::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
 {
+	ACXCombatCharacterPlayer* Character = ActorInfo ? Cast<ACXCombatCharacterPlayer>(ActorInfo->AvatarActor.Get()) : nullptr;
+
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+
+	if (IsValid(Character))
+	{
+		Character->NotifyBattleAbilityEnded(Handle, bWasCancelled);
+	}
 }
 
 void UCXGA_Fire::OnAttackCompleted()
@@ -98,4 +122,83 @@ void UCXGA_Fire::RegisterMontageTask()
 
 	// 함수 연결 후 Task 실행
 	MontageTask->ReadyForActivation();
+}
+
+void UCXGA_Fire::ApplyAimDamage(const FHitResult& Hit)
+{
+	ACXCombatCharacterPlayer* Attacker = Cast<ACXCombatCharacterPlayer>(GetAvatarActorFromActorInfo());
+
+	ACXCombatCharacterEnemy* Target = Cast<ACXCombatCharacterEnemy>(Hit.GetActor());
+
+	if (!IsValid(Attacker) || !Attacker->HasAuthority() ||
+		!IsValid(Target) || !Target->GetIsCharacterAlive() || !AimDamageEffect)
+	{
+		return;
+	}
+
+	UAbilitySystemComponent* SourceASC = GetAbilitySystemComponentFromActorInfo();
+
+	UAbilitySystemComponent* TargetASC = Target->GetAbilitySystemComponent();
+
+	if (!IsValid(SourceASC) || !IsValid(TargetASC))
+	{
+		return;
+	}
+
+	// 맞힌 컴포넌트가 아직 파괴되지 않은 약점인지 확인
+	UCXWeakPointComponent* WeakPoint = Cast<UCXWeakPointComponent>(Hit.GetComponent());
+
+	const bool bWeakPointHit = IsValid(WeakPoint) && WeakPoint->GetOwner() == Target && !WeakPoint->IsBroken();
+
+	const float WeakPointMultiplier = bWeakPointHit ? WeakPoint->GetDamageMultiplier() : 1.f;
+
+	const float AttackPower = FMath::Max(0.f, SourceASC->GetNumericAttribute(UCXCombatAttributeSetBase::GetAttackPowerAttribute()));
+
+	const float Damage = AttackPower * FMath::Max(0.f, AimDamageMultiplier) * WeakPointMultiplier;
+
+	if (Damage <= 0.f)
+	{
+		return;
+	}
+
+	// 공격자 정보와 레이 명중 정보를 피해 GE에 전달
+	FGameplayEffectContextHandle Context = SourceASC->MakeEffectContext();
+	Context.AddHitResult(Hit);
+
+	FGameplayEffectSpecHandle Spec = SourceASC->MakeOutgoingSpec(AimDamageEffect, GetAbilityLevel(), Context);
+
+	if (!Spec.IsValid())
+	{
+		return;
+	}
+
+	Spec.Data->SetSetByCallerMagnitude(CXVIGameplayTags::Data_Damage, Damage);
+	Spec.Data->AddDynamicAssetTag(CXVIGameplayTags::Damage_CannotBeDodged);
+
+	const float HealthBefore = TargetASC->GetNumericAttribute(UCXCombatAttributeSetBase::GetHealthAttribute());
+
+	UE_LOG(LogTemp, Display,
+		TEXT("[자유조준] %s -> %s, 약점배율 %.1f, 요청 피해 %.1f"),
+		*Attacker->GetName(),
+		*Target->GetName(),
+		WeakPointMultiplier,
+		Damage);
+
+	SourceASC->ApplyGameplayEffectSpecToTarget(*Spec.Data.Get(), TargetASC);
+
+	if (!bWeakPointHit || !IsValid(WeakPoint) || !IsValid(TargetASC))
+	{
+		return;
+	}
+
+	const float HealthAfter = TargetASC->GetNumericAttribute(UCXCombatAttributeSetBase::GetHealthAttribute());
+
+	if (HealthAfter < HealthBefore)
+	{
+		WeakPoint->TryBreak();
+	}
+	else
+	{
+		UE_LOG(LogTemp, Display, TEXT("[약점] 실제 체력 감소가 없어 약점 유지"));
+	}
 }
