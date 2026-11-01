@@ -7,6 +7,7 @@
 
 #include "CXVI/Character/Combat/CXCombatCharacterPlayer.h"
 #include "Character/Combat/CXCombatCharacterEnemy.h"
+#include "Character/Combat/Components/CXWeakPointComponent.h"
 #include "AbilitySystem/Attributes/Combat/CXCombatAttributeSetBase.h"
 
 #include "AbilitySystemComponent.h"
@@ -144,9 +145,16 @@ void UCXGA_Fire::ApplyAimDamage(const FHitResult& Hit)
 		return;
 	}
 
+	// 맞힌 컴포넌트가 아직 파괴되지 않은 약점인지 확인
+	UCXWeakPointComponent* WeakPoint = Cast<UCXWeakPointComponent>(Hit.GetComponent());
+
+	const bool bWeakPointHit = IsValid(WeakPoint) && WeakPoint->GetOwner() == Target && !WeakPoint->IsBroken();
+
+	const float WeakPointMultiplier = bWeakPointHit ? WeakPoint->GetDamageMultiplier() : 1.f;
+
 	const float AttackPower = FMath::Max(0.f, SourceASC->GetNumericAttribute(UCXCombatAttributeSetBase::GetAttackPowerAttribute()));
 
-	const float Damage = AttackPower * FMath::Max(0.f, AimDamageMultiplier);
+	const float Damage = AttackPower * FMath::Max(0.f, AimDamageMultiplier) * WeakPointMultiplier;
 
 	if (Damage <= 0.f)
 	{
@@ -165,12 +173,32 @@ void UCXGA_Fire::ApplyAimDamage(const FHitResult& Hit)
 	}
 
 	Spec.Data->SetSetByCallerMagnitude(CXVIGameplayTags::Data_Damage, Damage);
+	Spec.Data->AddDynamicAssetTag(CXVIGameplayTags::Damage_CannotBeDodged);
+
+	const float HealthBefore = TargetASC->GetNumericAttribute(UCXCombatAttributeSetBase::GetHealthAttribute());
 
 	UE_LOG(LogTemp, Display,
-		TEXT("[자유조준] %s -> %s, 요청 피해 %.1f"),
+		TEXT("[자유조준] %s -> %s, 약점배율 %.1f, 요청 피해 %.1f"),
 		*Attacker->GetName(),
 		*Target->GetName(),
+		WeakPointMultiplier,
 		Damage);
 
 	SourceASC->ApplyGameplayEffectSpecToTarget(*Spec.Data.Get(), TargetASC);
+
+	if (!bWeakPointHit || !IsValid(WeakPoint) || !IsValid(TargetASC))
+	{
+		return;
+	}
+
+	const float HealthAfter = TargetASC->GetNumericAttribute(UCXCombatAttributeSetBase::GetHealthAttribute());
+
+	if (HealthAfter < HealthBefore)
+	{
+		WeakPoint->TryBreak();
+	}
+	else
+	{
+		UE_LOG(LogTemp, Display, TEXT("[약점] 실제 체력 감소가 없어 약점 유지"));
+	}
 }

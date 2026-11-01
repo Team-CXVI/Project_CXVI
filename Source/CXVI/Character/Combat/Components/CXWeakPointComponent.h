@@ -38,7 +38,7 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Combat|WeakPoint")
 	FName WeakPointId = NAME_None;
 
-	UPROPERTY(EditAnywhere, Category = "Combat|WeakPoint", meta = (Config = "1.0"))
+	UPROPERTY(EditAnywhere, Category = "Combat|WeakPoint", meta = (ClampMin = "1.0"))
 	float DamageMultiplier = 3.f;
 
 	// 이후 파괴 처리에서 적용할 그로기 지속 피해 GE목록
