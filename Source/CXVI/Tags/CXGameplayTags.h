@@ -54,6 +54,9 @@ namespace CXVIGameplayTags
 	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Parry);
 	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Counter_Attack);
 
+	// Damage Type
+	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Damage_CannotBeDodged);
+	
 	//Item
 	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Item_Type_Potion);
 }

@@ -3,6 +3,8 @@
 
 #include "AbilitySystem/Attributes/Combat/CXCombatEnemyAttributeSet.h"
 
+#include "Tags/CXGameplayTags.h"
+
 #include "GameplayEffectExtension.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXCombatEnemyAttributeSet)
@@ -40,6 +42,15 @@ void UCXCombatEnemyAttributeSet::PostGameplayEffectExecute(const FGameplayEffect
 bool UCXCombatEnemyAttributeSet::TryAvoidDamage(const FGameplayEffectModCallbackData& Data, float IncomingDamage)
 {
 	bool Result = Super::TryAvoidDamage(Data, IncomingDamage);
+
+	FGameplayTagContainer DamageTags;
+	Data.EffectSpec.GetAllAssetTags(DamageTags);
+
+	// 회피 불가 피해는 적의 확률 회피 검사를 건너뛴다.
+	if (DamageTags.HasTag(CXVIGameplayTags::Damage_CannotBeDodged))
+	{
+		return Result;
+	}
 
 	const float TempDodgeChance = FMath::Clamp(GetDodgeChance(), 0.f, 100.f);
 
