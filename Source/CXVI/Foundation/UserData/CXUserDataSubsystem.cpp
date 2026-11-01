@@ -283,6 +283,19 @@ void UCXUserDataSubsystem::RemoveDefeatedSpawnIds(const TArray<FName>& InSpawnId
 	}
 }
 
+bool UCXUserDataSubsystem::IsItemCollected(FName InSpawnId) const
+{
+	return UserData.FieldData.CollectedItemSpawnIds.Contains(InSpawnId);
+}
+
+void UCXUserDataSubsystem::MarkItemCollected(FName InSpawnId)
+{
+	if (false == InSpawnId.IsNone())
+	{
+		UserData.FieldData.CollectedItemSpawnIds.Add(InSpawnId);
+	}
+}
+
 bool UCXUserDataSubsystem::SaveToSlotInternal(int32 InSlotIndex)
 {
 	// 진행 중인 저장이 끝나면 슬롯별로 다시 저장 (다른 슬롯 요청끼리 덮어쓰지 않음)

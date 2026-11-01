@@ -127,6 +127,10 @@ public:
 	// 처치된 적의 SpawnId (휴식으로 리젠되는 적은 휴식 시 제거됨)
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UserData")
 	TSet<FName> DefeatedSpawnIds;
+
+	// 획득한 필드 아이템의 SpawnId (한 번 얻으면 다시 생성되지 않음).
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UserData")
+	TSet<FName> CollectedItemSpawnIds;
 };
 
 // 세이브 대상 전체
