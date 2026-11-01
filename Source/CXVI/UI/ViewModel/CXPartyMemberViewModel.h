@@ -24,6 +24,10 @@ class CXVI_API UCXPartyMemberViewModel : public UMVVMViewModelBase
 public:
 	void Refresh(const FCXPartyMemberState& InMember, const UCXCharacterDefinition* InDefinition, float InMaxHealth);
 
+	// "현재 / 최대" (HP 수치 TextBlock 바인딩용)
+	UFUNCTION(BlueprintPure, FieldNotify, Category = "CXVI|Party")
+	FText GetHealthText() const;
+
 	// 0 ~ 1 (ProgressBar.Percent 바인딩용)
 	UFUNCTION(BlueprintPure, FieldNotify, Category = "CXVI|Party")
 	float GetHealthPercent() const;

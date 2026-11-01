@@ -54,6 +54,11 @@ void UCXCombatantViewModel::Unbind()
 	BoundASC.Reset();
 }
 
+FText UCXCombatantViewModel::GetHealthText() const
+{
+	return FText::Format(INVTEXT("{0} / {1}"), FText::AsNumber(FMath::RoundToInt(Health)), FText::AsNumber(FMath::RoundToInt(MaxHealth)));
+}
+
 float UCXCombatantViewModel::GetHealthPercent() const
 {
 	return MaxHealth > 0.f ? FMath::Clamp(Health / MaxHealth, 0.f, 1.f) : 0.f;
@@ -88,6 +93,7 @@ void UCXCombatantViewModel::SetHealth(float InValue)
 	if (UE_MVVM_SET_PROPERTY_VALUE(Health, InValue))
 	{
 		UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetHealthPercent);
+		UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetHealthText);
 		UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(IsDead);
 	}
 }
@@ -97,6 +103,7 @@ void UCXCombatantViewModel::SetMaxHealth(float InValue)
 	if (UE_MVVM_SET_PROPERTY_VALUE(MaxHealth, InValue))
 	{
 		UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetHealthPercent);
+		UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetHealthText);
 		UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(IsDead);
 	}
 }
