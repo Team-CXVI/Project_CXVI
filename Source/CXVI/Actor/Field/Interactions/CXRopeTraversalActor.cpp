@@ -277,7 +277,7 @@ void ACXRopeTraversalActor::UpdateRopeUI(ACXFieldPlayerCharacter* Player, bool b
 	PromptUI->SetVisibility(bShow);
 }
 
-bool ACXRopeTraversalActor::CanShowRopeUI(ACXFieldPlayerCharacter* Player)
+bool ACXRopeTraversalActor::CanShowRopeUI(const ACXFieldPlayerCharacter* Player)
 {
 	const UCharacterMovementComponent* Movement = Player->GetCharacterMovement();
 	const UAbilitySystemComponent* ASC = Player->GetAbilitySystemComponent();

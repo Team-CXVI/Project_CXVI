@@ -134,7 +134,7 @@ protected:
 	TObjectPtr<class UWidgetComponent> HpBar;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Attribute")
-	TObjectPtr<class UCXCombatAttributeSet> CharacterAttributeSet;
+	TObjectPtr<class UCXCombatAttributeSetBase> CharacterAttributeSet;
 
 	// Gameplay Effect
 	UPROPERTY(EditDefaultsOnly, Category = "Combat|Mana")

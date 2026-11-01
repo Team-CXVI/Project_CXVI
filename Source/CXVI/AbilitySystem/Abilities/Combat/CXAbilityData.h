@@ -22,8 +22,8 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Damage", meta = (ClampMin = "0.0"))
 	TArray<float> HitDamageMultipilers;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Cost", meta = (ClampMin = "0.0"))
-	float ManaCost = 0.f;
+	UPROPERTY(EditDefaultsOnly, Category = "Cost")
+	float APCost = 0.f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Animation|Prefix")
 	FString MontageSectionNamePrefix;

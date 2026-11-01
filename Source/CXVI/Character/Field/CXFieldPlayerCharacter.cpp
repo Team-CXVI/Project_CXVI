@@ -4,6 +4,7 @@
 #include "InputActionValue.h"
 #include "CXVI/Tags/CXFieldTags.h"
 #include "CXVI/Actor/Field/Interactions/CXExpeditionFlag.h"
+#include "CXVI/Character/Field/Interactions/CXGrapplingHookTriggerBox.h"
 
 #include "Components/SkeletalMeshComponent.h"
 #include "EnhancedInputSubsystems.h"
@@ -168,11 +169,12 @@ void ACXFieldPlayerCharacter::HandleInteractionUIAbilityEnded(UGameplayAbility* 
 	}
 }
 
-void ACXFieldPlayerCharacter::SetGrapplingTarget(AActor* TargetActor, AActor* LandingActor)
+void ACXFieldPlayerCharacter::SetGrapplingTarget(AActor* TargetActor, AActor* LandingActor, ACXGrapplingHookTriggerBox* TriggerBox)
 {
 	// 그래플링 대상과 착지 위치를 저장한다.
 	CurrentGrapplingTarget = TargetActor;
 	CurrentLandingSurface = IsValid(TargetActor) ? LandingActor : nullptr;
+	CurrentGrapplingTrigger = IsValid(TargetActor) ? TriggerBox : nullptr;
 }
 
 void ACXFieldPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -318,6 +320,12 @@ void ACXFieldPlayerCharacter::Look(const FInputActionValue& InValue)
 
 void ACXFieldPlayerCharacter::StartUseRope()
 {
+	if (IsCrouched())
+	{
+		UnCrouch();
+		GetCharacterMovement()->UnCrouch(false);
+	}
+
 	if (IsValid(ASC) && RopeTraversalAbilityHandle.IsValid())
 	{
 		ASC->TryActivateAbility(RopeTraversalAbilityHandle);
@@ -436,7 +444,8 @@ void ACXFieldPlayerCharacter::Interactive()
 
 void ACXFieldPlayerCharacter::AttackFunc()
 {
-	if (!IsValid(ASC))
+	// 공격 어빌리티는 MovingBlock으로 막히지 않아 메뉴 중에는 따로 막는다.
+	if (!IsValid(ASC) || ASC->HasMatchingGameplayTag(CXVIFieldTag::State_InMenu))
 	{
 		return;
 	}
@@ -455,6 +464,13 @@ void ACXFieldPlayerCharacter::AttackFunc()
 
 void ACXFieldPlayerCharacter::StartJumpOrParkour()
 {
+	// 임시: 메뉴 중에는 점프 키로 메뉴를 닫는다. ESC·나가기 버튼이 생기면 제거.
+	if (ASC && ASC->HasMatchingGameplayTag(CXVIFieldTag::State_InMenu))
+	{
+		ExitFlagMenu();
+		return;
+	}
+
 	if (bJumpOrParkourInputHeld)
 	{
 		return;
@@ -577,17 +593,52 @@ void ACXFieldPlayerCharacter::StartUseFlag()
 		return;
 	}
 
+	if (GetCharacterMovement()->IsCrouching())
+	{
+		UnCrouch();
+	}
+
 	UE_LOG(
 		LogTemp,
 		Log,
 		TEXT("[깃발 휴식] 접근한 깃발: %s"),
 		*GetNameSafe(Flag));
 
-	// 임시: 앉기 몽타주 대신 바로 휴식 처리하고 메뉴 태그를 붙인다.
-	// 카메라 연출·메뉴가 들어오면 이 자리에서 시작하고, 메뉴가 닫힐 때 태그를 뗀다.
+	// 임시: 앉기 몽타주 대신 바로 휴식 처리하고 메뉴 구간에 들어간다.
 	ActiveExpeditionFlag = Flag;
-	ASC->AddLooseGameplayTag(CXVIFieldTag::State_InMenu);
 	Flag->CompleteFlag();
+	EnterFlagMenu();
+}
+
+void ACXFieldPlayerCharacter::EnterFlagMenu()
+{
+	if (!IsValid(ASC) || ASC->HasMatchingGameplayTag(CXVIFieldTag::State_InMenu))
+	{
+		return;
+	}
+
+	// ===== 메뉴 진입 구간 =====
+	// TODO(메뉴): 카메라 연출과 휴식·강화 메뉴 위젯 열기는 이 자리에서 시작한다.
+
+	// 메뉴 동안 깃발 UI를 숨기고 이동·점프·스프린트·다른 상호작용을 막는다.
+	ASC->AddLooseGameplayTag(CXVIFieldTag::State_InMenu);
+	ASC->AddLooseGameplayTag(CXVIFieldTag::State_MovingBlock);
+	GetCharacterMovement()->StopMovementImmediately();
+}
+
+void ACXFieldPlayerCharacter::ExitFlagMenu()
+{
+	if (!IsValid(ASC) || !ASC->HasMatchingGameplayTag(CXVIFieldTag::State_InMenu))
+	{
+		return;
+	}
+
+	// ===== 메뉴 종료 구간 =====
+	// TODO(메뉴): 메뉴 위젯 닫기·카메라 복귀는 이 자리에서 처리한다.
+
+	// 진입 때 붙인 태그만 하나씩 뗀다 (다른 어빌리티가 붙인 MovingBlock은 남는다).
+	ASC->RemoveLooseGameplayTag(CXVIFieldTag::State_InMenu);
+	ASC->RemoveLooseGameplayTag(CXVIFieldTag::State_MovingBlock);
 }
 
 void ACXFieldPlayerCharacter::OnFlagMontageChanged(UAnimMontage* Montage, FName SectionName, bool bLooped)
@@ -649,6 +700,11 @@ void ACXFieldPlayerCharacter::GrapplingHook()
 	if (!IsValid(ASC) || !GrapplingHookHandle.IsValid())
 	{
 		return;
+	}
+
+	if (GetCharacterMovement()->IsCrouching())
+	{
+		UnCrouch();
 	}
 
 	if (ASC->HasMatchingGameplayTag(CXVIFieldTag::State_CanGrapplingHook)

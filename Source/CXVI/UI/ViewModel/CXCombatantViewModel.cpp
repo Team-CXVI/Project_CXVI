@@ -3,7 +3,8 @@
 
 #include "UI/ViewModel/CXCombatantViewModel.h"
 
-#include "AbilitySystem/Attributes/Combat/CXCombatAttributeSet.h"
+#include "AbilitySystem/Attributes/Combat/CXCombatAttributeSetBase.h"
+#include "AbilitySystem/Attributes/Combat/CXCombatPlayerAttributeSet.h"
 
 #include <AbilitySystemComponent.h>
 
@@ -13,6 +14,11 @@ void UCXCombatantViewModel::Bind(UAbilitySystemComponent* InASC)
 {
 	Unbind();
 
+	SetMaxHealth(0.f);
+	SetHealth(0.f);
+	SetMaxAP(0.f);
+	SetAP(0.f);
+
 	if (nullptr == InASC)
 	{
 		return;
@@ -20,10 +26,18 @@ void UCXCombatantViewModel::Bind(UAbilitySystemComponent* InASC)
 
 	BoundASC = InASC;
 
-	BindAttribute(UCXCombatAttributeSet::GetMaxHealthAttribute(), &ThisClass::SetMaxHealth);
-	BindAttribute(UCXCombatAttributeSet::GetHealthAttribute(), &ThisClass::SetHealth);
-	BindAttribute(UCXCombatAttributeSet::GetMaxManaAttribute(), &ThisClass::SetMaxAP);
-	BindAttribute(UCXCombatAttributeSet::GetManaAttribute(), &ThisClass::SetAP);
+	if (InASC->GetSet<UCXCombatAttributeSetBase>())
+	{
+		BindAttribute(UCXCombatAttributeSetBase::GetMaxHealthAttribute(), &ThisClass::SetMaxHealth);
+		BindAttribute(UCXCombatAttributeSetBase::GetHealthAttribute(), &ThisClass::SetHealth);
+	}
+
+	if (InASC->GetSet<UCXCombatPlayerAttributeSet>())
+	{
+		BindAttribute(UCXCombatPlayerAttributeSet::GetMaxAPAttribute(), &ThisClass::SetMaxAP);
+		BindAttribute(UCXCombatPlayerAttributeSet::GetAPAttribute(), &ThisClass::SetAP);
+	}
+	
 }
 
 void UCXCombatantViewModel::Unbind()

@@ -39,6 +39,8 @@ public:
 	bool GetApproachPoint(ECXRopeTraversalDirection Direction, FVector& OutApproach)const;
 
 	bool IsFacingRopePoint(const AActor* Player, ECXRopeTraversalDirection Direciton);
+
+	bool CanShowRopeUI(const ACXFieldPlayerCharacter* Player);
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -66,7 +68,7 @@ protected:
 protected:
 	// bInRange가 false면 범위 이탈로 보고 위젯에 숨김을 요청하고, 범위 안의 숨김 조건은 여기서 즉시 숨긴다.
 	void UpdateRopeUI(ACXFieldPlayerCharacter* Player, bool bInRange);
-	bool CanShowRopeUI(ACXFieldPlayerCharacter* Player);
+	
 	void ObserveUIState(ACXFieldPlayerCharacter* Player);
 	void StopObservingUIState();
 	void HandleUIStateTagChanged(const FGameplayTag Tag, int32 NewCount);
