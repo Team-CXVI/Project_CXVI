@@ -8,6 +8,7 @@
 #include "CXCharacterDefinition.generated.h"
 
 class ACXCombatCharacterBase;
+class UTexture2D;
 
 /**
  * 캐릭터 정의 (파티원 1명)
@@ -28,6 +29,10 @@ public:
 public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character")
 	FText DisplayName;
+
+	// UI에 표시할 초상화 (필드 HUD 파티 상태)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI")
+	TSoftObjectPtr<UTexture2D> Portrait;
 
 	// 전투에서 생성할 캐릭터 BP
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat")
