@@ -321,6 +321,16 @@ void ACXCombatCharacterPlayer::SelectTargetPhase()
 	// 대상 확정 전이므로 응답하지 않음.
 }
 
+bool ACXCombatCharacterPlayer::ActivateHealingItem()
+{
+	return false;
+}
+
+bool ACXCombatCharacterPlayer::ShouldApproachTarget() const
+{
+	return false;
+}
+
 //void ACXCombatCharacterPlayer::ActionPhase()
 //{
 //	const FCXActionSelection Action = GetPendingAction();

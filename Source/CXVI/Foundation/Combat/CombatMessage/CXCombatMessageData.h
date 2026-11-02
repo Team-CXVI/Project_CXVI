@@ -82,7 +82,15 @@ struct FCXActionSelection
 	int32 SlotIndex = INDEX_NONE;
 	ECXTargetTeam TargetTeam = ECXTargetTeam::Enemy;
 
-	void Clear() { Type = ECXActionType::None; SlotIndex = INDEX_NONE; TargetTeam = ECXTargetTeam::Enemy; }
+	FName ItemId = NAME_None;
+
+	void Clear() 
+	{ 
+		Type = ECXActionType::None; 
+		SlotIndex = INDEX_NONE; 
+		TargetTeam = ECXTargetTeam::Enemy; 
+		ItemId = NAME_None;
+	}
 };
 
 /** Message.Combat.End 채널 메시지 (전투 -> 전투 종료를 기다리는 쪽) */

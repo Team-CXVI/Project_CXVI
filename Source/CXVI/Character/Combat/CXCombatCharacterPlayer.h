@@ -52,6 +52,10 @@ protected:
 	virtual void SelectTargetPhase() override;
 	//virtual void ActionPhase() override;
 
+	bool ActivateHealingItem();
+
+	virtual bool ShouldApproachTarget() const override;
+
 
 protected:
 	UPROPERTY(VisibleAnywhere, Category = "Camera")

@@ -28,6 +28,7 @@ namespace CXVIGameplayTags
 
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Data_Damage, "Data.Damage", "GE에 전달하는 데미지 값(SetByCaller)");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Data_AP, "Data.AP", "GE에 전달하는 AP 값(SetByCaller)");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Data_Heal, "Data.Heal", "GE에 전달하는 HP 회복량(SetByCaller)");
 
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(UI_Layer_Game, "UI.Layer.Game", "HUD 레이어 (필드/전투 HUD)");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(UI_Layer_GameMenu, "UI.Layer.GameMenu", "게임 내 메뉴 레이어 (인벤토리, 장비, 스킬)");

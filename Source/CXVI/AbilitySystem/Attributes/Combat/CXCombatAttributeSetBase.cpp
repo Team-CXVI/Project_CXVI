@@ -52,6 +52,12 @@ void UCXCombatAttributeSetBase::PreAttributeBaseChange(const FGameplayAttribute&
 {
 	Super::PreAttributeBaseChange(Attribute, NewValue);
 
+	if (Attribute == GetHealthAttribute())
+	{
+		// Instant GE로 바뀌는 기준 체력도 최대 체력을 넘지 않도록 제한.
+		NewValue = FMath::Clamp(NewValue, 0.f, GetMaxHealth());
+	}
+
 }
 
 void UCXCombatAttributeSetBase::PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data)
@@ -101,6 +107,16 @@ void UCXCombatAttributeSetBase::PostGameplayEffectExecute(const FGameplayEffectM
 		{
 			OnOutOfHealth.Broadcast(Instigator);
 		}
+	}
+	else if (Data.EvaluatedData.Attribute == GetHealthAttribute())
+	{
+		// 체력을 직접 변경하는 GE의 최종 결과 제한.
+		SetHealth(FMath::Clamp(GetHealth(), 0.f, GetMaxHealth()));
+
+		UE_LOG(LogTemp, Display, TEXT("[체력 GE] %s: HP %.1f / %.1f"),
+			*GetNameSafe(GetOwningActor()),
+			GetHealth(),
+			GetMaxHealth());
 	}
 
 }

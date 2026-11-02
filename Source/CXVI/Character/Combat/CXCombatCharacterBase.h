@@ -65,6 +65,7 @@ public:
 	FORCEINLINE bool GetCounterAttackPending() const { return bCounterAttackPending; }
 	FORCEINLINE void SetCounterAttackPending(bool NewValue) { bCounterAttackPending = NewValue; }
 	FORCEINLINE bool GetWaitingForReturn() const { return bWaitingForReturn; }
+	FORCEINLINE FName GetSelectedItemId() const { return PendingAction.ItemId; }
 
 	float GetCombatSpeed() const;
 
