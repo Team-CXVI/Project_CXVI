@@ -506,28 +506,10 @@ namespace CXUserDataDebug
 					return;
 				}
 
-				UCXUserDataSubsystem* Subsystem = GetSubsystem(InWorld);
-				UCXLevelTransitionSubsystem* LevelTransition = UCXLevelTransitionSubsystem::TryGet(InWorld);
-				if (nullptr == Subsystem || nullptr == LevelTransition)
+				if (UCXUserDataSubsystem* Subsystem = GetSubsystem(InWorld))
 				{
-					return;
+					Subsystem->LoadGameAndTravel(SlotIndex);
 				}
-
-				// 이동이 거부될 상태라면 데이터를 덮어쓰기 전에 중단
-				if (LevelTransition->IsTransitioning())
-				{
-					UE_LOG(LogCXUserData, Warning, TEXT("레벨 전환 중에는 불러올 수 없습니다."));
-					return;
-				}
-
-				const FCXSaveLocation& SaveLocation = Subsystem->GetSaveLocation();
-				if (false == LevelTransition->TravelToLevel(SaveLocation.LevelId, SaveLocation.EntryTag))
-				{
-					UE_LOG(LogCXUserData, Warning, TEXT("불러온 위치로 이동하지 못했습니다: %s"), *SaveLocation.LevelId.ToString());
-					return;
-				}
-
-				Subsystem->LoadGame(SlotIndex);
 			}));
 }
 

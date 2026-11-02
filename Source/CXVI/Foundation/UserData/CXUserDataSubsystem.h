@@ -10,6 +10,8 @@
 #include "CXUserDataSubsystem.generated.h"
 
 class UCXCharacterDefinition;
+class UCXLevelDefinition;
+class UCXSaveGame;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogCXUserData, Log, All);
 
@@ -21,6 +23,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogCXUserData, Log, All);
  * - 레벨만 저장하고 스탯은 저장하지 않음 (정의 데이터 + 커브로 계산)
  * - 변경 시 Message.UserData.PartyChanged / InventoryChanged 방송 (UI 갱신용)
  * - Message.UserData.RequestAutoSave를 받으면 자동 저장 (요청하는 쪽이 데이터 반영 후 방송)
+ * - 불러오기는 슬롯을 먼저 읽어 이동을 요청하고, 화면이 가려진 뒤 UserData에 적용
  */
 UCLASS()
 class CXVI_API UCXUserDataSubsystem : public UGameInstanceSubsystem
@@ -43,7 +46,11 @@ public:
 	bool StartNewGame();
 
 	// 슬롯에서 불러오기. 레벨 이동은 호출하는 쪽에서 GetSaveLocation()으로 처리
-	bool LoadGame(int32 InSlotIndex);
+	// bool LoadGame(int32 InSlotIndex);
+
+	// 슬롯을 읽어 저장된 위치로 이동. UserData는 화면이 가려진 뒤 교체
+	// 슬롯을 읽지 못했거나 이동이 거부되면 false (현재 UserData는 그대로)
+	bool LoadGameAndTravel(int32 InSlotIndex);
 
 	// Save
 public:
@@ -105,6 +112,16 @@ public:
 	void RemoveDefeatedSpawnIds(const TArray<FName>& InSpawnIds);
 
 private:
+	// Load
+	UCXSaveGame* ReadSaveGame(int32 InSlotIndex) const;
+
+	void ApplySaveGame(const UCXSaveGame& InSaveGame, int32 InSlotIndex);
+
+	void HandleScreenCoveredForLoad(const UCXLevelDefinition* InTargetLevel);
+
+	void ClearPendingLoad();
+
+private:
 	// Save
 	bool SaveToSlotInternal(int32 InSlotIndex);
 
@@ -149,6 +166,14 @@ private:
 	bool bSaveInProgress = false;
 
 	FCXGameplayMessageListenerHandle AutoSaveRequestListener;
+
+	// 읽었지만 아직 적용하지 않은 저장 데이터 (페이드 아웃 동안 GC되지 않도록 UPROPERTY)
+	UPROPERTY()
+	TObjectPtr<UCXSaveGame> PendingLoadSaveGame;
+
+	int32 PendingLoadSlotIndex = INDEX_NONE;
+
+	FDelegateHandle PendingLoadHandle;
 
 	// 비동기 저장 진행 중에 들어온 저장 요청 (슬롯별 1개. 실제 저장 시점의 최신 데이터로 저장)
 	TSet<int32> QueuedSaveSlotIndices;
