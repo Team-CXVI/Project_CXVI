@@ -16,6 +16,7 @@
 #include "AbilitySystemBlueprintLibrary.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
+#include "Animation/AnimMontage.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXGameplayAbilityCombatBase)
 
@@ -87,8 +88,14 @@ void UCXGameplayAbilityCombatBase::ActivateAbility(const FGameplayAbilitySpecHan
 	}
 
 	ProcessedHitIndices.Reset();
+	ProcessedComboStages.Reset();
+	SuccessfulComboSections.Reset();
 
-	if (!RegisterHitEventTask())
+	const bool bHitTaskReady = RegisterHitEventTask();
+
+	const bool bComboTaskReady = AbilityData->JustTimingType != ECXJustTimingType::ContinueAttack || RegisterComboEventTask();
+
+	if (!bHitTaskReady || !bComboTaskReady)
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
@@ -245,6 +252,28 @@ void UCXGameplayAbilityCombatBase::OnAttackEvent(FGameplayEventData Payload)
 	{
 		return;
 	}
+
+	// 같은 타격 이벤트는 한 번만 처리
+	ProcessedHitIndices.Add(HitIndex);
+
+	bool bJustTimingSuccess = false;
+
+	// 데미지 증가형과 공격 연계형 모두 판정 결과를 확인.
+	if (AbilityData->JustTimingType == ECXJustTimingType::DamageBoost)
+	{
+		if (UCXJustTimingComponent* Timing = Attacker->FindComponentByClass<UCXJustTimingComponent>())
+		{
+			const int32 RequiredCount = AbilityData->RequiredTimingCounts.IsValidIndex(HitIndex) ?
+				FMath::Max(1, AbilityData->RequiredTimingCounts[HitIndex]) : 1;
+
+			bJustTimingSuccess = Timing->ConsumeSuccess(HitNumber, RequiredCount);
+		}
+	}
+
+	// 판정 결과로 다음 공격을 연결.
+	// 대상이 사망했거나 데미지가 0이여도 연계판단은 수행.
+	//UpdateNextAttackSection(HitIndex, bJustTimingSuccess);
+
 	ACXCombatCharacterBase* Target = Cast<ACXCombatCharacterBase>(Attacker->GetSelectedCombatTarget());
 
 	if (!IsValid(Target) || !Target->GetIsCharacterAlive())
@@ -265,7 +294,7 @@ void UCXGameplayAbilityCombatBase::OnAttackEvent(FGameplayEventData Payload)
 
 	const float BaseMultiplier = FMath::Max(0.f, AbilityData->HitDamageMultipilers[HitIndex]);
 
-	bool bJustTimingSuccess = false;
+	/*bool bJustTimingSuccess = false;
 
 	if (AbilityData->JustTimingType == ECXJustTimingType::DamageBoost)
 	{
@@ -277,9 +306,12 @@ void UCXGameplayAbilityCombatBase::OnAttackEvent(FGameplayEventData Payload)
 			bJustTimingSuccess = Timing->ConsumeSuccess(HitNumber, RequiredCount);
 
 		}
-	}
+	}*/
+	// 데미지 증가형에서 성공했을때만 증가.
+	// 공격 연계형은 판정에 성공해도 데미지 배율 1 유지.
+	const bool bApplyDamageBoost = AbilityData->JustTimingType == ECXJustTimingType::DamageBoost && bJustTimingSuccess;
 
-	const float JustMultiplier = bJustTimingSuccess ? FMath::Max(1.f, AbilityData->JustTimingDamageMultiplier) : 1.f;
+	const float JustMultiplier = bApplyDamageBoost ? FMath::Max(1.f, AbilityData->JustTimingDamageMultiplier) : 1.f;
 
 	const float Damage = AttackPower * BaseMultiplier * JustMultiplier;
 	if (Damage <= 0.f)
@@ -297,14 +329,24 @@ void UCXGameplayAbilityCombatBase::OnAttackEvent(FGameplayEventData Payload)
 
 	Spec.Data->SetSetByCallerMagnitude(CXVIGameplayTags::Data_Damage, Damage);
 
-	if (bJustTimingSuccess && AbilityData->bJustTimingCannotBeDodged)
+	// 회피 불가 적용
+
+	// 연계 성공으로 열린 동작인지 확인.
+	// 같은 동작에 여러 타격이 있어도 모두 같은 결과 사용
+	const bool bComboSectionSuccess = AbilityData->JustTimingType == ECXJustTimingType::ContinueAttack &&
+		SuccessfulComboSections.Contains(SourceASC->GetCurrentMontageSectionName());
+
+	const bool bCannotBeDodged = AbilityData->bJustTimingCannotBeDodged &&
+		(bJustTimingSuccess || bComboSectionSuccess);
+
+	if (bCannotBeDodged)
 	{
 		Spec.Data->AddDynamicAssetTag(CXVIGameplayTags::Damage_CannotBeDodged);
 	}
 
 
 	// GE적용 중 콜백이 발생해도 중복 처리 되지 않도록 먼저 기록.
-	ProcessedHitIndices.Add(HitIndex);
+	//ProcessedHitIndices.Add(HitIndex);
 
 	UE_LOG(LogTemp, Display, TEXT("[공격] %s -> %s: %d타, 기본 배율 %.2f, 저스트 %s, 저스트 배율 %.2f, 요청 데미지: %.1f"), 
 		*Attacker->GetName(),
@@ -340,4 +382,153 @@ bool UCXGameplayAbilityCombatBase::RegisterHitEventTask()
 	Task->ReadyForActivation();
 
 	return true;
+}
+
+void UCXGameplayAbilityCombatBase::UpdateNextAttackSection(int32 HitIndex, bool bSuccess)
+{
+	if (!IsValid(AbilityData) || AbilityData->JustTimingType != ECXJustTimingType::ContinueAttack)
+	{
+		return;
+	}
+
+	UAnimMontage* Montage = AbilityData->AnimMontage;
+
+	if (!IsValid(Montage) || !AbilityData->AttackSectionNames.IsValidIndex(HitIndex))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[연계] %d타의 공격 섹션 설정이 없습니다."), HitIndex + 1);
+		return;
+	}
+
+	const FName CurrentSection = AbilityData->AttackSectionNames[HitIndex];
+
+	// 기본적으로 마무리 섹션으로 진행.
+	FName NextSection = AbilityData->EndSectionName;
+
+	// 성공했고 다음 공격이 있으면 해당 공격으로 이동
+	if (bSuccess && AbilityData->AttackSectionNames.IsValidIndex(HitIndex + 1))
+	{
+		NextSection = AbilityData->AttackSectionNames[HitIndex + 1];
+	}
+
+	const bool bInvalidCurrentSection = Montage->GetSectionIndex(CurrentSection) == INDEX_NONE;
+
+	// None은 섹션 이름이 아니라 '다음 섹션 없이 종료' 라는 의미
+	const bool bInvalidNextSection = !NextSection.IsNone() && Montage->GetSectionIndex(NextSection) == INDEX_NONE;
+
+	if (bInvalidCurrentSection || bInvalidNextSection)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[연계] 몽타주 섹션을 찾을수 없습니다: %s -> %s"), *CurrentSection.ToString(), *NextSection.ToString());
+		return;
+	}
+
+	/*if (Montage->GetSectionIndex(CurrentSection) == INDEX_NONE || Montage->GetSectionIndex(NextSection) == INDEX_NONE)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[연계] 몽타주 섹션을 찾을수 없습니다: %s -> %s"), *CurrentSection.ToString(), *NextSection.ToString());
+		return;
+	}*/
+
+	// 현재 섹션은 끝까지 재생하고 다음 섹션을 변경.
+	MontageSetNextSectionName(CurrentSection, NextSection);
+	
+	UE_LOG(LogTemp, Display, TEXT("[연계] %d단계 판정 %s: %s → %s"), 
+		HitIndex + 1,
+		bSuccess ? TEXT("성공") : TEXT("실패"),
+		*CurrentSection.ToString(),
+		*NextSection.ToString());
+}
+
+bool UCXGameplayAbilityCombatBase::RegisterComboEventTask()
+{
+	UAbilityTask_WaitGameplayEvent* Task = 
+		UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+			this, 
+			CXVIGameplayTags::Event_Combat_ComboBranch,
+			nullptr,
+			false,
+			true
+		);
+	
+	if(!Task)
+	{ 
+		return false;
+	}
+
+	Task->EventReceived.AddDynamic(this, &UCXGameplayAbilityCombatBase::OnComboBranchEvent);
+
+	Task->ReadyForActivation();
+	return true;
+}
+
+void UCXGameplayAbilityCombatBase::OnComboBranchEvent(FGameplayEventData Payload)
+{
+	AActor* Owner = GetAvatarActorFromActorInfo();
+
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
+
+	if (!IsValid(Owner) || !Owner->HasAuthority() ||
+		!IsValid(ASC) || !IsValid(AbilityData) ||
+		!IsValid(AbilityData->AnimMontage) ||
+		AbilityData->JustTimingType != ECXJustTimingType::ContinueAttack)
+	{
+		return;
+	}
+
+	const int32 StageNumber = static_cast<int32>(Payload.EventMagnitude);
+
+	const int32 StageIndex = StageNumber - 1;
+
+	// 마지막 동작에는 다른 동작을 여는 노티파이가 필요 없음.
+	if (!AbilityData->AttackSectionNames.IsValidIndex(StageIndex) ||
+		!AbilityData->AttackSectionNames.IsValidIndex(StageIndex + 1))
+	{
+		return;
+	}
+
+	const FName CurrentSection = AbilityData->AttackSectionNames[StageIndex];
+
+	const FName NextSection = AbilityData->AttackSectionNames[StageIndex + 1];
+
+	const FName ActualSection = ASC->GetCurrentMontageSectionName();
+
+	const int32 NextSectionIndex = AbilityData->AnimMontage->GetSectionIndex(NextSection);
+
+	// 다른 동작에서 잘못 전달된 이벤트는 무시.
+	if (ActualSection != CurrentSection || NextSection.IsNone() || NextSectionIndex == INDEX_NONE)
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[연계] %d단계: 실제 섹션=%s, 설정 섹션=%s, 다음 섹션=%s, 다음 인덱스=%d"),
+			StageNumber,
+			*ActualSection.ToString(),
+			*CurrentSection.ToString(),
+			*NextSection.ToString(),
+			NextSectionIndex);
+
+		return;
+	}
+
+	ProcessedComboStages.Add(StageIndex);
+
+	bool bSuccess = false;
+
+	if (UCXJustTimingComponent* Timing = Owner->FindComponentByClass<UCXJustTimingComponent>())
+	{
+		const int32 RequiredCount = AbilityData->RequiredTimingCounts.IsValidIndex(StageIndex)
+			? FMath::Max(1, AbilityData->RequiredTimingCounts[StageIndex]) : 1;
+
+		// 연계형에서는 동작 번호를 판정 그룹 번호로 사용
+		bSuccess = Timing->ConsumeSuccess(StageNumber, RequiredCount);
+	}
+
+	// 기존 함수에 데미지 타격번호대신 공격 동작 인덱스 전달.
+	UpdateNextAttackSection(StageIndex, bSuccess);
+
+	if (bSuccess)
+	{
+		SuccessfulComboSections.Add(NextSection);
+	}
+
+	UE_LOG(LogTemp, Display, TEXT("[연계 판정] %s: %s → %s"),
+		*CurrentSection.ToString(),
+		bSuccess ? TEXT("성공") : TEXT("실패"),
+		bSuccess ? *NextSection.ToString() : *AbilityData->EndSectionName.ToString());
 }

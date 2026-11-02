@@ -79,6 +79,13 @@ private:
 
 	bool RegisterHitEventTask();
 
+	void UpdateNextAttackSection(int32 HitIndex, bool bSuccess);
+
+	bool RegisterComboEventTask();
+
+	UFUNCTION()
+	void OnComboBranchEvent(FGameplayEventData Payload);
+
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Montage")
 	TObjectPtr<class UCXAbilityData> AbilityData;
@@ -89,4 +96,11 @@ protected:
 private:
 	// 이번 스킬 사용에서 이미 처리한 타격 번호.
 	TSet<int32> ProcessedHitIndices;
+
+	// 동일한 동작의 연께 판정을 중복 처리 않음
+	TSet<int32> ProcessedComboStages;
+
+	// 이전 동작의 판정 성공으로 열린 공격섹션.
+	// 해당 섹션의 여러타격이 같은 결과를 사용
+	TSet<FName> SuccessfulComboSections;
 };
