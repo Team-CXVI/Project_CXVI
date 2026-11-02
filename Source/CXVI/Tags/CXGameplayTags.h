@@ -26,6 +26,7 @@ namespace CXVIGameplayTags
 	// Event
 	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combat_ParrySucceeded);
 	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combat_AttackHit);
+	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combat_ComboBranch);
 
 	// Message
 	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Message_Screen_Fade);

@@ -111,6 +111,10 @@ public:
 
 	void RemoveDefeatedSpawnIds(const TArray<FName>& InSpawnIds);
 
+	bool IsItemCollected(FName InSpawnId) const;
+
+	void MarkItemCollected(FName InSpawnId);
+
 private:
 	// Load
 	UCXSaveGame* ReadSaveGame(int32 InSlotIndex) const;
