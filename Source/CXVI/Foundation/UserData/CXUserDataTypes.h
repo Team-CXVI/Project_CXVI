@@ -207,4 +207,13 @@ public:
 	int32 NewCount = 0;
 };
 
+// Message.UserData.RequestAutoSave 태그로 전달하는 메시지 구조체
+// 저장할 데이터 반영이 끝난 뒤 방송 (받는 쪽은 그 시점의 UserData를 저장)
+// TODO : 추후에 자동 저장 관련해서 필요한 내용 채우기
+USTRUCT(BlueprintType)
+struct CXVI_API FCXAutoSaveRequestMessage
+{
+	GENERATED_BODY()
+};
+
 #pragma endregion // Message

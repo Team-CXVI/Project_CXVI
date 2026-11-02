@@ -21,6 +21,11 @@ void UCXInputHintWidget::NativePreConstruct()
 	if (LabelText)
 	{
 		LabelText->SetText(Label);
+
+		if (FontSize > 0.f)
+		{
+			LabelText->SetFontSize(FontSize);
+		}
 	}
 }
 
@@ -93,8 +98,14 @@ void UCXInputHintWidget::RefreshIcons(ECommonInputType InInputType)
 
 void UCXInputHintWidget::AddIcon(const FSlateBrush& InBrush)
 {
+	FSlateBrush IconBrush = InBrush;
+	if (IconSize.X > 0.f && IconSize.Y > 0.f)
+	{
+		IconBrush.SetImageSize(IconSize);
+	}
+
 	UImage* Icon = WidgetTree->ConstructWidget<UImage>();
-	Icon->SetBrush(InBrush);
+	Icon->SetBrush(IconBrush);
 
 	if (UHorizontalBoxSlot* IconSlot = IconBox->AddChildToHorizontalBox(Icon))
 	{
