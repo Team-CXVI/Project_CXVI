@@ -131,8 +131,6 @@ protected:
 	// 원정대 깃발 사용 시작.
 	void StartUseFlag();
 
-	void OnFlagMontageChanged(class UAnimMontage* Montage, FName SectionName, bool bLooped);
-
 	// 필드 아이템 획득.
 	void PickupItem();
 
@@ -205,11 +203,6 @@ protected:
 	// 선제 공격 스펙을 관리할 핸들.
 	FGameplayAbilitySpecHandle PreemptiveAttackHandle;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ExpeditionFlag")
-	TObjectPtr<class UAnimMontage> FlagMontage;
-
-	// 플래그에서 추가한 이동 제한을 관리.
-	bool bFlagMovementBlocked = false;
 
 	// 플레이어 공격.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = GameplayAbilities)
