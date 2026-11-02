@@ -627,6 +627,10 @@ void UCXTurnManager::SendPhaseRequest(const FCXCombatMessageData& OutMessage)
 		{
 			InputMode = ECXCombatInputMode::Command;
 		}
+		else if (PlayerCharacters.Contains(CurrentTurnPlayer) && OutMessage.Phase == ECXCombatPhase::ActionPhase)
+		{
+			InputMode = ECXCombatInputMode::JustTiming;
+		}
 		else if (EnemyCharacters.Contains(CurrentTurnPlayer) && OutMessage.Phase == ECXCombatPhase::ActionPhase)
 		{
 			ResetDefenseTargets();

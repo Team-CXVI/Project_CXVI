@@ -53,7 +53,8 @@ enum class ECXCombatInputMode : uint8
 {
 	Disabled,
 	Command,
-	Reaction
+	Reaction,
+	JustTiming
 };
 
 USTRUCT()
