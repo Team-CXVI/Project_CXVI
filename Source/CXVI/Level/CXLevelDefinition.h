@@ -9,6 +9,7 @@
 
 class UCXSceneDefinition;
 class UCXCharacterPartyData;
+class UTexture2D;
 
 /** 레벨 타입 */
 UENUM(BlueprintType)
@@ -41,6 +42,10 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Level")
 	TSoftObjectPtr<UWorld> Level;
+
+	// 저장 슬롯에 표시할 레벨 대표 이미지. 비어 있으면 표시하지 않음
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI")
+	TSoftObjectPtr<UTexture2D> PreviewImage;
 
 	// 첫 Scene. 레벨을 열 때 이 Scene의 서브레벨이 플레이어 스폰 전에 동기로 로드되고, 도착 후 Push됨 (InGame은 필수 설정)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Scene")

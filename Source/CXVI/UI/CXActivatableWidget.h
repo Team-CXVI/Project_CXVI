@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "CommonActivatableWidget.h"
+#include "GameplayTagContainer.h"
 
 #include "CXActivatableWidget.generated.h"
 
@@ -28,6 +29,7 @@ enum class ECXWidgetInputMode : uint8
  * - InputMode로 활성화 시 입력 모드를 선언 (맨 위의 ActivatableWidget 기준으로 적용됨)
  * - 게임패드용 첫 포커스: BP의 Get Desired Focus Target 구현 → 없으면 DefaultFocusWidgetName 위젯
  * - Menu 화면은 BP에서 Is Back Handler를 켜면 뒤로가기로 자동 닫힘
+ * - Message.UI.OpenScreen으로 열릴 때 메시지의 ContextTag를 SetScreenContext로 전달 (활성화 전, 이미 맨 위면 활성화 상태에서 호출)
  */
 UCLASS(Abstract, Blueprintable)
 class CXVI_API UCXActivatableWidget : public UCommonActivatableWidget
@@ -36,6 +38,9 @@ class CXVI_API UCXActivatableWidget : public UCommonActivatableWidget
 	
 public:
 	virtual TOptional<FUIInputConfig> GetDesiredInputConfig() const override;
+
+	// 구분 값이 필요한 화면만 재정의
+	virtual void SetScreenContext(const FGameplayTag& InContextTag) {}
 
 protected:
 	virtual UWidget* NativeGetDesiredFocusTarget() const override;
