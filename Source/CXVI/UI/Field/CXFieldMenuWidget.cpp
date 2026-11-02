@@ -5,6 +5,7 @@
 
 #include "UI/CXButtonBase.h"
 #include "Level/CXLevelTransitionSubsystem.h"
+#include "UI/CXUIManagerSubsystem.h"
 
 #include <Kismet/GameplayStatics.h>
 
@@ -50,6 +51,24 @@ void UCXFieldMenuWidget::HandleContinueClicked()
 
 void UCXFieldMenuWidget::HandleTitleClicked()
 {
+	if (UCXUIManagerSubsystem* UIManager = UCXUIManagerSubsystem::TryGet(this))
+	{
+		// TODO : 텍스트 데이터 테이블 작업 때 본문 ID 지정
+		UIManager->ShowConfirmCancelPopup(NAME_None, FSimpleDelegate::CreateUObject(this, &ThisClass::ConfirmReturnToTitle));
+	}
+}
+
+void UCXFieldMenuWidget::HandleQuitClicked()
+{
+	if (UCXUIManagerSubsystem* UIManager = UCXUIManagerSubsystem::TryGet(this))
+	{
+		// TODO : 텍스트 데이터 테이블 작업 때 본문 ID 지정
+		UIManager->ShowConfirmCancelPopup(NAME_None, FSimpleDelegate::CreateUObject(this, &ThisClass::ConfirmQuit));
+	}
+}
+
+void UCXFieldMenuWidget::ConfirmReturnToTitle()
+{
 	UCXLevelTransitionSubsystem* LevelTransition = UCXLevelTransitionSubsystem::TryGet(this);
 	if (nullptr == LevelTransition || LevelTransition->IsTransitioning())
 	{
@@ -62,7 +81,7 @@ void UCXFieldMenuWidget::HandleTitleClicked()
 	LevelTransition->TravelToTitle();
 }
 
-void UCXFieldMenuWidget::HandleQuitClicked()
+void UCXFieldMenuWidget::ConfirmQuit()
 {
 	if (UCXLevelTransitionSubsystem* LevelTransition = UCXLevelTransitionSubsystem::TryGet(this))
 	{

@@ -15,9 +15,9 @@ class UCXButtonBase;
  * - 입력 모드 Menu (게임 입력 차단, 조작 방식은 타이틀 화면과 동일)
  * - 활성화 동안 게임 일시정지 (Activated → 정지 / Deactivated → 해제)
  * - 계속하기 : 닫기 (뒤로가기도 같은 동작)
- * - 타이틀로 돌아가기 : 닫아서 정지 해제 후 타이틀 이동
+ * - 타이틀로 돌아가기 : 팝업에서 확인을 누르면 닫아서 정지 해제 후 타이틀 이동
  *   TODO : 동작 검증이 필요, 타이틀 이동 사이에 플레이어 입력 위험성
- * - 게임 종료하기 : 게임 종료
+ * - 게임 종료하기 : 팝업에서 확인을 누르면 게임 종료
  * - 첫 포커스는 DefaultFocusWidgetName (WBP에서 ContinueButton 지정)
  */
 UCLASS(Abstract)
@@ -41,6 +41,11 @@ private:
 	void HandleTitleClicked();
 
 	void HandleQuitClicked();
+
+	// 팝업의 확인 버튼에서 실행
+	void ConfirmReturnToTitle();
+
+	void ConfirmQuit();
 
 protected:
 	// 계속하기 버튼

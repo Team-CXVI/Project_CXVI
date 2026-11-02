@@ -2,6 +2,7 @@
 
 
 #include "UI/CXTitleScreenWidget.h"
+
 #include "CXButtonBase.h"
 #include "Foundation/UserData/CXUserDataSubsystem.h"
 #include "Level/CXLevelTransitionSubsystem.h"
@@ -9,6 +10,7 @@
 #include "Foundation/GameplayMessage/CXGameplayMessageSubsystem.h"
 #include "UI/CXUITypes.h"
 #include "Tags/CXGameplayTags.h"
+#include "UI/CXUIManagerSubsystem.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXTitleScreenWidget)
 
@@ -68,6 +70,15 @@ void UCXTitleScreenWidget::HandleContinueClicked()
 }
 
 void UCXTitleScreenWidget::HandleQuitClicked()
+{
+	if (UCXUIManagerSubsystem* UIManager = UCXUIManagerSubsystem::TryGet(this))
+	{
+		// TODO : 텍스트 데이터 테이블 작업 때 본문 ID 지정
+		UIManager->ShowConfirmCancelPopup(NAME_None, FSimpleDelegate::CreateUObject(this, &ThisClass::ConfirmQuit));
+	}
+}
+
+void UCXTitleScreenWidget::ConfirmQuit()
 {
 	if (UCXLevelTransitionSubsystem* LevelTransition = UCXLevelTransitionSubsystem::TryGet(this))
 	{

@@ -42,6 +42,9 @@ private:
 
 	void HandleSlotClicked(int32 InSlotIndex);
 
+	// 팝업의 확인 버튼에서 실행
+	void ConfirmLoad(int32 InSlotIndex);
+
 protected:
 	// 슬롯 항목 위젯 클래스
 	UPROPERTY(EditDefaultsOnly, Category = "Save Slot")
