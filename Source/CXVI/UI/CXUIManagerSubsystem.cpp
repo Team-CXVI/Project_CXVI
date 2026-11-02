@@ -7,6 +7,8 @@
 #include "CXNavigationConfig.h"
 #include "UI/ViewModel/CXPartyViewModel.h"
 #include "UI/ViewModel/CXPotionViewModel.h"
+#include "Foundation/Scene/CXSceneTypes.h"
+#include "Tags/CXGameplayTags.h"
 
 #include <CommonActivatableWidget.h>
 #include <Engine/LocalPlayer.h>
@@ -50,6 +52,12 @@ void UCXUIManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	// 위젯이 생성되기 전에 전역 Viewmodel Collection에 등록
 	CreateGlobalViewModel();
 
+	// 레이아웃이 없는 구간(맵 이동)에도 페이드 값을 유지하도록 Subsystem에서 구독
+	if (UCXGameplayMessageSubsystem* Messages = GetLocalPlayer()->GetGameInstance()->GetSubsystem<UCXGameplayMessageSubsystem>())
+	{
+		ScreenFadeListener = Messages->RegisterListener(CXVIGameplayTags::Message_Screen_Fade, this, &ThisClass::HandleScreenFade);
+	}
+
 #if WITH_EDITOR
 	if (FSlateApplication::IsInitialized())
 	{
@@ -62,6 +70,8 @@ void UCXUIManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 void UCXUIManagerSubsystem::Deinitialize()
 {
 	DestroyPrimaryLayout();
+	ScreenFadeListener.Unregister();
+	StopScreenFadeTicker();
 
 	DestroyGlobalViewModel();
 
@@ -109,6 +119,7 @@ void UCXUIManagerSubsystem::CreatePrimaryLayout(APlayerController* InPlayerContr
 
 	// 이건 필요 없는 것 같긴한데 그래도 한번 더
 	PrimaryLayout->SetPlayerContext(FLocalPlayerContext(GetLocalPlayer<ULocalPlayer>()));
+	ApplyScreenFadeToLayout();
 	PrimaryLayout->AddToPlayerScreen(Settings->LayoutZOrder);
 
 	// IMC 바인딩
@@ -271,6 +282,62 @@ void UCXUIManagerSubsystem::DestroyGlobalViewModel()
 	// 구독 해제 후 Collection에서 제거 (Collection의 참조가 사라지면 GC 대상)
 	PotionViewModel->Reset();
 	Collection->RemoveAllViewModelInstance(PotionViewModel);
+}
+
+void UCXUIManagerSubsystem::HandleScreenFade(const FGameplayTag& InChannel, const FCXScreenFadeMessage& InMessage)
+{
+	StopScreenFadeTicker();
+
+	if (InMessage.Duration <= 0.f)
+	{
+		ScreenFadeAlpha = InMessage.ToAlpha;
+		ApplyScreenFadeToLayout();
+		return;
+	}
+
+	ScreenFadeFromAlpha = InMessage.FromAlpha;
+	ScreenFadeToAlpha = InMessage.ToAlpha;
+	ScreenFadeDuration = InMessage.Duration;
+	ScreenFadeElapsed = 0.f;
+
+	ScreenFadeAlpha = ScreenFadeFromAlpha;
+	ApplyScreenFadeToLayout();
+
+	ScreenFadeTickerHandle = FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateUObject(this, &ThisClass::TickScreenFade));
+}
+
+bool UCXUIManagerSubsystem::TickScreenFade(float InDeltaTime)
+{
+	ScreenFadeElapsed += InDeltaTime;
+
+	const float Ratio = FMath::Clamp(ScreenFadeElapsed / ScreenFadeDuration, 0.f, 1.f);
+	ScreenFadeAlpha = FMath::Lerp(ScreenFadeFromAlpha, ScreenFadeToAlpha, Ratio);
+	ApplyScreenFadeToLayout();
+
+	if (Ratio >= 1.f)
+	{
+		ScreenFadeTickerHandle.Reset();
+		return false;
+	}
+
+	return true;
+}
+
+void UCXUIManagerSubsystem::StopScreenFadeTicker()
+{
+	if (ScreenFadeTickerHandle.IsValid())
+	{
+		FTSTicker::RemoveTicker(ScreenFadeTickerHandle);
+		ScreenFadeTickerHandle.Reset();
+	}
+}
+
+void UCXUIManagerSubsystem::ApplyScreenFadeToLayout() const
+{
+	if (PrimaryLayout)
+	{
+		PrimaryLayout->SetRenderOpacity(1.f - ScreenFadeAlpha);
+	}
 }
 
 #if WITH_EDITOR

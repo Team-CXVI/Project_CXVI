@@ -21,6 +21,7 @@ namespace CXVIGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Event_Combat_ParrySucceeded, "Event.Combat.ParrySucceeded", "패링 성공 시 GAS 이벤트");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Event_Combat_AttackHit, "Event.Combat.AttackHit", "공격 타격시 GAS 이벤트");
 
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Message_Screen_Fade, "Message.Screen.Fade", "화면 페이드 시작 (UI 불투명도 동기화 용)");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Message_Combat_End, "Message.Combat.End", "전투 종료 알림 채널");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Message_UserData_PartyChanged, "Message.UserData.PartyChanged", "파티 데이터 변경 (UI 갱신용)");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Message_UserData_InventoryChanged, "Message.UserData.InventoryChanged", "인벤토리 변경 (UI 갱신용)");

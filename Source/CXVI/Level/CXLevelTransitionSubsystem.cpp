@@ -6,6 +6,8 @@
 #include "CXLevelTransitionSettings.h"
 #include "CXLevelDefinition.h"
 #include "Foundation/Scene/CXSceneSubsystem.h"
+#include "Foundation/GameplayMessage/CXGameplayMessageSubsystem.h"
+#include "Tags/CXGameplayTags.h"
 
 #include <Engine/AssetManager.h>
 #include <Kismet/GameplayStatics.h>
@@ -252,7 +254,14 @@ void UCXLevelTransitionSubsystem::HandleWorldActorsInitialized(const UWorld::FAc
 bool UCXLevelTransitionSubsystem::StartCameraFade(bool bInFadeOut, float InDuration, const FLinearColor& InColor, const FTimerDelegate& InOnComplete)
 {
 	APlayerCameraManager* CameraManager = UGameplayStatics::GetPlayerCameraManager(GetGameInstance()->GetWorld(), 0);
-	if (nullptr == CameraManager || InDuration <= 0.f)
+	const bool bInstant = (nullptr == CameraManager || InDuration <= 0.f);
+
+	const float FromAlpha = bInFadeOut ? 0.f : 1.f;
+	const float ToAlpha = bInFadeOut ? 1.f : 0.f;
+
+	BroadcastScreenFade(FromAlpha, ToAlpha, bInstant ? 0.f : InDuration);
+
+	if (bInstant)
 	{
 		if (CameraManager)
 		{
@@ -268,15 +277,24 @@ bool UCXLevelTransitionSubsystem::StartCameraFade(bool bInFadeOut, float InDurat
 		return false;
 	}
 
-	const float FromAlpha = bInFadeOut ? 0.f : 1.f;
-	const float ToAlpha = bInFadeOut ? 1.f : 0.f;
-
 	// 가림은 끝난 뒤에도 유지(bHoldWhenFinished), 공개는 끝나면 해제
 	CameraManager->StartCameraFade(FromAlpha, ToAlpha, InDuration, InColor, /*bShouldFadeAudio*/ true, /*bHoldWhenFinished*/ bInFadeOut);
 
 	// 월드가 바뀌어도 타이머가 유지되도록 GameInstance쪽 TimerManager 사용
 	GetGameInstance()->GetTimerManager().SetTimer(FadeHandle, InOnComplete, InDuration, false);
 	return true;
+}
+
+void UCXLevelTransitionSubsystem::BroadcastScreenFade(float InFromAlpha, float InToAlpha, float InDuration) const
+{
+	if (UCXGameplayMessageSubsystem* Messages = GetGameInstance()->GetSubsystem<UCXGameplayMessageSubsystem>())
+	{
+		FCXScreenFadeMessage Message;
+		Message.FromAlpha = InFromAlpha;
+		Message.ToAlpha = InToAlpha;
+		Message.Duration = InDuration;
+		Messages->BroadcastMessage(CXVIGameplayTags::Message_Screen_Fade, Message);
+	}
 }
 
 void UCXLevelTransitionSubsystem::OpenPendingLevel()
@@ -288,6 +306,8 @@ void UCXLevelTransitionSubsystem::OpenPendingLevel()
 		ResetTransition();
 		return;
 	}
+
+	OnScreenCovered.Broadcast(PendingDefinition);
 
 	UGameplayStatics::OpenLevelBySoftObjectPtr(World, PendingDefinition->Level);
 }
@@ -315,6 +335,8 @@ void UCXLevelTransitionSubsystem::HandleTravelFailure(UWorld* InWorld, ETravelFa
 	bScreenCovered = false;
 	GetGameInstance()->GetTimerManager().ClearTimer(FadeHandle);
 	ResetTransition();
+
+	BroadcastScreenFade(0.f, 0.f, 0.f);
 
 	// 현재 월드에서 가림 해제
 	if (APlayerCameraManager* CameraManager = UGameplayStatics::GetPlayerCameraManager(InWorld, 0))

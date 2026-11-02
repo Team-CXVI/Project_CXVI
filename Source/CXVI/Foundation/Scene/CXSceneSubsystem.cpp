@@ -5,6 +5,8 @@
 
 #include "CXSceneDefinition.h"
 #include "CXGameScene.h"
+#include "Foundation/GameplayMessage/CXGameplayMessageSubsystem.h"
+#include "Tags/CXGameplayTags.h"
 
 #include <Kismet/GameplayStatics.h>
 #include <Camera/PlayerCameraManager.h>
@@ -510,7 +512,19 @@ bool UCXSceneSubsystem::IsInTargetState(const ULevelStreaming* InStreaming, ECXS
 bool UCXSceneSubsystem::StartFade(bool bInFadeOut, float InDuration, const FLinearColor& InColor)
 {
 	APlayerCameraManager* CameraManager = UGameplayStatics::GetPlayerCameraManager(this, 0);
-	if (nullptr == CameraManager || InDuration <= 0.f)
+	const bool bInstant = (nullptr == CameraManager || InDuration <= 0.f);
+
+	const float FromAlpha = bInFadeOut ? 0.f : 1.f;
+	const float ToAlpha = bInFadeOut ? 1.f : 0.f;
+
+	// UI 쪽도 페이드 하도록 UI 매니저에 메시지 전달
+	FCXScreenFadeMessage FadeMessage;
+	FadeMessage.FromAlpha = FromAlpha;
+	FadeMessage.ToAlpha = ToAlpha;
+	FadeMessage.Duration = bInstant ? 0.f : InDuration;
+	UCXGameplayMessageSubsystem::Get(this).BroadcastMessage(CXVIGameplayTags::Message_Screen_Fade, FadeMessage);
+
+	if (bInstant)
 	{
 		if (CameraManager)
 		{
@@ -526,9 +540,6 @@ bool UCXSceneSubsystem::StartFade(bool bInFadeOut, float InDuration, const FLine
 
 		return false;
 	}
-
-	const float FromAlpha = bInFadeOut ? 0.f : 1.f;
-	const float ToAlpha = bInFadeOut ? 1.f : 0.f;
 
 	// 페이드 아웃은 끝난 뒤에도 화면을 가린 상태로 유지(bHoldWhenFinished)
 	CameraManager->StartCameraFade(FromAlpha, ToAlpha, InDuration, InColor, /*bShouldFadeAudio*/ true, /*bHoldWhenFinished*/ bInFadeOut);

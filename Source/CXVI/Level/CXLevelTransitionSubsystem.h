@@ -23,6 +23,8 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FCXOnLevelTransition, const UCXLevelDefiniti
  * - 전환 중에는 다른 이동 요청과 게임 종료를 거부
  * - 진입 태그를 보관해서 도착한 GameMode가 스폰 위치를 고를 수 있게 함
  * - 세션 데이터는 다루지 않음
+ * - 페이드 아웃이 끝나 화면이 가려지면 레벨을 열기 직전에 OnScreenCovered 방송 (보이면 안 되는 데이터 교체 시점)
+ * - 화면 가림을 바꿀 때 Message.Screen.Fade 방송 (UI가 같은 값으로 따라감)
  * 
  * *도착한 레벨의 GameMode는 준비가 끝나면 반드시 NotifyLevelReady()를 호출해서 레벨 준비가 끝났다는걸 알려야 함
  */
@@ -86,6 +88,8 @@ private:
 	// false = 즉시 완료 (InOnComplete는 호출하지 않으므로 호출한 쪽에서 바로 이어서 처리)
 	bool StartCameraFade(bool bInFadeOut, float InDuration, const FLinearColor& InColor, const FTimerDelegate& InOnComplete);
 
+	void BroadcastScreenFade(float InFromAlpha, float InToAlpha, float InDuration) const;
+
 	void OpenPendingLevel();
 
 	// 공개 페이드 인이 끝나면 전환 종료
@@ -101,6 +105,9 @@ private:
 
 public:
 	FCXOnLevelTransition OnTransitionStarted;
+
+	// 페이드 시간이 0이면 TravelToLevel / TravelToTitle 안에서 바로 방송되므로 이동 요청 전에 구독
+	FCXOnLevelTransition OnScreenCovered;
 
 	FCXOnLevelTransition OnTransitionFinished;
 

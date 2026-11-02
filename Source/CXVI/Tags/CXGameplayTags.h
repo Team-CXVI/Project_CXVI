@@ -28,6 +28,7 @@ namespace CXVIGameplayTags
 	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combat_AttackHit);
 
 	// Message
+	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Message_Screen_Fade);
 	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Message_Combat_End);
 	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Message_UserData_PartyChanged);
 	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Message_UserData_InventoryChanged);

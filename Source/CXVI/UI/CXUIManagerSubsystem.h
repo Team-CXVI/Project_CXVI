@@ -6,11 +6,14 @@
 #include "Subsystems/LocalPlayerSubsystem.h"
 #include "CXPrimaryGameLayout.h"
 #include "GameplayTagContainer.h"
+#include "Foundation/GameplayMessage/CXGameplayMessageSubsystem.h"
+#include <Containers/Ticker.h>
 
 #include "CXUIManagerSubsystem.generated.h"
 
 class APlayerController;
 struct FCXNavigationConfig;
+struct FCXScreenFadeMessage;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogCXUI, Log, All);
 
@@ -22,6 +25,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogCXUI, Log, All);
  * 화면 Push / Remove 진입점
  * 레이아웃이 있는 동안 UI 공통 IMC 적용
  * 게임 전체 수명의 ViewModel을 생성해서 MVVM 전역 Viewmodel Collection에 등록 / 해제 (VM 보관은 Collection)
+ * 화면 페이드 메시지를 받아 페이드 중에만 Ticker로 레이아웃 불투명도를 갱신 (카메라 페이드는 UI를 덮지 않음)
  * 
  * *화면이 스스로 닫힐 때는 RemoveWidget 보다는 개별 위젯의 DeactivateWidget()을 호출(Stack이 자동 제거)
  */
@@ -90,12 +94,38 @@ private:
 	void DestroyGlobalViewModel();
 
 private:
+	// Screen Fade
+	void HandleScreenFade(const FGameplayTag& InChannel, const FCXScreenFadeMessage& InMessage);
+
+	// return : true = 다음 프레임에도 호출, false = 페이드 종료 (Ticker 자동 해제)
+	bool TickScreenFade(float InDeltaTime);
+
+	void StopScreenFadeTicker();
+
+	void ApplyScreenFadeToLayout() const;
+
+private:
 	UPROPERTY(Transient)
 	TObjectPtr<UCXPrimaryGameLayout> PrimaryLayout;
 
 	// 복구할 Slate 내비게이션 캐시
 	TSharedPtr<FNavigationConfig> PreviousNavigationConfig;
 
+	FCXGameplayMessageListenerHandle ScreenFadeListener;
+
+	// 페이드 중에만 유효
+	FTSTicker::FDelegateHandle ScreenFadeTickerHandle;
+
+	float ScreenFadeFromAlpha = 0.f;
+
+	float ScreenFadeToAlpha = 0.f;
+
+	float ScreenFadeDuration = 0.f;
+
+	float ScreenFadeElapsed = 0.f;
+
+	// 현재 화면 가림 정도 (0 ~ 1). 레이아웃은 맵마다 다시 생성되므로 여기에 보관
+	float ScreenFadeAlpha = 0.f;
 
 #if WITH_EDITOR
 private:
