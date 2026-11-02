@@ -6,7 +6,9 @@
 #include "Foundation/UserData/CXUserDataSubsystem.h"
 #include "Level/CXLevelTransitionSubsystem.h"
 #include "Level/CXLevelTransitionSettings.h"
-
+#include "Foundation/GameplayMessage/CXGameplayMessageSubsystem.h"
+#include "UI/CXUITypes.h"
+#include "Tags/CXGameplayTags.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXTitleScreenWidget)
 
@@ -22,7 +24,16 @@ void UCXTitleScreenWidget::NativeOnInitialized()
 	Super::NativeOnInitialized();
 
 	StartButton->OnClicked().AddUObject(this, &ThisClass::HandleStartClicked);
+	ContinueButton->OnClicked().AddUObject(this, &ThisClass::HandleContinueClicked);
 	QuitButton->OnClicked().AddUObject(this, &ThisClass::HandleQuitClicked);
+}
+
+void UCXTitleScreenWidget::NativeOnActivated()
+{
+	Super::NativeOnActivated();
+
+	const UCXUserDataSubsystem* UserData = UCXUserDataSubsystem::TryGet(this);
+	ContinueButton->SetIsEnabled(UserData && UserData->HasAnySaveSlot());
 }
 
 void UCXTitleScreenWidget::HandleStartClicked()
@@ -40,6 +51,20 @@ void UCXTitleScreenWidget::HandleStartClicked()
 	}
 
 	LevelTransition->TravelToLevel(GetDefault<UCXLevelTransitionSettings>()->NewGameLevel, NAME_None);
+}
+
+void UCXTitleScreenWidget::HandleContinueClicked()
+{
+	const UCXLevelTransitionSubsystem* LevelTransition = UCXLevelTransitionSubsystem::TryGet(this);
+	if (nullptr == LevelTransition || LevelTransition->IsTransitioning())
+	{
+		return;
+	}
+
+	FCXOpenScreenMessage Message;
+	Message.ScreenTag = CXVIGameplayTags::UI_Screen_SaveSlot;
+	Message.ContextTag = CXVIGameplayTags::UI_ScreenContext_SaveSlot_Load;
+	UCXGameplayMessageSubsystem::Get(this).BroadcastMessage(CXVIGameplayTags::Message_UI_OpenScreen, Message);
 }
 
 void UCXTitleScreenWidget::HandleQuitClicked()

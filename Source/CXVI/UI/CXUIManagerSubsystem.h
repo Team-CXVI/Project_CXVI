@@ -14,6 +14,7 @@
 class APlayerController;
 struct FCXNavigationConfig;
 struct FCXScreenFadeMessage;
+struct FCXOpenScreenMessage;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogCXUI, Log, All);
 
@@ -26,6 +27,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogCXUI, Log, All);
  * 레이아웃이 있는 동안 UI 공통 IMC 적용
  * 게임 전체 수명의 ViewModel을 생성해서 MVVM 전역 Viewmodel Collection에 등록 / 해제 (VM 보관은 Collection)
  * 화면 페이드 메시지를 받아 페이드 중에만 Ticker로 레이아웃 불투명도를 갱신 (카메라 페이드는 UI를 덮지 않음)
+ * Message.UI.OpenScreen을 받아 UCXUISettings::Screens에 지정된 화면을 열기. 이미 스택에 있으면 새로 만들지 않고 위로 올림
  * 
  * *화면이 스스로 닫힐 때는 RemoveWidget 보다는 개별 위젯의 DeactivateWidget()을 호출(Stack이 자동 제거)
  */
@@ -94,6 +96,10 @@ private:
 	void DestroyGlobalViewModel();
 
 private:
+	// Open Screen
+	void HandleOpenScreen(const FGameplayTag& InChannel, const FCXOpenScreenMessage& InMessage);
+
+private:
 	// Screen Fade
 	void HandleScreenFade(const FGameplayTag& InChannel, const FCXScreenFadeMessage& InMessage);
 
@@ -112,6 +118,8 @@ private:
 	TSharedPtr<FNavigationConfig> PreviousNavigationConfig;
 
 	FCXGameplayMessageListenerHandle ScreenFadeListener;
+
+	FCXGameplayMessageListenerHandle OpenScreenListener;
 
 	// 페이드 중에만 유효
 	FTSTicker::FDelegateHandle ScreenFadeTickerHandle;

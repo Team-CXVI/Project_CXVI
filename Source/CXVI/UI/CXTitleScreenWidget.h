@@ -12,6 +12,7 @@ class UCXButtonBase;
 /**
  * 타이틀 화면
  * - 게임 시작 : 새 게임 레벨(Settings.NewGameLevel)로 이동
+ * - 이어하기 : 저장 슬롯 목록을 불러오기로 열기. 저장 파일이 없으면 비활성화 (활성화될 때마다 확인)
  * - 게임 종료 : 게임 종료
  * 
  * - 메뉴 이동 입력은 Slate 내비게이션 기준 (W/S, 방향키, D-Pad).
@@ -30,8 +31,12 @@ public:
 protected:
 	virtual void NativeOnInitialized() override;
 
+	virtual void NativeOnActivated() override;
+
 private:
 	void HandleStartClicked();
+
+	void HandleContinueClicked();
 
 	void HandleQuitClicked();
 
@@ -39,6 +44,9 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UCXButtonBase> StartButton;
 	
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UCXButtonBase> ContinueButton;
+
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UCXButtonBase> QuitButton;
 };

@@ -18,6 +18,7 @@ class UPanelWidget;
  *   (Stack이 위젯을 재사용하므로 저장 내용은 활성화 시점에 다시 읽음)
  * - 저장 파일이 없는 슬롯은 비활성화 (내비게이션에서 제외)
  * - 첫 포커스는 활성화된 첫 항목. 항목이 없을 때만 DefaultFocusWidgetName 사용
+ * - Message.UI.OpenScreen의 UI.Screen.SaveSlot으로 열림. ContextTag로 불러오기 / 저장하기 구분 (저장하기는 미구현)
  */
 UCLASS(Abstract)
 class CXVI_API UCXSaveSlotListWidget : public UCXActivatableWidget
@@ -27,6 +28,8 @@ class CXVI_API UCXSaveSlotListWidget : public UCXActivatableWidget
 public:
 	UCXSaveSlotListWidget(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
+	virtual void SetScreenContext(const FGameplayTag& InContextTag) override;
+
 protected:
 	virtual void NativeOnInitialized() override;
 
@@ -35,6 +38,8 @@ protected:
 	virtual UWidget* NativeGetDesiredFocusTarget() const override;
 
 private:
+	void RefreshEntries();
+
 	void HandleSlotClicked(int32 InSlotIndex);
 
 protected:
@@ -49,5 +54,6 @@ protected:
 private:
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UCXSaveSlotEntryWidget>> SlotEntries;
-	
+
+	FGameplayTag ScreenContext;
 };
