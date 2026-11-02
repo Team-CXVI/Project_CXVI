@@ -22,9 +22,12 @@ namespace CXVIGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Event_Combat_AttackHit, "Event.Combat.AttackHit", "공격 타격시 GAS 이벤트");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Event_Combat_ComboBranch, "Event.Combat.ComboBranch", "저스트 타이밍 결과로 다음 공격 동작 연결");
 
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Message_Screen_Fade, "Message.Screen.Fade", "화면 페이드 시작 (UI 불투명도 동기화 용)");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Message_Combat_End, "Message.Combat.End", "전투 종료 알림 채널");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Message_UserData_PartyChanged, "Message.UserData.PartyChanged", "파티 데이터 변경 (UI 갱신용)");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Message_UserData_InventoryChanged, "Message.UserData.InventoryChanged", "인벤토리 변경 (UI 갱신용)");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Message_UserData_RequestAutoSave, "Message.UserData.RequestAutoSave", "자동 저장 요청 (데이터 반영이 끝난 뒤 방송)");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Message_UI_OpenScreen, "Message.UI.OpenScreen", "화면 열기 요청 (UI 매니저가 수신)");
 
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Data_Damage, "Data.Damage", "GE에 전달하는 데미지 값(SetByCaller)");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Data_AP, "Data.AP", "GE에 전달하는 AP 값(SetByCaller)");
@@ -35,6 +38,12 @@ namespace CXVIGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(UI_Layer_Menu, "UI.Layer.Menu", "시스템 메뉴 레이어 (일시정지, 옵션)");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(UI_Layer_Modal, "UI.Layer.Modal", "모달 레이어 (확인 팝업, 게임오버)");
 	
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(UI_Screen_SaveSlot, "UI.Screen.SaveSlot", "저장 슬롯 목록 화면");
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(UI_ScreenContext_SaveSlot_Load, "UI.ScreenContext.SaveSlot.Load", "저장 슬롯 목록 : 불러오기");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(UI_ScreenContext_SaveSlot_Save, "UI.ScreenContext.SaveSlot.Save", "저장 슬롯 목록 : 저장하기");
+
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Basic_Attack, "Character.Ability.BasicAttack", "캐릭터 기본 공격");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Fire, "Character.Ability.Fire", "캐릭터 레이 발사");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Item_Heal, "Character.Ability.Item.Heal", "전투 회복 아이템 사용");

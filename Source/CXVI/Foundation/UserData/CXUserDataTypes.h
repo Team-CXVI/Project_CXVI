@@ -127,6 +127,10 @@ public:
 	// 처치된 적의 SpawnId (휴식으로 리젠되는 적은 휴식 시 제거됨)
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UserData")
 	TSet<FName> DefeatedSpawnIds;
+
+	// 획득한 필드 아이템의 SpawnId (한 번 얻으면 다시 생성되지 않음).
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UserData")
+	TSet<FName> CollectedItemSpawnIds;
 };
 
 // 세이브 대상 전체
@@ -201,6 +205,15 @@ public:
 
 	UPROPERTY(BlueprintReadOnly, Category = "UserData")
 	int32 NewCount = 0;
+};
+
+// Message.UserData.RequestAutoSave 태그로 전달하는 메시지 구조체
+// 저장할 데이터 반영이 끝난 뒤 방송 (받는 쪽은 그 시점의 UserData를 저장)
+// TODO : 추후에 자동 저장 관련해서 필요한 내용 채우기
+USTRUCT(BlueprintType)
+struct CXVI_API FCXAutoSaveRequestMessage
+{
+	GENERATED_BODY()
 };
 
 #pragma endregion // Message

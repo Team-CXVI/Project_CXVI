@@ -7,6 +7,7 @@
 #include "Foundation/GameplayData/CXGameplayDataSettings.h"
 #include "Foundation/GameplayMessage/CXGameplayMessageSubsystem.h"
 #include "Level/CXLevelTransitionSettings.h"
+#include "Level/CXLevelTransitionSubsystem.h"
 #include "Tags/CXGameplayTags.h"
 #include "CXCharacterDefinition.h"
 #include "CXNewGameData.h"
@@ -60,13 +61,23 @@ void UCXUserDataSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
 	Super::Initialize(Collection);
 
+	// 자동 저장 메시지 처리 바인딩
+	if (UCXGameplayMessageSubsystem* Messages = GetGameInstance()->GetSubsystem<UCXGameplayMessageSubsystem>())
+	{
+		AutoSaveRequestListener = Messages->RegisterListener(CXVIGameplayTags::Message_UserData_RequestAutoSave, this, &ThisClass::HandleAutoSaveRequested);
+	}
+
 	// 타이틀을 거치지 않고 인게임 레벨을 바로 실행해도(PIE) 데이터가 있도록 새 게임 데이터로 시작
 	StartNewGame();
 }
 
 void UCXUserDataSubsystem::Deinitialize()
 {
+	AutoSaveRequestListener.Unregister();
+
 	CharacterDefinitions.Reset();
+
+	PendingLoadSaveGame = nullptr;
 
 	Super::Deinitialize();
 }
@@ -121,36 +132,72 @@ bool UCXUserDataSubsystem::StartNewGame()
 	return true;
 }
 
-bool UCXUserDataSubsystem::LoadGame(int32 InSlotIndex)
+//bool UCXUserDataSubsystem::LoadGame(int32 InSlotIndex)
+//{
+//	const FString SlotName = MakeSlotName(InSlotIndex);
+//	const UCXSaveGame* SaveGameObject = Cast<UCXSaveGame>(UGameplayStatics::LoadGameFromSlot(SlotName, CXUserData::SaveUserIndex));
+//	if (nullptr == SaveGameObject)
+//	{
+//		UE_LOG(LogCXUserData, Warning, TEXT("LoadGame 실패: 슬롯 %d (%s)를 불러올 수 없습니다."), InSlotIndex, *SlotName);
+//		return false;
+//	}
+//
+//	if (SaveGameObject->Header.SaveVersion > UCXSaveGame::CurrentVersion)
+//	{
+//		UE_LOG(LogCXUserData, Error, TEXT("LoadGame 실패: 지원하지 않는 저장 버전입니다. (%d > %d)"), SaveGameObject->Header.SaveVersion, UCXSaveGame::CurrentVersion);
+//		return false;
+//	}
+//
+//	// TODO : 저장 형식이 바뀌면 여기서 이전 버전 변환
+//
+//	UserData = SaveGameObject->UserData;
+//	LoadCharacterDefinitions();
+//
+//	// 자동 저장을 불러온 경우 수동 슬롯은 정해지지 않음 (다음 수동 저장 때 결정)
+//	CurrentSlotIndex = IsManualSlotIndex(InSlotIndex) ? InSlotIndex : INDEX_NONE;
+//	PlayTimeBaseSeconds = SaveGameObject->Header.PlayTimeSeconds;
+//	SessionStartSeconds = FPlatformTime::Seconds();
+//
+//	UE_LOG(LogCXUserData, Log, TEXT("Game loaded from slot %d."), InSlotIndex);
+//
+//	BroadcastPartyChanged(INDEX_NONE);
+//	BroadcastInventoryChanged(NAME_None, 0);
+//	return true;
+//}
+
+bool UCXUserDataSubsystem::LoadGameAndTravel(int32 InSlotIndex)
 {
-	const FString SlotName = MakeSlotName(InSlotIndex);
-	const UCXSaveGame* SaveGameObject = Cast<UCXSaveGame>(UGameplayStatics::LoadGameFromSlot(SlotName, CXUserData::SaveUserIndex));
+	UCXLevelTransitionSubsystem* LevelTransition = GetGameInstance()->GetSubsystem<UCXLevelTransitionSubsystem>();
+	if (nullptr == LevelTransition)
+	{
+		return false;
+	}
+
+	if (LevelTransition->IsTransitioning())
+	{
+		UE_LOG(LogCXUserData, Warning, TEXT("LoadGame 무시: 레벨 전환 중입니다."));
+		return false;
+	}
+
+	UCXSaveGame* SaveGameObject = ReadSaveGame(InSlotIndex);
 	if (nullptr == SaveGameObject)
 	{
-		UE_LOG(LogCXUserData, Warning, TEXT("LoadGame 실패: 슬롯 %d (%s)를 불러올 수 없습니다."), InSlotIndex, *SlotName);
 		return false;
 	}
 
-	if (SaveGameObject->Header.SaveVersion > UCXSaveGame::CurrentVersion)
+	// 로드 된 데이터를 나중에 적용하도록 레벨 전이 이벤트에 바인딩
+	PendingLoadSaveGame = SaveGameObject;
+	PendingLoadSlotIndex = InSlotIndex;
+	PendingLoadHandle = LevelTransition->OnScreenCovered.AddUObject(this, &ThisClass::HandleScreenCoveredForLoad);
+
+	const FCXSaveLocation& SaveLocation = SaveGameObject->UserData.SaveLocation;
+	if (false == LevelTransition->TravelToLevel(SaveLocation.LevelId, SaveLocation.EntryTag))
 	{
-		UE_LOG(LogCXUserData, Error, TEXT("LoadGame 실패: 지원하지 않는 저장 버전입니다. (%d > %d)"), SaveGameObject->Header.SaveVersion, UCXSaveGame::CurrentVersion);
+		UE_LOG(LogCXUserData, Warning, TEXT("LoadGame 실패: 저장된 위치로 이동할 수 없습니다. [%s]"), *SaveLocation.LevelId.ToString());
+		ClearPendingLoad();
 		return false;
 	}
 
-	// TODO : 저장 형식이 바뀌면 여기서 이전 버전 변환
-
-	UserData = SaveGameObject->UserData;
-	LoadCharacterDefinitions();
-
-	// 자동 저장을 불러온 경우 수동 슬롯은 정해지지 않음 (다음 수동 저장 때 결정)
-	CurrentSlotIndex = IsManualSlotIndex(InSlotIndex) ? InSlotIndex : INDEX_NONE;
-	PlayTimeBaseSeconds = SaveGameObject->Header.PlayTimeSeconds;
-	SessionStartSeconds = FPlatformTime::Seconds();
-
-	UE_LOG(LogCXUserData, Log, TEXT("Game loaded from slot %d."), InSlotIndex);
-
-	BroadcastPartyChanged(INDEX_NONE);
-	BroadcastInventoryChanged(NAME_None, 0);
 	return true;
 }
 
@@ -187,15 +234,86 @@ bool UCXUserDataSubsystem::GetSlotHeader(int32 InSlotIndex, FCXSaveHeader& OutHe
 	return true;
 }
 
+bool UCXUserDataSubsystem::GetSlotInfo(int32 InSlotIndex, FCXSaveHeader& OutHeader, TArray<FCXPartyMemberState>& OutParty) const
+{
+	const UCXSaveGame* SaveGameObject = Cast<UCXSaveGame>(UGameplayStatics::LoadGameFromSlot(MakeSlotName(InSlotIndex), CXUserData::SaveUserIndex));
+	if (nullptr == SaveGameObject)
+	{
+		return false;
+	}
+
+	OutHeader = SaveGameObject->Header;
+	OutParty = SaveGameObject->UserData.Party;
+	return true;
+}
+
+TArray<int32> UCXUserDataSubsystem::GetAllSlotIndices() const
+{
+	TArray<int32> SlotIndices;
+	SlotIndices.Add(AutoSaveSlotIndex);
+
+	const int32 MaxManualSaveSlots = GetDefault<UCXGameplayDataSettings>()->MaxManualSaveSlots;
+	for (int32 SlotIndex = 1; SlotIndex <= MaxManualSaveSlots; ++SlotIndex)
+	{
+		SlotIndices.Add(SlotIndex);
+	}
+
+	return SlotIndices;
+}
+
+bool UCXUserDataSubsystem::HasAnySaveSlot() const
+{
+	for (const int32 SlotIndex : GetAllSlotIndices())
+	{
+		if (DoesSlotExist(SlotIndex))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
 double UCXUserDataSubsystem::GetPlayTimeSeconds() const
 {
 	return PlayTimeBaseSeconds + (FPlatformTime::Seconds() - SessionStartSeconds);
+}
+
+void UCXUserDataSubsystem::HandleAutoSaveRequested(const FGameplayTag& InChannel, const FCXAutoSaveRequestMessage& InMessage)
+{
+	if (false == AutoSave())
+	{
+		UE_LOG(LogCXUserData, Error, TEXT("자동 저장 요청 처리 실패"));
+	}
 }
 
 const UCXCharacterDefinition* UCXUserDataSubsystem::GetCharacterDefinition(const FPrimaryAssetId& InCharacterId) const
 {
 	const TObjectPtr<UCXCharacterDefinition>* Found = CharacterDefinitions.Find(InCharacterId);
 	return Found ? Found->Get() : nullptr;
+}
+
+const UCXCharacterDefinition* UCXUserDataSubsystem::LoadCharacterDefinition(const FPrimaryAssetId& InCharacterId) const
+{
+	if (const UCXCharacterDefinition* CachedDefinition = GetCharacterDefinition(InCharacterId))
+	{
+		return CachedDefinition;
+	}
+
+	UAssetManager* AssetManager = UAssetManager::GetIfInitialized();
+	if (nullptr == AssetManager)
+	{
+		return nullptr;
+	}
+
+	const FSoftObjectPath AssetPath = AssetManager->GetPrimaryAssetPath(InCharacterId);
+	const UCXCharacterDefinition* Definition = Cast<UCXCharacterDefinition>(AssetPath.TryLoad());
+	if (nullptr == Definition)
+	{
+		UE_LOG(LogCXUserData, Error, TEXT("캐릭터 정의를 찾을 수 없습니다: %s (Asset Manager 스캔 경로 확인)"), *InCharacterId.ToString());
+	}
+
+	return Definition;
 }
 
 float UCXUserDataSubsystem::GetMemberMaxHealth(int32 InMemberIndex) const
@@ -280,6 +398,81 @@ void UCXUserDataSubsystem::RemoveDefeatedSpawnIds(const TArray<FName>& InSpawnId
 	for (const FName& SpawnId : InSpawnIds)
 	{
 		UserData.FieldData.DefeatedSpawnIds.Remove(SpawnId);
+	}
+}
+
+UCXSaveGame* UCXUserDataSubsystem::ReadSaveGame(int32 InSlotIndex) const
+{
+	const FString SlotName = MakeSlotName(InSlotIndex);
+	UCXSaveGame* SaveGameObject = Cast<UCXSaveGame>(UGameplayStatics::LoadGameFromSlot(SlotName, CXUserData::SaveUserIndex));
+	if (nullptr == SaveGameObject)
+	{
+		UE_LOG(LogCXUserData, Warning, TEXT("LoadGame 실패: 슬롯 %d (%s)를 불러올 수 없습니다."), InSlotIndex, *SlotName);
+		return nullptr;
+	}
+
+	if (SaveGameObject->Header.SaveVersion > UCXSaveGame::CurrentVersion)
+	{
+		UE_LOG(LogCXUserData, Error, TEXT("LoadGame 실패: 지원하지 않는 저장 버전입니다. (%d > %d)"), SaveGameObject->Header.SaveVersion, UCXSaveGame::CurrentVersion);
+		return nullptr;
+	}
+
+	// TODO : 저장 형식이 바뀌면 여기서 이전 버전 변환
+
+	return SaveGameObject;
+}
+
+void UCXUserDataSubsystem::ApplySaveGame(const UCXSaveGame& InSaveGame, int32 InSlotIndex)
+{
+	UserData = InSaveGame.UserData;
+	LoadCharacterDefinitions();
+
+	// 자동 저장을 불러온 경우 수동 슬롯은 정해지지 않음 (다음 수동 저장 때 결정)
+	CurrentSlotIndex = IsManualSlotIndex(InSlotIndex) ? InSlotIndex : INDEX_NONE;
+	PlayTimeBaseSeconds = InSaveGame.Header.PlayTimeSeconds;
+	SessionStartSeconds = FPlatformTime::Seconds();
+
+	UE_LOG(LogCXUserData, Log, TEXT("Game loaded from slot %d."), InSlotIndex);
+
+	BroadcastPartyChanged(INDEX_NONE);
+	BroadcastInventoryChanged(NAME_None, 0);
+}
+
+void UCXUserDataSubsystem::HandleScreenCoveredForLoad(const UCXLevelDefinition* InTargetLevel)
+{
+	const UCXSaveGame* SaveGameObject = PendingLoadSaveGame;
+	const int32 SlotIndex = PendingLoadSlotIndex;
+
+	ClearPendingLoad();
+
+	if (SaveGameObject)
+	{
+		ApplySaveGame(*SaveGameObject, SlotIndex);
+	}
+}
+
+void UCXUserDataSubsystem::ClearPendingLoad()
+{
+	if (UCXLevelTransitionSubsystem* LevelTransition = GetGameInstance()->GetSubsystem<UCXLevelTransitionSubsystem>())
+	{
+		LevelTransition->OnScreenCovered.Remove(PendingLoadHandle);
+	}
+
+	PendingLoadHandle.Reset();
+	PendingLoadSaveGame = nullptr;
+	PendingLoadSlotIndex = INDEX_NONE;
+}
+
+bool UCXUserDataSubsystem::IsItemCollected(FName InSpawnId) const
+{
+	return UserData.FieldData.CollectedItemSpawnIds.Contains(InSpawnId);
+}
+
+void UCXUserDataSubsystem::MarkItemCollected(FName InSpawnId)
+{
+	if (false == InSpawnId.IsNone())
+	{
+		UserData.FieldData.CollectedItemSpawnIds.Add(InSpawnId);
 	}
 }
 

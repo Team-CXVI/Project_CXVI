@@ -4,6 +4,7 @@
 #include "InputActionValue.h"
 #include "CXVI/Tags/CXFieldTags.h"
 #include "CXVI/Actor/Field/Interactions/CXExpeditionFlag.h"
+#include "CXVI/Actor/Field/Interactions/CXFieldItemPickup.h"
 #include "CXVI/Character/Field/Interactions/CXGrapplingHookTriggerBox.h"
 
 #include "Components/SkeletalMeshComponent.h"
@@ -292,13 +293,6 @@ void ACXFieldPlayerCharacter::Move(const FInputActionValue& InValue)
 	{
 		return;
 	}
-	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
-	if (IsValid(AnimInstance) && IsValid(FlagMontage) &&
-		AnimInstance->Montage_IsActive(FlagMontage) &&
-		AnimInstance->Montage_GetCurrentSection(FlagMontage) == FName(TEXT("SitIdle")))
-	{
-		AnimInstance->Montage_Stop(0.2f, FlagMontage);
-	}
 
 	const FRotator YawRotation(0.0f, Controller->GetControlRotation().Yaw, 0.0f);
 	const FRotationMatrix RotationMatrix(YawRotation);
@@ -402,6 +396,37 @@ void ACXFieldPlayerCharacter::UnregisterNearByFlag(ACXExpeditionFlag* Flag)
 	NearByActiveExpeditionFlag.Reset();
 }
 
+void ACXFieldPlayerCharacter::RegisterNearByItem(ACXFieldItemPickup* Pickup)
+{
+	if (!IsValid(Pickup))
+	{
+		return;
+	}
+
+	NearByItemPickup = Pickup;
+}
+
+void ACXFieldPlayerCharacter::UnregisterNearByItem(ACXFieldItemPickup* Pickup)
+{
+	// 현재 저장된 아이템에서 벗어났을 때만 제거.
+	if (NearByItemPickup.Get() != Pickup)
+	{
+		return;
+	}
+	NearByItemPickup.Reset();
+}
+
+void ACXFieldPlayerCharacter::PickupItem()
+{
+	ACXFieldItemPickup* Pickup = NearByItemPickup.Get();
+	if (!IsValid(Pickup) || !Pickup->CanPickup(this))
+	{
+		return;
+	}
+
+	Pickup->Pickup(this);
+}
+
 void ACXFieldPlayerCharacter::OnSceneSuspended_Implementation()
 {
 	SetActorHiddenInGame(true);
@@ -426,6 +451,10 @@ void ACXFieldPlayerCharacter::Interactive()
 	if (ASC->HasMatchingGameplayTag(CXVIFieldTag::State_CanUseExpeditionFlag))
 	{
 		StartUseFlag();
+	}
+	else if (ASC->HasMatchingGameplayTag(CXVIFieldTag::State_CanPickupItem))
+	{
+		PickupItem();
 	}
 	else if (ASC->HasMatchingGameplayTag(CXVIFieldTag::State_CanGrapplingHook))
 	{
@@ -604,9 +633,9 @@ void ACXFieldPlayerCharacter::StartUseFlag()
 		TEXT("[깃발 휴식] 접근한 깃발: %s"),
 		*GetNameSafe(Flag));
 
-	// 임시: 앉기 몽타주 대신 바로 휴식 처리하고 메뉴 구간에 들어간다.
 	ActiveExpeditionFlag = Flag;
-	Flag->CompleteFlag();
+	Flag->ActivateFlag();
+	Flag->Rest(); // 임시: 휴식 버튼 UI가 생기면 메뉴 버튼으로 이동.
 	EnterFlagMenu();
 }
 
@@ -639,36 +668,6 @@ void ACXFieldPlayerCharacter::ExitFlagMenu()
 	// 진입 때 붙인 태그만 하나씩 뗀다 (다른 어빌리티가 붙인 MovingBlock은 남는다).
 	ASC->RemoveLooseGameplayTag(CXVIFieldTag::State_InMenu);
 	ASC->RemoveLooseGameplayTag(CXVIFieldTag::State_MovingBlock);
-}
-
-void ACXFieldPlayerCharacter::OnFlagMontageChanged(UAnimMontage* Montage, FName SectionName, bool bLooped)
-{
-	if (Montage != FlagMontage || SectionName!=FName(TEXT("SitIdle")) || !bFlagMovementBlocked)
-	{
-		return;
-	}
-
-	// 이번 플래그 처리 완료.
-	bFlagMovementBlocked = false;
-
-	if (!IsValid(ASC))
-	{
-		return;
-	}
-
-	ASC->RemoveLooseGameplayTag(CXVIFieldTag::State_MovingBlock);
-
-	// 원정대 깃발로 책임 이전.
-	if (ACXExpeditionFlag* Flag = ActiveExpeditionFlag.Get())
-	{
-		UE_LOG(
-			LogTemp,
-			Log,
-			TEXT("[깃발 휴식] 완료 요청을 받은 깃발: %s"),
-			*GetNameSafe(Flag));
-		Flag->CompleteFlag();
-	}
-
 }
 
 void ACXFieldPlayerCharacter::Attack()

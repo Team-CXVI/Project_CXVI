@@ -5,6 +5,9 @@
 #include "CXVI/Foundation/Field/FieldEnemySpawning/CXFieldEnemySubsystem.h"
 #include "CXVI/Character/Field/CXFieldPlayerCharacter.h"
 #include "CXVI/Tags/CXFieldTags.h"
+#include "CXVI/Foundation/UserData/CXUserDataSubsystem.h"
+#include "CXVI/Level/CXLevelTransitionSubsystem.h"
+#include "CXVI/Level/CXLevelDefinition.h"
 
 #include "Engine/World.h"
 #include "AbilitySystemComponent.h"
@@ -17,6 +20,7 @@
 #include "Blueprint/UserWidget.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "TimerManager.h"
+#include "GameFramework/PlayerStart.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXExpeditionFlag)
 
@@ -33,15 +37,6 @@ ACXExpeditionFlag::ACXExpeditionFlag()
             TEXT("ExpeditionFlag"));
     ExpeditionFlag->SetupAttachment(SceneRoot);
 
-    // Keep the serialized subobject name so existing Blueprint overrides remain valid.
-    //ExpeditionFlagTrigger =
-    //    CreateDefaultSubobject<UChildActorComponent>(
-    //        TEXT("SaveFlagTrigger"));
-    //ExpeditionFlagTrigger->SetupAttachment(SceneRoot);
-    //ExpeditionFlagTrigger->SetChildActorClass(
-    //    ACXExpeditionFlagTriggerBox::StaticClass());
-    //ExpeditionFlagTrigger->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
-
     ExpeditionInteractionSphere = CreateDefaultSubobject<USphereComponent>(TEXT("ExpeditionInteractionSphere"));
     ExpeditionInteractionSphere->SetupAttachment(SceneRoot);
 
@@ -55,6 +50,21 @@ ACXExpeditionFlag::ACXExpeditionFlag()
     FlagPromptUI->SetupAttachment(GetRootComponent());
     FlagPromptUI->SetWidgetSpace(EWidgetSpace::Screen);
     FlagPromptUI->SetDrawSize(FVector2D(48.0f, 48.0f));
+
+    RespawnPoint = CreateDefaultSubobject<UChildActorComponent>(TEXT("RespawnPoint"));
+    RespawnPoint->SetupAttachment(SceneRoot);
+    RespawnPoint->SetChildActorClass(APlayerStart::StaticClass());
+}
+
+void ACXExpeditionFlag::OnConstruction(const FTransform& Transform)
+{
+    Super::OnConstruction(Transform);
+
+    // 인스턴스마다 다른 EntryTag를 자식 PlayerStart에 반영
+    if (APlayerStart* PlayerStart = Cast<APlayerStart>(RespawnPoint->GetChildActor()))
+    {
+        PlayerStart->PlayerStartTag = EntryTag;
+    }
 }
 
 bool ACXExpeditionFlag::CanFlag(const ACXFieldPlayerCharacter* Player) const
@@ -72,7 +82,13 @@ bool ACXExpeditionFlag::CanFlag(const ACXFieldPlayerCharacter* Player) const
     return true;
 }
 
-void ACXExpeditionFlag::CompleteFlag()
+void ACXExpeditionFlag::ActivateFlag()
+{
+    // 앉는 순간 이 깃발을 부활 / 저장 위치로 기록
+    RecordSaveLocation();
+}
+
+void ACXExpeditionFlag::Rest()
 {
     UWorld* World = GetWorld();
     if (!IsValid(World))
@@ -88,6 +104,19 @@ void ACXExpeditionFlag::CompleteFlag()
     const int32 RespawnedCount = EnemySubsystem->RespawnDefeatedEnemies(NAME_None);
 
     UE_LOG(LogTemp, Log, TEXT("깃발 휴식: 필드 적 %d 마리 복원"), RespawnedCount);
+
+    UCXUserDataSubsystem::Get(this).AutoSave();
+}
+
+bool ACXExpeditionFlag::SaveToSlot(int32 InSlotIndex)
+{
+    // 메뉴를 거치지 않은 호출에 대비해 한 번 더 기록.
+    if (!RecordSaveLocation())
+    {
+        return false;
+    }
+
+    return UCXUserDataSubsystem::Get(this).SaveGame(InSlotIndex);
 }
 
 // Called when the game starts or when spawned
@@ -297,4 +326,30 @@ void ACXExpeditionFlag::RefreshFlagUI()
     {
         UpdateFlagUI(Player, true);
     }
+}
+
+bool ACXExpeditionFlag::RecordSaveLocation()
+{
+    // 저장 위치 = 현재 레벨 + 이 깃발의 PlayerStart
+    UCXLevelTransitionSubsystem* LevelTransition = UCXLevelTransitionSubsystem::TryGet(this);
+    UCXUserDataSubsystem* UserData = UCXUserDataSubsystem::TryGet(this);
+    if (!IsValid(LevelTransition) || !IsValid(UserData))
+    {
+        return false;
+    }
+
+    const UCXLevelDefinition* LevelDefinition = LevelTransition->GetCurrentLevelDefinition();
+    if (nullptr == LevelDefinition)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("깃발 휴식: 레벨 정의가 없어 저장 위치를 기록하지 않습니다."));
+        return false;
+    }
+
+    if (EntryTag.IsNone())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[%s] EntryTag가 비어 있어 레벨 기본 위치로 저장됩니다."), *GetName());
+    }
+
+    UserData->SetSaveLocation(LevelDefinition->GetPrimaryAssetId(), EntryTag);
+    return true;
 }

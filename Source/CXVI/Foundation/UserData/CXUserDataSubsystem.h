@@ -5,10 +5,13 @@
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "CXUserDataTypes.h"
+#include "Foundation/GameplayMessage/CXGameplayMessageSubsystem.h"
 
 #include "CXUserDataSubsystem.generated.h"
 
 class UCXCharacterDefinition;
+class UCXLevelDefinition;
+class UCXSaveGame;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogCXUserData, Log, All);
 
@@ -19,6 +22,8 @@ DECLARE_LOG_CATEGORY_EXTERN(LogCXUserData, Log, All);
  * - 저장은 호출 시점의 UserData 스냅샷. 저장 시점 판단(전투 중 금지 등)은 호출하는 쪽 책임
  * - 레벨만 저장하고 스탯은 저장하지 않음 (정의 데이터 + 커브로 계산)
  * - 변경 시 Message.UserData.PartyChanged / InventoryChanged 방송 (UI 갱신용)
+ * - Message.UserData.RequestAutoSave를 받으면 자동 저장 (요청하는 쪽이 데이터 반영 후 방송)
+ * - 불러오기는 슬롯을 먼저 읽어 이동을 요청하고, 화면이 가려진 뒤 UserData에 적용
  */
 UCLASS()
 class CXVI_API UCXUserDataSubsystem : public UGameInstanceSubsystem
@@ -41,7 +46,11 @@ public:
 	bool StartNewGame();
 
 	// 슬롯에서 불러오기. 레벨 이동은 호출하는 쪽에서 GetSaveLocation()으로 처리
-	bool LoadGame(int32 InSlotIndex);
+	// bool LoadGame(int32 InSlotIndex);
+
+	// 슬롯을 읽어 저장된 위치로 이동. UserData는 화면이 가려진 뒤 교체
+	// 슬롯을 읽지 못했거나 이동이 거부되면 false (현재 UserData는 그대로)
+	bool LoadGameAndTravel(int32 InSlotIndex);
 
 	// Save
 public:
@@ -56,16 +65,30 @@ public:
 	// 슬롯 목록 UI용
 	bool GetSlotHeader(int32 InSlotIndex, FCXSaveHeader& OutHeader) const;
 
+	// 슬롯 목록 UI용 : 헤더 + 저장된 파티. 저장 파일이 없으면 false
+	bool GetSlotInfo(int32 InSlotIndex, FCXSaveHeader& OutHeader, TArray<FCXPartyMemberState>& OutParty) const;
+
+	// 슬롯 목록 UI용 : 자동 저장 슬롯 + 수동 저장 슬롯 전체 (저장 파일 유무와 무관)
+	TArray<int32> GetAllSlotIndices() const;
+
+	// 저장 파일이 있는 슬롯이 하나라도 있는지
+	bool HasAnySaveSlot() const;
+
 	// 마지막으로 쓴 수동 슬롯 (없으면 INDEX_NONE)
 	int32 GetCurrentSlotIndex() const { return CurrentSlotIndex; }
 
 	double GetPlayTimeSeconds() const;
+
+	void HandleAutoSaveRequested(const FGameplayTag& InChannel, const FCXAutoSaveRequestMessage& InMessage);
 
 	// Party
 public:
 	const TArray<FCXPartyMemberState>& GetPartyMembers() const { return UserData.Party; }
 
 	const UCXCharacterDefinition* GetCharacterDefinition(const FPrimaryAssetId& InCharacterId) const;
+
+	// 현재 파티가 아닌 캐릭터(저장 슬롯의 파티 등)도 찾음. 캐시에 없으면 동기 로드
+	const UCXCharacterDefinition* LoadCharacterDefinition(const FPrimaryAssetId& InCharacterId) const;
 
 	float GetMemberMaxHealth(int32 InMemberIndex) const;
 
@@ -99,6 +122,20 @@ public:
 	void AddDefeatedSpawnId(FName InSpawnId);
 
 	void RemoveDefeatedSpawnIds(const TArray<FName>& InSpawnIds);
+
+	bool IsItemCollected(FName InSpawnId) const;
+
+	void MarkItemCollected(FName InSpawnId);
+
+private:
+	// Load
+	UCXSaveGame* ReadSaveGame(int32 InSlotIndex) const;
+
+	void ApplySaveGame(const UCXSaveGame& InSaveGame, int32 InSlotIndex);
+
+	void HandleScreenCoveredForLoad(const UCXLevelDefinition* InTargetLevel);
+
+	void ClearPendingLoad();
 
 private:
 	// Save
@@ -143,6 +180,16 @@ private:
 	double SessionStartSeconds = 0.0;
 
 	bool bSaveInProgress = false;
+
+	FCXGameplayMessageListenerHandle AutoSaveRequestListener;
+
+	// 읽었지만 아직 적용하지 않은 저장 데이터 (페이드 아웃 동안 GC되지 않도록 UPROPERTY)
+	UPROPERTY()
+	TObjectPtr<UCXSaveGame> PendingLoadSaveGame;
+
+	int32 PendingLoadSlotIndex = INDEX_NONE;
+
+	FDelegateHandle PendingLoadHandle;
 
 	// 비동기 저장 진행 중에 들어온 저장 요청 (슬롯별 1개. 실제 저장 시점의 최신 데이터로 저장)
 	TSet<int32> QueuedSaveSlotIndices;

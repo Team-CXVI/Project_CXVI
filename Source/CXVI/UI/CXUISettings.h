@@ -4,8 +4,25 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DeveloperSettings.h"
+#include "GameplayTagContainer.h"
 
 #include "CXUISettings.generated.h"
+
+// Message.UI.OpenScreen으로 여는 화면 하나의 설정
+USTRUCT()
+struct FCXScreenEntry
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, Category = "Screen")
+	TSoftClassPtr<class UCXActivatableWidget> WidgetClass;
+
+	// Push할 레이어
+	UPROPERTY(EditAnywhere, Category = "Screen", meta = (Categories = "UI.Layer"))
+	FGameplayTag LayerTag;
+};
+
 
 /**
  * UI 루트 레이아웃 / UI 공통 입력 설정
@@ -37,5 +54,7 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Input")
 	int32 UIMappingPriority = 100;
 	
-	
+	// Message.UI.OpenScreen으로 열 수 있는 화면 (화면 태그 → 위젯, 레이어)
+	UPROPERTY(Config, EditAnywhere, Category = "Screen", meta = (ForceInlineRow, Categories = "UI.Screen"))
+	TMap<FGameplayTag, FCXScreenEntry> Screens;
 };

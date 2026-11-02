@@ -16,6 +16,7 @@ class UAnimMontage;
 class UCableComponent;
 class ACXExpeditionFlag;
 class ACXGrapplingHookTriggerBox;
+class ACXFieldItemPickup;
 struct FInputActionValue;
 
 
@@ -60,6 +61,14 @@ public:
 	// 메뉴 UI가 들어오면 닫기(ESC·나가기 버튼)에서 ExitFlagMenu를 호출한다.
 	void EnterFlagMenu();
 	void ExitFlagMenu();
+
+	// 아이템 섹션.
+public:
+	// 접근한 필드 아이템을 획득 후보에 추가.
+	void RegisterNearByItem(ACXFieldItemPickup* Pickup);
+
+	// 벗어난(또는 제거된) 필드 아이템을 획득 후보에서 제거.
+	void UnregisterNearByItem(ACXFieldItemPickup* Pickup);
 
 	// 로프 섹션.
 public:
@@ -122,7 +131,8 @@ protected:
 	// 원정대 깃발 사용 시작.
 	void StartUseFlag();
 
-	void OnFlagMontageChanged(class UAnimMontage* Montage, FName SectionName, bool bLooped);
+	// 필드 아이템 획득.
+	void PickupItem();
 
 	// 플레이어 공격.
 	void Attack();
@@ -193,11 +203,6 @@ protected:
 	// 선제 공격 스펙을 관리할 핸들.
 	FGameplayAbilitySpecHandle PreemptiveAttackHandle;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ExpeditionFlag")
-	TObjectPtr<class UAnimMontage> FlagMontage;
-
-	// 플래그에서 추가한 이동 제한을 관리.
-	bool bFlagMovementBlocked = false;
 
 	// 플레이어 공격.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = GameplayAbilities)
@@ -214,6 +219,10 @@ protected:
 	// 이번 휴식을 시작할 깃발.
 	UPROPERTY(Transient)
 	TWeakObjectPtr<class ACXExpeditionFlag> ActiveExpeditionFlag;
+
+	// 현재 획득 범위 안에 있는 필드 아이템.
+	UPROPERTY(Transient)
+	TWeakObjectPtr<ACXFieldItemPickup> NearByItemPickup;
 
 
 	// 플레이어 로프 어빌리티.
