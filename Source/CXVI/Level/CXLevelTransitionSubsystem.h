@@ -62,6 +62,9 @@ public:
 	// 현재 레벨의 레벨 정의 (정의가 없는 레벨이면 nullptr)
 	const UCXLevelDefinition* GetCurrentLevelDefinition() const { return CurrentDefinition; }
 
+	// 레벨 ID로 레벨 정의를 동기 로드. 저장 슬롯 표시 등 이동 없이 정의가 필요할 때 사용
+	UCXLevelDefinition* LoadLevelDefinition(const FPrimaryAssetId& InLevelId) const;
+
 	// 현재 레벨의 GameMode가 스폰할 위치 Tag
 	FName GetPendingEntryTag() const { return PendingEntryTag; }
 
@@ -74,8 +77,6 @@ public:
 private:
 	// TravelToTitle / TravelToLevel 공통 이동 경로
 	bool BeginTransition(UCXLevelDefinition* InDefinition, FName InEntryTag);
-
-	UCXLevelDefinition* LoadLevelDefinition(const FPrimaryAssetId& InLevelId) const;
 
 	// 요청 없이 시작된 월드(부트 맵, 에디터에서 바로 PIE)의 레벨 정의 검색
 	UCXLevelDefinition* FindLevelDefinitionForWorld(const UWorld* InWorld) const;

@@ -234,6 +234,46 @@ bool UCXUserDataSubsystem::GetSlotHeader(int32 InSlotIndex, FCXSaveHeader& OutHe
 	return true;
 }
 
+bool UCXUserDataSubsystem::GetSlotInfo(int32 InSlotIndex, FCXSaveHeader& OutHeader, TArray<FCXPartyMemberState>& OutParty) const
+{
+	const UCXSaveGame* SaveGameObject = Cast<UCXSaveGame>(UGameplayStatics::LoadGameFromSlot(MakeSlotName(InSlotIndex), CXUserData::SaveUserIndex));
+	if (nullptr == SaveGameObject)
+	{
+		return false;
+	}
+
+	OutHeader = SaveGameObject->Header;
+	OutParty = SaveGameObject->UserData.Party;
+	return true;
+}
+
+TArray<int32> UCXUserDataSubsystem::GetAllSlotIndices() const
+{
+	TArray<int32> SlotIndices;
+	SlotIndices.Add(AutoSaveSlotIndex);
+
+	const int32 MaxManualSaveSlots = GetDefault<UCXGameplayDataSettings>()->MaxManualSaveSlots;
+	for (int32 SlotIndex = 1; SlotIndex <= MaxManualSaveSlots; ++SlotIndex)
+	{
+		SlotIndices.Add(SlotIndex);
+	}
+
+	return SlotIndices;
+}
+
+bool UCXUserDataSubsystem::HasAnySaveSlot() const
+{
+	for (const int32 SlotIndex : GetAllSlotIndices())
+	{
+		if (DoesSlotExist(SlotIndex))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
 double UCXUserDataSubsystem::GetPlayTimeSeconds() const
 {
 	return PlayTimeBaseSeconds + (FPlatformTime::Seconds() - SessionStartSeconds);
@@ -251,6 +291,29 @@ const UCXCharacterDefinition* UCXUserDataSubsystem::GetCharacterDefinition(const
 {
 	const TObjectPtr<UCXCharacterDefinition>* Found = CharacterDefinitions.Find(InCharacterId);
 	return Found ? Found->Get() : nullptr;
+}
+
+const UCXCharacterDefinition* UCXUserDataSubsystem::LoadCharacterDefinition(const FPrimaryAssetId& InCharacterId) const
+{
+	if (const UCXCharacterDefinition* CachedDefinition = GetCharacterDefinition(InCharacterId))
+	{
+		return CachedDefinition;
+	}
+
+	UAssetManager* AssetManager = UAssetManager::GetIfInitialized();
+	if (nullptr == AssetManager)
+	{
+		return nullptr;
+	}
+
+	const FSoftObjectPath AssetPath = AssetManager->GetPrimaryAssetPath(InCharacterId);
+	const UCXCharacterDefinition* Definition = Cast<UCXCharacterDefinition>(AssetPath.TryLoad());
+	if (nullptr == Definition)
+	{
+		UE_LOG(LogCXUserData, Error, TEXT("캐릭터 정의를 찾을 수 없습니다: %s (Asset Manager 스캔 경로 확인)"), *InCharacterId.ToString());
+	}
+
+	return Definition;
 }
 
 float UCXUserDataSubsystem::GetMemberMaxHealth(int32 InMemberIndex) const

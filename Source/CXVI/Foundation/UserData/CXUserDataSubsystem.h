@@ -65,6 +65,15 @@ public:
 	// 슬롯 목록 UI용
 	bool GetSlotHeader(int32 InSlotIndex, FCXSaveHeader& OutHeader) const;
 
+	// 슬롯 목록 UI용 : 헤더 + 저장된 파티. 저장 파일이 없으면 false
+	bool GetSlotInfo(int32 InSlotIndex, FCXSaveHeader& OutHeader, TArray<FCXPartyMemberState>& OutParty) const;
+
+	// 슬롯 목록 UI용 : 자동 저장 슬롯 + 수동 저장 슬롯 전체 (저장 파일 유무와 무관)
+	TArray<int32> GetAllSlotIndices() const;
+
+	// 저장 파일이 있는 슬롯이 하나라도 있는지
+	bool HasAnySaveSlot() const;
+
 	// 마지막으로 쓴 수동 슬롯 (없으면 INDEX_NONE)
 	int32 GetCurrentSlotIndex() const { return CurrentSlotIndex; }
 
@@ -77,6 +86,9 @@ public:
 	const TArray<FCXPartyMemberState>& GetPartyMembers() const { return UserData.Party; }
 
 	const UCXCharacterDefinition* GetCharacterDefinition(const FPrimaryAssetId& InCharacterId) const;
+
+	// 현재 파티가 아닌 캐릭터(저장 슬롯의 파티 등)도 찾음. 캐시에 없으면 동기 로드
+	const UCXCharacterDefinition* LoadCharacterDefinition(const FPrimaryAssetId& InCharacterId) const;
 
 	float GetMemberMaxHealth(int32 InMemberIndex) const;
 
