@@ -21,11 +21,22 @@ public:
 	// Sets default values for this actor's properties
 	ACXExpeditionFlag();
 
+	virtual void OnConstruction(const FTransform& Transform) override;
+
 public:
 	// 이 플레이어에게 플래그를 사용할 수 있는지 물어보는 함수.
 	bool CanFlag(const ACXFieldPlayerCharacter* Player)const;
 
-	void CompleteFlag();
+
+	// 메뉴 섹션.
+	// 깃발 메뉴가 열릴 때 호출.
+	void ActivateFlag();
+
+	// 휴식 버튼. 적 재생성 + 자동 저장.
+	void Rest();
+
+	// 저장 버튼에서 슬롯을 고른 뒤 호출(1 ~ MaxManualSaveSlots)
+	bool SaveToSlot(int32 InSlotIndex);
 
 protected:
 	// Called when the game starts or when spawned
@@ -77,8 +88,6 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "ExpeditionFlag|UI", meta = (ClampMin = "0.0", ClampMax = "180.0"))
 	float PromptFacingAngle = 45.0f;
 
-
-
 protected:
 
 	// 원정대 깃발 메시.
@@ -91,5 +100,17 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ExpeditionFlag|UI")
 	TObjectPtr<class UWidgetComponent> FlagPromptUI;
+
+	// 휴식 시 저장 위치로 기록할 PlayerStart 태그. 자식 PlayerStart(RespawnPoint)의 태그로 자동 반영.
+	UPROPERTY(EditInstanceOnly, Category = "ExpeditionFlag|Save")
+	FName EntryTag;
+
+	// 부활 / 이어하기 스폰 위치. 자식 PlayerStart의 태그는 EntryTag로 자동 설정
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ExpeditionFlag|Save")
+	TObjectPtr<UChildActorComponent> RespawnPoint;
+
+private:
+	// 현재 레벨 + EntryTag를 UserData의 SaveLocation으로 기록.
+	bool RecordSaveLocation();
 	
 };
