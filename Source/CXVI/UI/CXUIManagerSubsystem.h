@@ -15,9 +15,9 @@ class APlayerController;
 struct FCXNavigationConfig;
 struct FCXScreenFadeMessage;
 struct FCXOpenScreenMessage;
+class UCXPopupWidget;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogCXUI, Log, All);
-
 
 /**
  * UI 매니저 (로컬 플레이어마다 하나)
@@ -28,6 +28,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogCXUI, Log, All);
  * 게임 전체 수명의 ViewModel을 생성해서 MVVM 전역 Viewmodel Collection에 등록 / 해제 (VM 보관은 Collection)
  * 화면 페이드 메시지를 받아 페이드 중에만 Ticker로 레이아웃 불투명도를 갱신 (카메라 페이드는 UI를 덮지 않음)
  * Message.UI.OpenScreen을 받아 UCXUISettings::Screens에 지정된 화면을 열기. 이미 스택에 있으면 새로 만들지 않고 위로 올림
+ * 공용 팝업을 UI.Layer.Modal에 Push (UCXUISettings::PopupClass)
  * 
  * *화면이 스스로 닫힐 때는 RemoveWidget 보다는 개별 위젯의 DeactivateWidget()을 호출(Stack이 자동 제거)
  */
@@ -75,6 +76,15 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "CXVI|UI")
 	void RemoveWidget(UCommonActivatableWidget* InWidget);
 
+public:
+	// Popup
+
+	// 버튼 1개. InOnConfirm이 없으면 닫기만 함
+	void ShowConfirmPopup(FName InBodyTextId, FSimpleDelegate InOnConfirm = FSimpleDelegate());
+
+	// 버튼 2개 (왼쪽 확인, 오른쪽 취소). 콜백이 없는 버튼은 닫기만 함
+	void ShowConfirmCancelPopup(FName InBodyTextId, FSimpleDelegate InOnConfirm, FSimpleDelegate InOnCancel = FSimpleDelegate());
+
 private:
 	// Add : bInApply == true
 	// Remove : bInApply == false
@@ -98,6 +108,9 @@ private:
 private:
 	// Open Screen
 	void HandleOpenScreen(const FGameplayTag& InChannel, const FCXOpenScreenMessage& InMessage);
+	
+	// Popup
+	void PushPopup(TFunctionRef<void(UCXPopupWidget&)> InSetupFunc);
 
 private:
 	// Screen Fade

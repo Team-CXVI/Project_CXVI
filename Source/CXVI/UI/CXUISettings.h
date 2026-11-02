@@ -54,6 +54,10 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Input")
 	int32 UIMappingPriority = 100;
 	
+	// ShowConfirmPopup / ShowConfirmCancelPopup으로 여는 공용 팝업 (WBP_Popup)
+	UPROPERTY(Config, EditAnywhere, Category = "Popup")
+	TSoftClassPtr<class UCXPopupWidget> PopupClass;
+
 	// Message.UI.OpenScreen으로 열 수 있는 화면 (화면 태그 → 위젯, 레이어)
 	UPROPERTY(Config, EditAnywhere, Category = "Screen", meta = (ForceInlineRow, Categories = "UI.Screen"))
 	TMap<FGameplayTag, FCXScreenEntry> Screens;

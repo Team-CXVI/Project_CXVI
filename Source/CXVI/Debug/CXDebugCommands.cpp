@@ -23,6 +23,8 @@
 
 #include "Foundation/UserData/CXUserDataSubsystem.h"
 
+#include "UI/CXUIManagerSubsystem.h"
+
 namespace CXSceneDebug
 {
 	/** 에셋 이름 또는 전체 경로(/Game/...)로 T 타입 에셋 검색 */
@@ -509,6 +511,34 @@ namespace CXUserDataDebug
 				if (UCXUserDataSubsystem* Subsystem = GetSubsystem(InWorld))
 				{
 					Subsystem->LoadGameAndTravel(SlotIndex);
+				}
+			}));
+}
+
+namespace CXPopupDebug
+{
+	static FAutoConsoleCommandWithWorldAndArgs PopupCommand(
+		TEXT("CXVI.UI.Popup"),
+		TEXT("공용 팝업 열기. CXVI.UI.Popup <1|2> (1 = 확인, 2 = 확인/취소)"),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateLambda(
+			[](const TArray<FString>& InArgs, UWorld* InWorld)
+			{
+				UCXUIManagerSubsystem* UIManager = UCXUIManagerSubsystem::TryGet(InWorld);
+				if (nullptr == UIManager)
+				{
+					return;
+				}
+
+				const FSimpleDelegate OnConfirm = FSimpleDelegate::CreateLambda([]() { UE_LOG(LogCXUI, Log, TEXT("팝업 콜백: 확인")); });
+				const FSimpleDelegate OnCancel = FSimpleDelegate::CreateLambda([]() { UE_LOG(LogCXUI, Log, TEXT("팝업 콜백: 취소")); });
+
+				if (InArgs.Num() > 0 && InArgs[0] == TEXT("2"))
+				{
+					UIManager->ShowConfirmCancelPopup(NAME_None, OnConfirm, OnCancel);
+				}
+				else
+				{
+					UIManager->ShowConfirmPopup(NAME_None, OnConfirm);
 				}
 			}));
 }
