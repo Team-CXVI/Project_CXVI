@@ -184,7 +184,7 @@ void UCXBTService_FieldDetect::TickNode(UBehaviorTreeComponent& OwnerComp, uint8
 		OverlapResults,
 		Center,
 		FQuat::Identity,
-		ECC_GameTraceChannel1,
+		ECC_Pawn,
 		FCollisionShape::MakeSphere(DetectRadius),
 		Params
 		);
