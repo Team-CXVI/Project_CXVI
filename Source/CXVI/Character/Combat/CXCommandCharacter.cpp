@@ -6,6 +6,8 @@
 #include "CXVI/Character/Combat/CXCombatCharacterPlayer.h"
 #include "CXVI/Foundation/Combat/CXCombatManagerSubsystem.h"
 
+#include "Character/Combat/Components/CXJustTimingComponent.h"
+
 #include "Engine/LocalPlayer.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
@@ -220,6 +222,7 @@ void ACXCommandCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 	
 	EnhancedInput->BindAction(RunawayAction, ETriggerEvent::Started, this, &ACXCommandCharacter::HandleInputRunaway);
 	EnhancedInput->BindAction(SkipTurnAction, ETriggerEvent::Started, this, &ACXCommandCharacter::HandleInputSkipTurn);
+	EnhancedInput->BindAction(JustTimingAction, ETriggerEvent::Started, this, &ACXCommandCharacter::HandleInputJustTiming);
 
 }
 
@@ -612,6 +615,28 @@ void ACXCommandCharacter::HandleInputSkipTurn()
 	} 
 
 	CommandPlayer->SkipTurn();
+}
+
+void ACXCommandCharacter::HandleInputJustTiming()
+{
+	if (CombatInputMode != ECXCombatInputMode::JustTiming)
+	{
+		return;
+	}
+
+	ACXCombatCharacterPlayer* Player = CommandCharacter.Get();
+
+	if (!IsValid(Player) || !Player->GetIsCharacterAlive() || !Player->GetIsTurn())
+	{
+		return;
+	}
+
+	if (UCXJustTimingComponent* Timing = Player->FindComponentByClass<UCXJustTimingComponent>())
+	{
+		Timing->HandleInput();
+	}
+
+	/*UE_LOG(LogTemp, Display, TEXT("[저스트타이밍] 스페이스 입력: %s"), *Player->GetName());*/
 }
 
 

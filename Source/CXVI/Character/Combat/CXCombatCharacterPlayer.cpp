@@ -7,6 +7,7 @@
 #include "Foundation/Combat/CXCollisionChannels.h"
 
 #include "CXVI/AbilitySystem/Attributes/Combat/CXCombatPlayerAttributeSet.h"
+#include "Character/Combat/Components/CXJustTimingComponent.h"
 
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
@@ -37,6 +38,8 @@ ACXCombatCharacterPlayer::ACXCombatCharacterPlayer()
 	{
 		GetMesh()->SetSkeletalMesh(CharacterMeshRef.Object);
 	}
+
+	JustTimingComponent = CreateDefaultSubobject<UCXJustTimingComponent>(TEXT("JustTimingComponent"));
 
 	AttributeSet = CreateDefaultSubobject<UCXCombatPlayerAttributeSet>(TEXT("AttributeSet"));
 	ASC->AddAttributeSetSubobject<UCXCombatPlayerAttributeSet>(AttributeSet);
