@@ -4,8 +4,12 @@
 #include "UI/Field/CXFieldMenuWidget.h"
 
 #include "UI/CXButtonBase.h"
+#include "Foundation/GameplayMessage/CXGameplayMessageSubsystem.h"
+#include "Foundation/UserData/CXUserDataSubsystem.h"
 #include "Level/CXLevelTransitionSubsystem.h"
 #include "UI/CXUIManagerSubsystem.h"
+#include "Tags/CXGameplayTags.h"
+#include "UI/CXUITypes.h"
 
 #include <Kismet/GameplayStatics.h>
 
@@ -25,6 +29,7 @@ void UCXFieldMenuWidget::NativeOnInitialized()
 	Super::NativeOnInitialized();
 
 	ContinueButton->OnClicked().AddUObject(this, &ThisClass::HandleContinueClicked);
+	LoadGameButton->OnClicked().AddUObject(this, &ThisClass::HandleLoadGameClicked);
 	TitleButton->OnClicked().AddUObject(this, &ThisClass::HandleTitleClicked);
 	QuitButton->OnClicked().AddUObject(this, &ThisClass::HandleQuitClicked);
 }
@@ -32,6 +37,9 @@ void UCXFieldMenuWidget::NativeOnInitialized()
 void UCXFieldMenuWidget::NativeOnActivated()
 {
 	Super::NativeOnActivated();
+
+	const UCXUserDataSubsystem* UserData = UCXUserDataSubsystem::TryGet(this);
+	LoadGameButton->SetIsEnabled(UserData && UserData->HasAnySaveSlot());
 
 	// 인 게임은 일시 정지
 	UGameplayStatics::SetGamePaused(this, true);
@@ -47,6 +55,20 @@ void UCXFieldMenuWidget::NativeOnDeactivated()
 void UCXFieldMenuWidget::HandleContinueClicked()
 {
 	DeactivateWidget();
+}
+
+void UCXFieldMenuWidget::HandleLoadGameClicked()
+{
+	const UCXLevelTransitionSubsystem* LevelTransition = UCXLevelTransitionSubsystem::TryGet(this);
+	if (nullptr == LevelTransition || LevelTransition->IsTransitioning())
+	{
+		return;
+	}
+
+	FCXOpenScreenMessage Message;
+	Message.ScreenTag = CXVIGameplayTags::UI_Screen_SaveSlot;
+	Message.ContextTag = CXVIGameplayTags::UI_ScreenContext_SaveSlot_Load;
+	UCXGameplayMessageSubsystem::Get(this).BroadcastMessage(CXVIGameplayTags::Message_UI_OpenScreen, Message);
 }
 
 void UCXFieldMenuWidget::HandleTitleClicked()

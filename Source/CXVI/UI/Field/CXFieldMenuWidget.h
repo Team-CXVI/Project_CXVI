@@ -38,9 +38,12 @@ protected:
 private:
 	void HandleContinueClicked();
 
+	void HandleLoadGameClicked();
+
 	void HandleTitleClicked();
 
 	void HandleQuitClicked();
+
 
 	// 팝업의 확인 버튼에서 실행
 	void ConfirmReturnToTitle();
@@ -51,6 +54,10 @@ protected:
 	// 계속하기 버튼
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UCXButtonBase> ContinueButton;
+
+	// 이어하기 버튼
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UCXButtonBase> LoadGameButton;
 
 	// 타이틀로 돌아가기 버튼
 	UPROPERTY(meta = (BindWidget))
