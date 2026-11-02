@@ -83,10 +83,11 @@ private:
 
 private:
 	// ViewModel
-	// 파티 ViewModel 생성 후 MVVM 전역 Viewmodel Collection에 등록 / Collection에서 찾아 정리 후 등록 해제
-	void CreatePartyViewModel();
 
-	void DestroyPartyViewModel();
+	// 전역 관리 ViewModel 생성 후 MVVM 전역 Viewmodel Collection에 등록 / Collection에서 찾아 정리 후 등록 해제
+	void CreateGlobalViewModel();
+
+	void DestroyGlobalViewModel();
 
 private:
 	UPROPERTY(Transient)

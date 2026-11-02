@@ -21,6 +21,8 @@
 #include "Subsystems/CXInputControlSubsystem.h"
 #include "Tags/CXGameplayTags.h"
 
+#include "Foundation/UserData/CXUserDataSubsystem.h"
+
 namespace CXSceneDebug
 {
 	/** 에셋 이름 또는 전체 경로(/Game/...)로 T 타입 에셋 검색 */
@@ -362,5 +364,83 @@ namespace CXInputDebug
 			}));
 }
 
+namespace CXUserDataDebug
+{
+	static UCXUserDataSubsystem* GetSubsystem(UWorld* InWorld)
+	{
+		UCXUserDataSubsystem* Subsystem = UCXUserDataSubsystem::TryGet(InWorld);
+		if (nullptr == Subsystem)
+		{
+			UE_LOG(LogCXUserData, Warning, TEXT("UserData Subsystem이 없습니다. 게임 맵에서 실행하세요."));
+		}
+		return Subsystem;
+	}
+
+	// <ItemId> [Count] 파싱 (Count 기본 1). 인자가 잘못되면 false
+	static bool ParseItemArgs(const TArray<FString>& InArgs, FName& OutItemId, int32& OutCount)
+	{
+		if (InArgs.IsEmpty())
+		{
+			return false;
+		}
+
+		OutItemId = FName(*InArgs[0]);
+		OutCount = InArgs.IsValidIndex(1) ? FCString::Atoi(*InArgs[1]) : 1;
+		return OutCount > 0;
+	}
+
+	// CXVI.UserData.AddItem <ItemId> [Count]
+	static FAutoConsoleCommandWithWorldAndArgs AddItemCommand(
+		TEXT("CXVI.UserData.AddItem"),
+		TEXT("UserData 인벤토리에 아이템을 추가합니다. 사용법: CXVI.UserData.AddItem <ItemId> [개수] (기본 1)"),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& InArgs, UWorld* InWorld)
+			{
+				FName ItemId;
+				int32 Count = 0;
+				if (false == ParseItemArgs(InArgs, ItemId, Count))
+				{
+					UE_LOG(LogCXUserData, Warning, TEXT("사용법: CXVI.UserData.AddItem <ItemId> [개수] (개수는 1 이상)"));
+					return;
+				}
+
+				UCXUserDataSubsystem* Subsystem = GetSubsystem(InWorld);
+				if (nullptr == Subsystem)
+				{
+					return;
+				}
+
+				Subsystem->AddItem(ItemId, Count);
+				UE_LOG(LogCXUserData, Display, TEXT("%s +%d -> %d"), *ItemId.ToString(), Count, Subsystem->GetItemCount(ItemId));
+			}));
+
+	// CXVI.UserData.RemoveItem <ItemId> [Count]
+	static FAutoConsoleCommandWithWorldAndArgs RemoveItemCommand(
+		TEXT("CXVI.UserData.RemoveItem"),
+		TEXT("UserData 인벤토리에서 아이템을 제거합니다. 수량이 부족하면 제거하지 않습니다. 사용법: CXVI.UserData.RemoveItem <ItemId> [개수] (기본 1)"),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& InArgs, UWorld* InWorld)
+			{
+				FName ItemId;
+				int32 Count = 0;
+				if (false == ParseItemArgs(InArgs, ItemId, Count))
+				{
+					UE_LOG(LogCXUserData, Warning, TEXT("사용법: CXVI.UserData.RemoveItem <ItemId> [개수] (개수는 1 이상)"));
+					return;
+				}
+
+				UCXUserDataSubsystem* Subsystem = GetSubsystem(InWorld);
+				if (nullptr == Subsystem)
+				{
+					return;
+				}
+
+				if (false == Subsystem->RemoveItem(ItemId, Count))
+				{
+					UE_LOG(LogCXUserData, Warning, TEXT("수량이 부족해 제거하지 않았습니다: %s (보유 %d, 요청 %d)"), *ItemId.ToString(), Subsystem->GetItemCount(ItemId), Count);
+					return;
+				}
+
+				UE_LOG(LogCXUserData, Display, TEXT("%s -%d -> %d"), *ItemId.ToString(), Count, Subsystem->GetItemCount(ItemId));
+			}));
+}
 
 #endif // !UE_BUILD_SHIPPING
