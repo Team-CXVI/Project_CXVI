@@ -57,4 +57,7 @@ namespace CXVIGameplayTags
 
 	// Damage Type
 	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Damage_CannotBeDodged);
+	
+	//Item
+	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Item_Type_Potion);
 }

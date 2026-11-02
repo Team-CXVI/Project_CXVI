@@ -41,4 +41,8 @@ public:
 	// 수동 저장 슬롯 수 (슬롯 0은 자동 저장 전용)
 	UPROPERTY(Config, EditAnywhere, Category = "Save", meta = (ClampMin = 1))
 	int32 MaxManualSaveSlots = 3;
+
+	// 필드 HUD에서 홀드로 사용하는 포션 (DT_Item의 Row 이름)
+	UPROPERTY(Config, EditAnywhere, Category = "Item")
+	FName PotionItemId;
 };
