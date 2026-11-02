@@ -427,8 +427,18 @@ void UCXGameplayAbilityCombatBase::UpdateNextAttackSection(int32 HitIndex, bool 
 		return;
 	}*/
 
-	// 현재 섹션은 끝까지 재생하고 다음 섹션을 변경.
-	MontageSetNextSectionName(CurrentSection, NextSection);
+	const bool bJumpToNextAttack = bSuccess && AbilityData->AttackSectionNames.IsValidIndex(HitIndex + 1);
+
+	if (bJumpToNextAttack)
+	{
+		// 현재 동작의 남은 부분을 생략하고 다음 공격 시작.
+		MontageJumpToSection(NextSection);
+	}
+	else
+	{
+		// 실패하면 현재 동작을 끝까지 재생하고 종료.
+		MontageSetNextSectionName(CurrentSection, NextSection);
+	}
 	
 	UE_LOG(LogTemp, Display, TEXT("[연계] %d단계 판정 %s: %s → %s"), 
 		HitIndex + 1,
