@@ -6,6 +6,7 @@
 #include "CXUISettings.h"
 #include "CXNavigationConfig.h"
 #include "UI/ViewModel/CXPartyViewModel.h"
+#include "UI/ViewModel/CXPotionViewModel.h"
 
 #include <CommonActivatableWidget.h>
 #include <Engine/LocalPlayer.h>
@@ -15,6 +16,7 @@
 #include <Input/CommonUIActionRouterBase.h>
 #include <GameFramework/InputSettings.h>
 #include <MVVMGameSubsystem.h>
+#include <Engine/GameInstance.h>
 
 #if WITH_EDITOR
 #include <Engine/GameViewportClient.h>
@@ -46,7 +48,7 @@ void UCXUIManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	ApplyNavigationConfig(true);
 
 	// 위젯이 생성되기 전에 전역 Viewmodel Collection에 등록
-	CreatePartyViewModel();
+	CreateGlobalViewModel();
 
 #if WITH_EDITOR
 	if (FSlateApplication::IsInitialized())
@@ -61,7 +63,7 @@ void UCXUIManagerSubsystem::Deinitialize()
 {
 	DestroyPrimaryLayout();
 
-	DestroyPartyViewModel();
+	DestroyGlobalViewModel();
 
 	ApplyNavigationConfig(false);
 
@@ -211,15 +213,13 @@ void UCXUIManagerSubsystem::ResetInputConfigToGameDefault() const
 	ActionRouter->SetActiveUIInputConfig(FUIInputConfig(ECommonInputMode::Game, CaptureMode));
 }
 
-void UCXUIManagerSubsystem::CreatePartyViewModel()
+void UCXUIManagerSubsystem::CreateGlobalViewModel()
 {
-	// LocalPlayer Subsystem의 Initialize 시점에는 월드가 없을 수 있으므로 GameInstance에서 직접 가져옴
 	UGameInstance* GameInstance = GetLocalPlayer() ? GetLocalPlayer()->GetGameInstance() : nullptr;
 	const UMVVMGameSubsystem* MVVMSubsystem = GameInstance ? GameInstance->GetSubsystem<UMVVMGameSubsystem>() : nullptr;
 	UMVVMViewModelCollectionObject* Collection = MVVMSubsystem ? MVVMSubsystem->GetViewModelCollection() : nullptr;
 	if (nullptr == Collection)
 	{
-		UE_LOG(LogCXUI, Error, TEXT("MVVM 전역 Viewmodel Collection이 없어 PartyViewModel을 등록하지 못했습니다."));
 		return;
 	}
 
@@ -231,9 +231,18 @@ void UCXUIManagerSubsystem::CreatePartyViewModel()
 		UE_LOG(LogCXUI, Error, TEXT("PartyViewModel을 전역 Viewmodel Collection에 등록하지 못했습니다."));
 		PartyViewModel->Reset();
 	}
+
+	UCXPotionViewModel* PotionViewModel = NewObject<UCXPotionViewModel>(GameInstance);
+	PotionViewModel->Initialize(*GameInstance);
+
+	if (false == Collection->AddViewModelInstance(UCXPotionViewModel::MakeGlobalContext(), PotionViewModel))
+	{
+		UE_LOG(LogCXUI, Error, TEXT("PotionViewModel을 전역 Viewmodel Collection에 등록하지 못했습니다."));
+		PotionViewModel->Reset();
+	}
 }
 
-void UCXUIManagerSubsystem::DestroyPartyViewModel()
+void UCXUIManagerSubsystem::DestroyGlobalViewModel()
 {
 	const UGameInstance* GameInstance = GetLocalPlayer() ? GetLocalPlayer()->GetGameInstance() : nullptr;
 	const UMVVMGameSubsystem* MVVMSubsystem = GameInstance ? GameInstance->GetSubsystem<UMVVMGameSubsystem>() : nullptr;
@@ -252,6 +261,16 @@ void UCXUIManagerSubsystem::DestroyPartyViewModel()
 	// 구독 해제 후 Collection에서 제거 (Collection의 참조가 사라지면 GC 대상)
 	PartyViewModel->Reset();
 	Collection->RemoveAllViewModelInstance(PartyViewModel);
+
+	UCXPotionViewModel* PotionViewModel = Cast<UCXPotionViewModel>(Collection->FindFirstViewModelInstanceOfType(UCXPotionViewModel::StaticClass()));
+	if (nullptr == PotionViewModel)
+	{
+		return;
+	}
+
+	// 구독 해제 후 Collection에서 제거 (Collection의 참조가 사라지면 GC 대상)
+	PotionViewModel->Reset();
+	Collection->RemoveAllViewModelInstance(PotionViewModel);
 }
 
 #if WITH_EDITOR
