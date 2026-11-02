@@ -7,6 +7,7 @@
 #include "Foundation/Combat/CXCollisionChannels.h"
 
 #include "CXVI/AbilitySystem/Attributes/Combat/CXCombatPlayerAttributeSet.h"
+#include "AbilitySystem/Abilities/Combat/CXGA_UseItemBase.h"
 #include "Character/Combat/Components/CXJustTimingComponent.h"
 
 #include "GameFramework/SpringArmComponent.h"
@@ -252,6 +253,45 @@ void ACXCombatCharacterPlayer::TryRunaway()
 	
 }
 
+bool ACXCombatCharacterPlayer::CanUseHealingItem(FName ItemId, const ACXCombatCharacterBase* Target) const
+{
+	if (!IsValid(ASC))
+	{
+		return false;
+	}
+
+	FScopedAbilityListLock AbilityListLock(*ASC);
+
+	FGameplayTagContainer AbilityTags;
+	AbilityTags.AddTag(CXVIGameplayTags::Ability_Item_Heal);
+
+	TArray<FGameplayAbilitySpec*> MatchingAbilities;
+
+	ASC->GetActivatableGameplayAbilitySpecsByAllMatchingTags(
+		AbilityTags,
+		MatchingAbilities,
+		false
+	);
+
+	if (MatchingAbilities.Num() != 1)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[아이템] 회복 GA 등록 확인 필요: 검색 결과 %d개"), MatchingAbilities.Num());
+
+		return false;
+	}
+
+	const FGameplayAbilitySpec* Spec = MatchingAbilities[0];
+	
+	if (!Spec || Spec->IsActive())
+	{
+		return false;
+	}
+
+	const UCXGA_UseItemBase* ItemAbility = Cast<UCXGA_UseItemBase>(Spec->Ability);
+
+	return ItemAbility && ItemAbility->CanUseItem(this, ItemId, Target);
+}
+
 void ACXCombatCharacterPlayer::PostInitializeComponents()
 {
 	CharacterAttributeSet = AttributeSet;
@@ -261,7 +301,7 @@ void ACXCombatCharacterPlayer::PostInitializeComponents()
 	InitializeGAS();
 
 	ASC->SetNumericAttributeBase(AttributeSet->GetMaxHealthAttribute(), 200.f);
-	ASC->SetNumericAttributeBase(AttributeSet->GetHealthAttribute(), 200.f);
+	ASC->SetNumericAttributeBase(AttributeSet->GetHealthAttribute(), 100.f);
 	ASC->SetNumericAttributeBase(AttributeSet->GetCombatSpeedAttribute(), 200.f);
 	ASC->SetNumericAttributeBase(AttributeSet->GetAttackPowerAttribute(), 40.f);
 	ASC->SetNumericAttributeBase(AttributeSet->GetDefenseAttribute(), 40.f);
@@ -303,6 +343,10 @@ bool ACXCombatCharacterPlayer::ExecuteCombatAbility()
 	case ECXActionType::CounterAttack:
 		return CounterAbility();
 
+	case ECXActionType::Item:
+		// 나중에 종류 별로 설정
+		return ActivateHealingItem();
+
 	default:
 		return false;
 	}
@@ -323,12 +367,58 @@ void ACXCombatCharacterPlayer::SelectTargetPhase()
 
 bool ACXCombatCharacterPlayer::ActivateHealingItem()
 {
-	return false;
+	if (!IsValid(ASC))
+	{
+		return false;
+	}
+
+	FGameplayAbilitySpecHandle AbilityHandle;
+	
+	{
+		FScopedAbilityListLock AbilityListLock(*ASC);
+
+		FGameplayTagContainer AbilityTags;
+		AbilityTags.AddTag(CXVIGameplayTags::Ability_Item_Heal);
+
+		TArray<FGameplayAbilitySpec*> MatchingAbilities;
+
+		ASC->GetActivatableGameplayAbilitySpecsByAllMatchingTags(
+			AbilityTags,
+			MatchingAbilities,
+			false
+		);
+
+		// 회복 아이템 실행 태그는 하나의 GA에만 지정
+		if (MatchingAbilities.Num() != 1)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[아이템] 회복 Ga 등록 확인 필요: 검색결과 %d개"), MatchingAbilities.Num());
+
+			return false;
+		}
+
+		const FGameplayAbilitySpec* Spec = MatchingAbilities[0];
+
+		if (!Spec || !Spec->Ability || Spec->IsActive())
+		{
+			return false;
+		}
+
+		AbilityHandle = Spec->Handle;
+	}
+
+	UE_LOG(LogTemp, Display, TEXT("[아이템] 회복 GA 실행 요청"));
+
+	return TryStartCombatAbility(AbilityHandle);
 }
 
 bool ACXCombatCharacterPlayer::ShouldApproachTarget() const
 {
-	return false;
+	if (GetPendingAction().Type == ECXActionType::Item)
+	{
+		return false;
+	}
+
+	return Super::ShouldApproachTarget();
 }
 
 //void ACXCombatCharacterPlayer::ActionPhase()

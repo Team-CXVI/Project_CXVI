@@ -298,7 +298,22 @@ void ACXCommandCharacter::HandleInputConfirm()
 			return;
 		}
 
-		Player->SubmitTarget(TargetCandidates[SelectedTargetIndex].Get());
+		//Player->SubmitTarget(TargetCandidates[SelectedTargetIndex].Get());
+		ACXCombatCharacterBase* Target = Cast<ACXCombatCharacterBase>(TargetCandidates[SelectedTargetIndex].Get());
+
+		if (!IsValid(Target))
+		{
+			return;
+		}
+
+		if (SavedSelection.Type == ECXActionType::Item && !Player->CanUseHealingItem(SavedSelection.ItemId, Target))
+		{
+			UE_LOG(LogTemp, Display, TEXT("[아이템] 사용할 수 없는 대상입니다. 다른 대상을 선택하세요"));
+
+			return;
+		}
+
+		Player->SubmitTarget(Target);
 		break;
 	}
 	}
@@ -357,7 +372,16 @@ void ACXCommandCharacter::HandleInputSlot1()
 	}
 	case ECommandMenuState::ItemMenu:
 	{
-		UE_LOG(LogTemp, Display, TEXT("1번아이템 선택"));
+
+		SavedSelection.Clear();
+		SavedSelection.Type = ECXActionType::Item;
+		SavedSelection.ItemId = FName(TEXT("Potion"));
+		SavedSelection.TargetTeam = ECXTargetTeam::Player;
+
+		UE_LOG(LogTemp, Display, TEXT("[아이템] 포션 선택: 아군 대상을 선택하세요."));
+
+		SubmitActionToPlayer(SavedSelection);
+
 		return;
 	}
 	}
@@ -652,6 +676,13 @@ void ACXCommandCharacter::SubmitActionToPlayer(const FCXActionSelection& Selecti
 	// 메뉴와 턴페이즈를 그대로 유지.
 	if (Selection.Type == ECXActionType::Skill && !Player->CanActivateSelectSkill(Selection.SlotIndex))
 	{
+		return;
+	}
+
+	if (Selection.Type == ECXActionType::Item && !Player->CanUseHealingItem(Selection.ItemId))
+	{
+		UE_LOG(LogTemp, Display, TEXT("[아이템] 포션을 선택할ㅇ 수 없습니다. 수량과 GA설정을 확인하세요"));
+
 		return;
 	}
 

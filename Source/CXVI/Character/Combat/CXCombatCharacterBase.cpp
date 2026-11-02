@@ -643,13 +643,26 @@ bool ACXCombatCharacterBase::TryStartCombatAbility(FGameplayAbilitySpecHandle Ha
 		return false;
 	}
 
-	FVector Direction = Target->GetActorLocation() - GetActorLocation();
+	/*FVector Direction = Target->GetActorLocation() - GetActorLocation();
 	Direction.Z = 0.f;
 
 	if (!Direction.IsNearlyZero())
 	{
 		SetActorRotation(Direction.Rotation());
+	}*/
+
+	// 아이템은 현재 방향을 유지한 채 사용
+	if (GetPendingAction().Type != ECXActionType::Item)
+	{
+		FVector Direction = Target->GetActorLocation() - GetActorLocation();
+		Direction.Z = 0.f;
+
+		if (!Direction.IsNearlyZero())
+		{
+			SetActorRotation(Direction.Rotation());
+		}
 	}
+
 
 	// 새 행동에서는 다시 한번 마나 획득 가능
 	bBasicAttackManaGranted = false;

@@ -47,6 +47,7 @@ namespace CXVIGameplayTags
 	// Ability
 	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Basic_Attack);
 	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Fire);
+	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Item_Heal);
 
 	// Character
 	// TODO : 추후에 태그 맞추기

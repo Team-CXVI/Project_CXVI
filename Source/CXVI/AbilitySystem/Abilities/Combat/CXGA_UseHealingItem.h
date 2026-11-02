@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Abilities/GameplayAbility.h"
+#include "AbilitySystem/Abilities/Combat/CXGA_UseItemBase.h"
 #include "CXGA_UseHealingItem.generated.h"
 
 class ACXCombatCharacterPlayer;
@@ -13,42 +13,24 @@ class ACXCombatCharacterBase;
  * 
  */
 UCLASS()
-class CXVI_API UCXGA_UseHealingItem : public UGameplayAbility
+class CXVI_API UCXGA_UseHealingItem : public UCXGA_UseItemBase
 {
 	GENERATED_BODY()
-	
+
 public:
 	UCXGA_UseHealingItem();
 
-	static bool CanUseHealingItem(
-		const ACXCombatCharacterPlayer* User,
-		FName ItemId,
-		const ACXCombatCharacterBase* Target = nullptr);
-
-
 protected:
-	virtual void ActivateAbility(
-		const FGameplayAbilitySpecHandle Handle,
-		const FGameplayAbilityActorInfo* ActorInfo,
-		const FGameplayAbilityActivationInfo ActivationInfo,
-		const FGameplayEventData* TriggerEventData
-	) override;
+	virtual bool IsItemDataValid(const FCXItemRow& ItemRow) const override;
 
-	virtual bool CanActivateAbility(
-		const FGameplayAbilitySpecHandle Handle,
-		const FGameplayAbilityActorInfo* ActorInfo,
-		const FGameplayTagContainer* SourceTags = nullptr,
-		const FGameplayTagContainer* TargetTags = nullptr,
-		OUT FGameplayTagContainer* OptionalRelevantTags = nullptr
-	) const override;
+	virtual bool IsItemTargetValid(
+		const ACXCombatCharacterPlayer* User,
+		const ACXCombatCharacterBase* Target) const override;
 
-	virtual void EndAbility(
-		const FGameplayAbilitySpecHandle Handle,
-		const FGameplayAbilityActorInfo* ActorInfo,
-		const FGameplayAbilityActivationInfo ActivationInfo,
-		bool bReplicateEndAbility,
-		bool bWasCancelled
-	) override;
+	virtual bool ApplyItemEffect(
+		ACXCombatCharacterPlayer* User,
+		ACXCombatCharacterBase* Target,
+		const FCXItemRow& ItemRow) override;
 
 protected:
 	// 에디터에서 만든 공통 회복 GE지정

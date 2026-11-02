@@ -41,6 +41,8 @@ public:
 	void SkipTurn();
 	void TryRunaway();
 
+	bool CanUseHealingItem(FName ItemId, const ACXCombatCharacterBase* Target = nullptr) const;
+
 protected:
 	virtual void PostInitializeComponents() override;
 
