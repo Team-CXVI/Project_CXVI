@@ -4,6 +4,7 @@
 #include "InputActionValue.h"
 #include "CXVI/Tags/CXFieldTags.h"
 #include "CXVI/Actor/Field/Interactions/CXExpeditionFlag.h"
+#include "CXVI/Actor/Field/Interactions/CXFieldItemPickup.h"
 #include "CXVI/Character/Field/Interactions/CXGrapplingHookTriggerBox.h"
 
 #include "Components/SkeletalMeshComponent.h"
@@ -402,6 +403,37 @@ void ACXFieldPlayerCharacter::UnregisterNearByFlag(ACXExpeditionFlag* Flag)
 	NearByActiveExpeditionFlag.Reset();
 }
 
+void ACXFieldPlayerCharacter::RegisterNearByItem(ACXFieldItemPickup* Pickup)
+{
+	if (!IsValid(Pickup))
+	{
+		return;
+	}
+
+	NearByItemPickup = Pickup;
+}
+
+void ACXFieldPlayerCharacter::UnregisterNearByItem(ACXFieldItemPickup* Pickup)
+{
+	// 현재 저장된 아이템에서 벗어났을 때만 제거.
+	if (NearByItemPickup.Get() != Pickup)
+	{
+		return;
+	}
+	NearByItemPickup.Reset();
+}
+
+void ACXFieldPlayerCharacter::PickupItem()
+{
+	ACXFieldItemPickup* Pickup = NearByItemPickup.Get();
+	if (!IsValid(Pickup) || !Pickup->CanPickup(this))
+	{
+		return;
+	}
+
+	Pickup->Pickup(this);
+}
+
 void ACXFieldPlayerCharacter::OnSceneSuspended_Implementation()
 {
 	SetActorHiddenInGame(true);
@@ -426,6 +458,10 @@ void ACXFieldPlayerCharacter::Interactive()
 	if (ASC->HasMatchingGameplayTag(CXVIFieldTag::State_CanUseExpeditionFlag))
 	{
 		StartUseFlag();
+	}
+	else if (ASC->HasMatchingGameplayTag(CXVIFieldTag::State_CanPickupItem))
+	{
+		PickupItem();
 	}
 	else if (ASC->HasMatchingGameplayTag(CXVIFieldTag::State_CanGrapplingHook))
 	{

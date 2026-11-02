@@ -100,6 +100,10 @@ public:
 
 	void RemoveDefeatedSpawnIds(const TArray<FName>& InSpawnIds);
 
+	bool IsItemCollected(FName InSpawnId) const;
+
+	void MarkItemCollected(FName InSpawnId);
+
 private:
 	// Save
 	bool SaveToSlotInternal(int32 InSlotIndex);
