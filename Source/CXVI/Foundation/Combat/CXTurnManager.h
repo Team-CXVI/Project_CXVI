@@ -23,8 +23,17 @@ struct FTurnOrder
 	UPROPERTY()
 	TObjectPtr<ACXCombatCharacterBase> Character = nullptr;
 
+	// 다음 행동이 가능한 시간
 	UPROPERTY()
 	float NextActionTime = 0.f;
+
+	// 우선순위 계산에 사용하는 속도
+	UPROPERTY()
+	float CombatSpeed = 1.f;
+
+	// 시간과 속도가 같을 때 사용할 순서
+	UPROPERTY()
+	int32 RegistrationOrder = 0;
 };
 
 
@@ -57,8 +66,8 @@ private:
 	// 초기화 함수.
 	void ResetBattle();
 
-	// 순서 정렬
-	void SortTurnOrder();
+	// 순서 정렬 - 우선순위 큐로 이동
+	//void SortTurnOrder();
 	// 다음 플레이어 찾기
 	void FindNextPlayer();
 	// 찾은 플레이어 실행
@@ -98,8 +107,13 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category = "Battle")
 	TArray<TObjectPtr<class ACXCombatCharacterBase>> EnemyCharacters;
 
+	// 대기중인 턴을 저장하는 최소 힙
 	UPROPERTY(VisibleAnywhere, Category = "Battle")
-	TArray<FTurnOrder> TurnOrderArray;
+	TArray<FTurnOrder> TurnOrderQueue;
+
+	// 큐에서 꺼내 현재 진행중인 턴
+	UPROPERTY(VisibleAnywhere, Category = "Battle")
+	FTurnOrder CurrentTurnOrder;
 
 	// Track subscriptions separately from the living participant arrays.
 	UPROPERTY(VisibleAnywhere, Category = "Battle")

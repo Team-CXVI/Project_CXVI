@@ -10,6 +10,30 @@
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXTurnManager)
 
+namespace
+{
+	struct FTurnOrderPriority
+	{
+		bool operator()(const FTurnOrder& Left, const FTurnOrder& Right) const
+		{
+			// 행동 시간이 빠른 캐릭터 우선
+			if (Left.NextActionTime != Right.NextActionTime)
+			{
+				return Left.NextActionTime < Right.NextActionTime;
+			}
+
+			// 시간이 같으면 속도가 높은 캐릭터 우선
+			if (Left.CombatSpeed != Right.CombatSpeed)
+			{
+				return Left.CombatSpeed > Right.CombatSpeed;
+			}
+
+			// 시간과 속도도 같으면 최초 등록 순서
+			return Left.RegistrationOrder < Right.RegistrationOrder;
+		}
+	};
+}
+
 UCXTurnManager::UCXTurnManager()
 {
 }
@@ -28,11 +52,13 @@ void UCXTurnManager::StartBattle(TArray<TObjectPtr<ACXCombatCharacterBase>> Play
 
 		FTurnOrder TurnOrder;
 		TurnOrder.Character = Players[Index];
-		TurnOrder.NextActionTime = BaseActionCost / Players[Index]->GetCombatSpeed();
+		TurnOrder.CombatSpeed = FMath::Max(Players[Index]->GetCombatSpeed(), 1.f);
+		TurnOrder.NextActionTime = BaseActionCost / TurnOrder.CombatSpeed;
+		TurnOrder.RegistrationOrder = TurnOrderQueue.Num();
 
 		PlayerCharacters.Add(Players[Index]);
 		BindTurnResponseDelegate(Players[Index]);
-		TurnOrderArray.Add(TurnOrder);
+		TurnOrderQueue.HeapPush(TurnOrder, FTurnOrderPriority{});
 	}
 
 	for (int32 Index = 0; Index < Enemies.Num(); ++Index)
@@ -44,15 +70,17 @@ void UCXTurnManager::StartBattle(TArray<TObjectPtr<ACXCombatCharacterBase>> Play
 
 		FTurnOrder TurnOrder;
 		TurnOrder.Character = Enemies[Index];
-		TurnOrder.NextActionTime = BaseActionCost / Enemies[Index]->GetCombatSpeed();
+		TurnOrder.CombatSpeed = FMath::Max(Enemies[Index]->GetCombatSpeed(), 1.f);
+		TurnOrder.NextActionTime = BaseActionCost / TurnOrder.CombatSpeed;
+		TurnOrder.RegistrationOrder = TurnOrderQueue.Num();
 
 		EnemyCharacters.Add(Enemies[Index]);
 		BindTurnResponseDelegate(Enemies[Index]);
-		TurnOrderArray.Add(TurnOrder);
+		TurnOrderQueue.HeapPush(TurnOrder, FTurnOrderPriority{});
 	}
 
 	// 순서 정렬
-	SortTurnOrder();
+	//SortTurnOrder();
 
 	FindNextPlayer();
 
@@ -64,44 +92,71 @@ void UCXTurnManager::ResetBattle()
 	UnbindAllTurnResponseDelegates();
 	PlayerCharacters.Reset();
 	EnemyCharacters.Reset();
-	TurnOrderArray.Reset();
+	TurnOrderQueue.Reset();
+	CurrentTurnOrder = FTurnOrder{};
 	CurrentTurnPlayer = nullptr;
 	CurrentAttackTotalHitCount = 0;
 	ParrySuccessCounts.Reset();
 	CurrentPhase = ECXCombatPhase::BeginPhase;
 }
 
-void UCXTurnManager::SortTurnOrder()
-{
-	if (TurnOrderArray.Num() <= 0)
-	{
-		return;
-	}
-
-	TurnOrderArray.StableSort([](const FTurnOrder& Left, const FTurnOrder& Right)
-		{
-			if (Left.NextActionTime != Right.NextActionTime)
-			{
-				return Left.NextActionTime < Right.NextActionTime;
-			}
-
-			return Left.Character->GetCombatSpeed() > Right.Character->GetCombatSpeed();
-		}
-	);
-}
-
+//void UCXTurnManager::SortTurnOrder()
+//{
+//	if (TurnOrderArray.Num() <= 0)
+//	{
+//		return;
+//	}
+//
+//	TurnOrderArray.StableSort([](const FTurnOrder& Left, const FTurnOrder& Right)
+//		{
+//			if (Left.NextActionTime != Right.NextActionTime)
+//			{
+//				return Left.NextActionTime < Right.NextActionTime;
+//			}
+//
+//			return Left.Character->GetCombatSpeed() > Right.Character->GetCombatSpeed();
+//		}
+//	);
+//}
+//
 void UCXTurnManager::FindNextPlayer()
 {
 	CurrentTurnPlayer = nullptr;
+	CurrentTurnOrder = FTurnOrder();
 
-	for (int32 Index = 0; Index < TurnOrderArray.Num(); ++Index)
+	// 사망한 캐릭터의 항목은 잠시 꺼냈다가 다시 보관
+	TArray<FTurnOrder> SkippedTurns;
+	
+	while (!TurnOrderQueue.IsEmpty())
 	{
-		if (IsValid(TurnOrderArray[Index].Character) && TurnOrderArray[Index].Character->GetIsCharacterAlive())
+		FTurnOrder NextTurn;
+
+		TurnOrderQueue.HeapPop(NextTurn, FTurnOrderPriority{}, EAllowShrinking::No);
+
+		ACXCombatCharacterBase* Character = NextTurn.Character.Get();
+
+		// 파괴된 객체의 항목은 제거
+		if (!IsValid(Character))
 		{
-			// 캐릭터가 살아있다면 턴 부여 죽어있다면 계속 검색
-			CurrentTurnPlayer = TurnOrderArray[Index].Character;
-			break;
+			continue;
 		}
+
+		if (!Character->GetIsCharacterAlive())
+		{
+			SkippedTurns.Add(NextTurn);
+			continue;
+		}
+
+		CurrentTurnOrder = NextTurn;
+		CurrentTurnPlayer = Character;
+
+		break;
+
+	}
+
+	for (const FTurnOrder& SkippedTurn : SkippedTurns)
+	{
+		TurnOrderQueue.HeapPush(SkippedTurn, FTurnOrderPriority{});
 	}
 }
 
@@ -111,6 +166,13 @@ void UCXTurnManager::StartTurn()
 	{
 		return;
 	}
+
+	UE_LOG(LogTemp, Display, TEXT("[턴 시작] %s / 행동 시간=%.3f / 속도=%.1f"),
+		*GetNameSafe(CurrentTurnPlayer.Get()),
+		CurrentTurnOrder.NextActionTime,
+		CurrentTurnOrder.CombatSpeed
+	);
+
 
 	CurrentAttackTotalHitCount = 0;
 	ParrySuccessCounts.Reset();
@@ -131,21 +193,18 @@ void UCXTurnManager::CompleteTurn()
 
 	OnPlayerInputEnabledChanged.Broadcast(ECXCombatInputMode::Disabled);
 
-	for (auto& TurnOrder : TurnOrderArray)
-	{
-		if (TurnOrder.Character == CurrentTurnPlayer)
-		{
-			TurnOrder.NextActionTime += BaseActionCost / TurnOrder.Character->GetCombatSpeed();
-		}
-	}
+	// 이번턴 종료 시점의 속도로 다음 행동 간격 계산.
+	CurrentTurnOrder.CombatSpeed = FMath::Max(CurrentTurnPlayer->GetCombatSpeed(), 1.f);
+
+	CurrentTurnOrder.NextActionTime += BaseActionCost / CurrentTurnOrder.CombatSpeed;
+
+	// 현재 턴을 다시 대기 큐에 삽입
+	TurnOrderQueue.HeapPush(CurrentTurnOrder, FTurnOrderPriority{});
 
 	CurrentTurnPlayer = nullptr;
-
-	// 갱신된 정보로 다시 순서 정렬
-	SortTurnOrder();
+	CurrentTurnOrder = FTurnOrder{};
 
 	FindNextPlayer();
-	// 다음 턴 시작
 	StartTurn();
 }
 
