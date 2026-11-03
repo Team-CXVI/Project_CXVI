@@ -34,6 +34,8 @@ public:
 	// return : 저장 파일이 있으면 true
 	bool RefreshSlot();
 
+	FORCEINLINE int32 GetSlotIndex() const { return SlotIndex; }
+
 private:
 	void ShowEmptySlot();
 

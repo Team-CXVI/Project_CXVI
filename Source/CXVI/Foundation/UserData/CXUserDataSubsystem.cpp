@@ -509,6 +509,7 @@ bool UCXUserDataSubsystem::SaveToSlotInternal(int32 InSlotIndex)
 
 	// 직렬화는 여기서 바로, 파일 쓰기만 비동기 (이후 데이터 변경은 이번 저장에 섞이지 않음)
 	bSaveInProgress = true;
+	SavingSlotIndex = InSlotIndex;
 	UGameplayStatics::AsyncSaveGameToSlot(SaveGameObject, MakeSlotName(InSlotIndex), CXUserData::SaveUserIndex,
 		FAsyncSaveGameToSlotDelegate::CreateUObject(this, &ThisClass::HandleAsyncSaveFinished));
 
@@ -517,7 +518,10 @@ bool UCXUserDataSubsystem::SaveToSlotInternal(int32 InSlotIndex)
 
 void UCXUserDataSubsystem::HandleAsyncSaveFinished(const FString& InSlotName, const int32 InUserIndex, bool bInSuccess)
 {
+	const int32 FinishedSlotIndex = SavingSlotIndex;
+
 	bSaveInProgress = false;
+	SavingSlotIndex = INDEX_NONE;
 
 	if (bInSuccess)
 	{
@@ -527,6 +531,8 @@ void UCXUserDataSubsystem::HandleAsyncSaveFinished(const FString& InSlotName, co
 	{
 		UE_LOG(LogCXUserData, Error, TEXT("저장 실패: %s"), *InSlotName);
 	}
+
+	BroadcastSaveFinished(FinishedSlotIndex, bInSuccess);
 
 	if (QueuedSaveSlotIndices.Num() > 0)
 	{
@@ -546,6 +552,18 @@ bool UCXUserDataSubsystem::IsManualSlotIndex(int32 InSlotIndex) const
 FString UCXUserDataSubsystem::MakeSlotName(int32 InSlotIndex)
 {
 	return FString::Printf(TEXT("CXVI_Slot_%d"), InSlotIndex);
+}
+
+void UCXUserDataSubsystem::BroadcastSaveFinished(int32 InSlotIndex, bool bInSuccess) const
+{
+	// 저장이 끝났다면 저장 리스트를 갱신 하도록 메시지
+	if (UCXGameplayMessageSubsystem* Messages = GetGameInstance()->GetSubsystem<UCXGameplayMessageSubsystem>())
+	{
+		FCXSaveFinishedMessage Message;
+		Message.SlotIndex = InSlotIndex;
+		Message.bSuccess = bInSuccess;
+		Messages->BroadcastMessage(CXVIGameplayTags::Message_UserData_SaveFinished, Message);
+	}
 }
 
 void UCXUserDataSubsystem::LoadCharacterDefinitions()

@@ -34,6 +34,7 @@ namespace CXVIGameplayTags
 	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Message_UserData_PartyChanged);
 	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Message_UserData_InventoryChanged);
 	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Message_UserData_RequestAutoSave);
+	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Message_UserData_SaveFinished);
 	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Message_UI_OpenScreen);
 
 	// Data
@@ -48,6 +49,7 @@ namespace CXVIGameplayTags
 	
 	// UI Screen
 	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(UI_Screen_SaveSlot);
+	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(UI_Screen_FlagMenu);
 
 	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(UI_ScreenContext_SaveSlot_Load);
 	CXVI_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(UI_ScreenContext_SaveSlot_Save);
