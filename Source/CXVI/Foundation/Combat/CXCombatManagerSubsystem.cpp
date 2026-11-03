@@ -186,6 +186,8 @@ bool UCXCombatManagerSubsystem::RequestStartBattle(FName InEncounterId, const TA
 
 	}
 
+	int32 VictoryExp = 0;
+
 	// 적 생성
 	if (!InEnemyClasses.IsEmpty())
 	{
@@ -237,6 +239,8 @@ bool UCXCombatManagerSubsystem::RequestStartBattle(FName InEncounterId, const TA
 				return false;
 			}
 
+			VictoryExp += Row->Exp;
+
 			FCXCombatSpawnEntry& Entry = Params.EnemySpawns.AddDefaulted_GetRef();
 			Entry.CharacterClass = EnemyClass;
 
@@ -274,11 +278,13 @@ bool UCXCombatManagerSubsystem::RequestStartBattle(FName InEncounterId, const TA
 
 	// 전환 설정에 따라 Push 안에서 OnEnter -> BeginBattle이 바로 호출될 수 있으므로 Push 전에 상태 변경
 	// Push 이후 OnEnter 전까지 들어오는 재요청도 이 상태로 거절
+	PendingVictoryExp = VictoryExp;
 	CombatState = ECXCombatState::Entering;
 
 	// 전환 중이면 PushScene이 거부함
 	if (!UCXSceneSubsystem::Get(this).PushScene(CombatScene, FCXSceneContext::Make(Params)))
 	{
+		PendingVictoryExp = 0;
 		CombatState = ECXCombatState::Idle;
 		return false;
 	}
@@ -347,6 +353,7 @@ void UCXCombatManagerSubsystem::EndBattle()
 	CombatArena.Reset();
 	WeakCommandCharacter.Reset();
 
+	PendingVictoryExp = 0;
 	CombatState = ECXCombatState::Idle;
 }
 
@@ -405,6 +412,9 @@ void UCXCombatManagerSubsystem::HandleBattleEnded(bool bInVictory, double InElap
 	FCXCombatEndMessage Message;
 	Message.bVictory = bInVictory;
 	Message.ElapsedSeconds = InElapsedSeconds;
+	Message.EarnedExp = bInVictory ? PendingVictoryExp : 0;
+
+	PendingVictoryExp = 0;
 
 	UCXGameplayMessageSubsystem::Get(this).BroadcastMessage(CXVIGameplayTags::Message_Combat_End, Message);
 }

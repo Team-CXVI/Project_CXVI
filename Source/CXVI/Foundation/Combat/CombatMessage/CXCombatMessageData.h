@@ -98,6 +98,9 @@ public:
 
 	UPROPERTY(BlueprintReadOnly, Category = "Combat")
 	double ElapsedSeconds = 0.0;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Combat")
+	int32 EarnedExp = 0;
 };
 
 /** Message.Combat.TurnOrderChanged 채널 메시지. 받는 쪽은 UCXCombatManagerSubsystem::GetUpcomingTurns()로 다시 읽음 */
