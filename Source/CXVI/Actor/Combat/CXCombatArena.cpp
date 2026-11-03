@@ -5,6 +5,7 @@
 #include "CXVI/Character/Combat/CXCombatCharacterBase.h"
 #include "Character/Combat/CXCombatCharacterEnemy.h"
 #include "Foundation/UserData/CXEnemyDefinition.h"
+#include "Character/Combat/CXCombatCharacterPlayer.h"
 
 #include "Components/ArrowComponent.h"
 #include "Camera/CameraComponent.h"
@@ -155,7 +156,21 @@ bool ACXCombatArena::SpawnParty(const TArray<FCXCombatSpawnEntry>& InEntries, bo
 		SpawnParams.OverrideLevel = GetLevel();
 		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-		if (UCXEnemyDefinition* Definition = Entry.Definition.Get())
+		if (bInPlayerParty && Entry.InitialAttributes.MaxHealth > 0.f)
+		{
+			if (!CharacterClass->IsChildOf(ACXCombatCharacterPlayer::StaticClass()))
+			{
+				return false;
+			}
+
+			SpawnParams.CustomPreSpawnInitialization =
+				[Health = Entry.InitialAttributes](AActor* Actor)
+				{
+					CastChecked<ACXCombatCharacterPlayer>(Actor)->SetInitialAttributes(Health);
+				};
+		}
+
+		else if (UCXEnemyDefinition* Definition = Entry.Definition.Get())
 		{
 			if (!CharacterClass->IsChildOf(ACXCombatCharacterEnemy::StaticClass()))
 			{

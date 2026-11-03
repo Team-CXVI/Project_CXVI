@@ -27,6 +27,18 @@ enum class ECXCombatState : uint8
 	InBattle,	// 턴 진행 중
 };
 
+USTRUCT()
+struct FCXInitialAttributes
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	float MaxHealth = 0.f;
+
+	UPROPERTY()
+	float CurrentHealth = 0.f;
+};
+
 USTRUCT(BlueprintType)
 struct CXVI_API FCXCombatSpawnEntry
 {
@@ -38,6 +50,9 @@ struct CXVI_API FCXCombatSpawnEntry
 	// 스탯과 경험치의 출처. 클래스를 직접 지정 테스트에는 비어있을수 있다,.
 	UPROPERTY(BlueprintReadOnly, Category = "Combat")
 	TObjectPtr<UCXEnemyDefinition> Definition = nullptr;
+
+	UPROPERTY()
+	FCXInitialAttributes InitialAttributes;
 };
 
 // 필드 -> 전투 (FCXSceneContext Payload)

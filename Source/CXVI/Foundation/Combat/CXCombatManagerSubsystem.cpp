@@ -97,7 +97,45 @@ bool UCXCombatManagerSubsystem::RequestStartBattle(FName InEncounterId, const TA
 		const auto& PartyMembers = UserData->GetPartyMembers();
 		Params.PlayerClasses.Reserve(PartyMembers.Num());
 
-		for (const FCXPartyMemberState& Member : PartyMembers)
+		for (int32 MemberIndex = 0; MemberIndex < PartyMembers.Num(); ++MemberIndex)
+		{
+			const FCXPartyMemberState& Member = PartyMembers[MemberIndex];
+
+			const UCXCharacterDefinition* Definition = UserData->LoadCharacterDefinition(Member.CharacterId);
+
+			UClass* PlayerClass = Definition ? Definition->CombatCharacterClass.LoadSynchronous() : nullptr;
+
+			if (!PlayerClass || !PlayerClass->IsChildOf(ACXCombatCharacterPlayer::StaticClass()) ||
+				PlayerClass->HasAnyClassFlags(CLASS_Abstract))
+			{
+				UE_LOG(LogCXCombat, Warning, TEXT("[아군 스폰] 최대 HP 조회 실패. ID=%s Level=%d"),
+					*Member.CharacterId.ToString(), Member.Level);
+
+				return false;
+			}
+
+			const float MaxHealth = UserData->GetMemberMaxHealth(MemberIndex);
+			if (!FMath::IsFinite(MaxHealth) || MaxHealth <= 0.f)
+			{
+				UE_LOG(LogCXCombat, Warning,
+					TEXT("[아군 스폰] 최대 HP 조회 실패. ID=%s Level=%d"),
+					*Member.CharacterId.ToString(), Member.Level);
+
+				return false;
+			}
+
+			FCXCombatSpawnEntry& Entry = Params.PlayerClasses.AddDefaulted_GetRef();
+			Entry.CharacterClass = PlayerClass;
+			Entry.InitialAttributes.MaxHealth = MaxHealth;
+			Entry.InitialAttributes.CurrentHealth = Member.CurrentHealth;
+
+			UE_LOG(LogCXCombat, Display,
+				TEXT("[아군 스폰 준비] 슬롯=%d ID=%s Level=%d HP=%.1f/%.1f"),
+				MemberIndex, *Member.CharacterId.ToString(), Member.Level,
+				Member.CurrentHealth, MaxHealth);
+		}
+
+		/*for (const FCXPartyMemberState& Member : PartyMembers)
 		{
 			const UCXCharacterDefinition* Definition = UserData->LoadCharacterDefinition(Member.CharacterId);
 
@@ -115,7 +153,7 @@ bool UCXCombatManagerSubsystem::RequestStartBattle(FName InEncounterId, const TA
 			Entry.CharacterClass = PlayerClass;
 
 			UE_LOG(LogCXCombat, Display, TEXT("[아군 스폰 준비] ID=%s / 클래스=%s"), *Member.CharacterId.ToString(), *GetNameSafe(PlayerClass));
-		}
+		}*/
 
 	}
 
