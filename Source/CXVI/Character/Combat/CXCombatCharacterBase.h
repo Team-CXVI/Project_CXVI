@@ -66,6 +66,8 @@ public:
 	FORCEINLINE void SetCounterAttackPending(bool NewValue) { bCounterAttackPending = NewValue; }
 	FORCEINLINE bool GetWaitingForReturn() const { return bWaitingForReturn; }
 
+	FORCEINLINE FPrimaryAssetId GetCharacterId() const { return CharacterId; }
+
 	float GetCombatSpeed() const;
 
 	APawn* GetSelectedCombatTarget() const { return CurrentTargetPawn.Get(); }
@@ -187,5 +189,6 @@ protected:
 
 	//////////////////////////
 
-
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadWrite, Category = "Id")
+	FPrimaryAssetId CharacterId;
 };
