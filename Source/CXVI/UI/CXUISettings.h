@@ -58,6 +58,10 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Popup")
 	TSoftClassPtr<class UCXPopupWidget> PopupClass;
 
+	// 전투 승리 시 전투 Scene이 UI.Layer.GameMenu에 Push하는 화면 (WBP_CombatVictory)
+	UPROPERTY(Config, EditAnywhere, Category = "Combat")
+	TSoftClassPtr<class UCXCombatVictoryWidget> CombatVictoryClass;
+
 	// Message.UI.OpenScreen으로 열 수 있는 화면 (화면 태그 → 위젯, 레이어)
 	UPROPERTY(Config, EditAnywhere, Category = "Screen", meta = (ForceInlineRow, Categories = "UI.Screen"))
 	TMap<FGameplayTag, FCXScreenEntry> Screens;

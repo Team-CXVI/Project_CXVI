@@ -9,8 +9,11 @@
 #include "Actor/Combat/CXCombatArena.h"
 #include "Character/Combat/CXCommandCharacter.h"
 #include "Tags/CXGameplayTags.h"
-#include "UI/Combat/CXCombatHUDWidget.h"
 #include "UI/ViewModel/CXCombatViewModel.h"
+#include "UI/Combat/CXCombatHUDWidget.h"
+#include "UI/Combat/CXCombatVictoryWidget.h"
+#include "UI/CXUIManagerSubsystem.h"
+#include "UI/CXUISettings.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXCombatScene)
 
@@ -36,6 +39,12 @@ void UCXCombatScene::OnExit()
 {
 	CombatEndListener.Unregister();
 	UnbindSceneChanged();
+
+	if (UCXCombatVictoryWidget* Widget = VictoryWidget.Get())
+	{
+		Widget->DeactivateWidget();
+	}
+	VictoryWidget.Reset();
 
 	// 화면이 가려진 상태에서 정리. 턴 정지(바인딩 해제)가 전투원 Destroy보다 먼저
 	if (UCXCombatManagerSubsystem* CombatManager = GetCombatManager())
@@ -148,10 +157,64 @@ void UCXCombatScene::EndCombat(const FCXCombatResult& InResult)
 
 void UCXCombatScene::HandleCombatEnded(const FGameplayTag& InChannel, const FCXCombatEndMessage& InMessage)
 {
+	// 승리 화면이 떠 있는 동안 들어온 중복 종료 무시
+	if (VictoryWidget.IsValid())
+	{
+		return;
+	}
+
 	FCXCombatResult Result;
 	Result.bVictory = InMessage.bVictory;
 
+	if (Result.bVictory && ShowVictoryScreen(Result))
+	{
+		return;
+	}
+
 	EndCombat(Result);
+}
+
+bool UCXCombatScene::ShowVictoryScreen(const FCXCombatResult& InResult)
+{
+	// 승리 화면이 일시정지를 걸면 전환 타이머가 멈추므로 전환 중에는 띄우지 않음
+	const UCXSceneSubsystem* Subsystem = GetSceneSubsystem();
+	if (nullptr == Subsystem || Subsystem->IsTransitioning())
+	{
+		return false;
+	}
+
+	UCXUIManagerSubsystem* UIManager = UCXUIManagerSubsystem::TryGet(this);
+	if (nullptr == UIManager)
+	{
+		return false;
+	}
+
+	const TSubclassOf<UCXCombatVictoryWidget> WidgetClass = GetDefault<UCXUISettings>()->CombatVictoryClass.LoadSynchronous();
+	if (nullptr == WidgetClass)
+	{
+		UE_LOG(LogCXScene, Warning, TEXT("CombatScene : 승리 화면 클래스가 지정되지 않았습니다. (Project Settings > Game > CXVI UI)"));
+		return false;
+	}
+
+	// 전투 HUD는 다른 레이어(UI.Layer.Game)에 있어 자동으로 가려지지 않으므로 직접 닫음
+	HideSceneHUD();
+
+	PendingResult = InResult;
+
+	VictoryWidget = UIManager->PushWidgetToLayer<UCXCombatVictoryWidget>(CXVIGameplayTags::UI_Layer_GameMenu, WidgetClass,
+		[this](UCXCombatVictoryWidget& InWidget)
+		{
+			InWidget.SetOnConfirmed(FSimpleDelegate::CreateUObject(this, &ThisClass::HandleVictoryConfirmed));
+		});
+
+	return VictoryWidget.IsValid();
+}
+
+void UCXCombatScene::HandleVictoryConfirmed()
+{
+	VictoryWidget.Reset();
+
+	EndCombat(PendingResult);
 }
 
 void UCXCombatScene::HandleSceneChanged(UCXGameScene* InNewScene, UCXGameScene* InOldScene)
