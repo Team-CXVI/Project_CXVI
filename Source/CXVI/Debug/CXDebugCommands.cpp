@@ -444,6 +444,34 @@ namespace CXUserDataDebug
 				UE_LOG(LogCXUserData, Display, TEXT("%s -%d -> %d"), *ItemId.ToString(), Count, Subsystem->GetItemCount(ItemId));
 			}));
 
+	// CXVI.UserData.SetHealth <MemberIndex> <Health>
+	static FAutoConsoleCommandWithWorldAndArgs SetHealthCommand(
+		TEXT("CXVI.UserData.SetHealth"),
+		TEXT("파티원의 현재 HP를 지정합니다. 사용법: CXVI.UserData.SetHealth <파티원 인덱스> <HP>"),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& InArgs, UWorld* InWorld)
+			{
+				if (InArgs.Num() < 2 || false == InArgs[0].IsNumeric() || false == InArgs[1].IsNumeric())
+				{
+					UE_LOG(LogCXUserData, Warning, TEXT("사용법: CXVI.UserData.SetHealth <파티원 인덱스> <HP>"));
+					return;
+				}
+
+				UCXUserDataSubsystem* Subsystem = GetSubsystem(InWorld);
+				if (nullptr == Subsystem)
+				{
+					return;
+				}
+
+				const int32 MemberIndex = FCString::Atoi(*InArgs[0]);
+				if (false == Subsystem->GetPartyMembers().IsValidIndex(MemberIndex))
+				{
+					UE_LOG(LogCXUserData, Warning, TEXT("파티원 인덱스가 범위를 벗어났습니다: %d (파티 인원 %d)"), MemberIndex, Subsystem->GetPartyMembers().Num());
+					return;
+				}
+
+				Subsystem->SetMemberHealth(MemberIndex, FCString::Atof(*InArgs[1]));
+				UE_LOG(LogCXUserData, Display, TEXT("파티원 %d HP -> %.0f"), MemberIndex, Subsystem->GetPartyMembers()[MemberIndex].CurrentHealth);
+			}));
 
 	// <SlotIndex> 파싱. 숫자가 아니면 false
 	static bool ParseSlotArg(const TArray<FString>& InArgs, int32& OutSlotIndex)
