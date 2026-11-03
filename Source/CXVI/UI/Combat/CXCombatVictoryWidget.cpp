@@ -9,7 +9,7 @@
 #include <Input/CommonUIInputTypes.h>
 #include <Kismet/GameplayStatics.h>
 
-#include UE_INLINE_GENERATED_CPP_BY_NAME(CXTurnOrderWidget)
+#include UE_INLINE_GENERATED_CPP_BY_NAME(CXCombatVictoryWidget)
 
 UCXCombatVictoryWidget::UCXCombatVictoryWidget(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer)
