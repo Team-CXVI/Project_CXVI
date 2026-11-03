@@ -268,6 +268,11 @@ void ACXCombatCharacterPlayer::PostInitializeComponents()
 
 	ASC->SetNumericAttributeBase(AttributeSet->GetMaxHealthAttribute(), MaxHealth);
 	ASC->SetNumericAttributeBase(AttributeSet->GetHealthAttribute(), CurrentHealth);
+	ASC->SetNumericAttributeBase(AttributeSet->GetCombatSpeedAttribute(), InitialAttributes.CombatSpeed);
+	ASC->SetNumericAttributeBase(AttributeSet->GetAttackPowerAttribute(), InitialAttributes.AttackPower);
+	ASC->SetNumericAttributeBase(AttributeSet->GetDefenseAttribute(), InitialAttributes.Defense);
+	ASC->SetNumericAttributeBase(AttributeSet->GetCriticalChanceAttribute(), InitialAttributes.CriticalChance);
+	ASC->SetNumericAttributeBase(AttributeSet->GetCriticalDamageMultiplierAttribute(), InitialAttributes.CriticalDamageMultiplier);
 
 	if (AttributeSet->GetHealth() <= 0.f)
 	{
@@ -278,11 +283,6 @@ void ACXCombatCharacterPlayer::PostInitializeComponents()
 		*GetName(), AttributeSet->GetHealth(), AttributeSet->GetMaxHealth());
 
 
-	ASC->SetNumericAttributeBase(AttributeSet->GetCombatSpeedAttribute(), 200.f);
-	ASC->SetNumericAttributeBase(AttributeSet->GetAttackPowerAttribute(), 40.f);
-	ASC->SetNumericAttributeBase(AttributeSet->GetDefenseAttribute(), 40.f);
-	ASC->SetNumericAttributeBase(AttributeSet->GetCriticalChanceAttribute(), 50.f);
-	ASC->SetNumericAttributeBase(AttributeSet->GetCriticalDamageMultiplierAttribute(), 2.f);
 }
 
 bool ACXCombatCharacterPlayer::ActivateSelectedSkill(int32 SlotIndex)

@@ -94,6 +94,14 @@ bool UCXCombatManagerSubsystem::RequestStartBattle(FName InEncounterId, const TA
 			return false;
 		}
 
+		if (!UCXGameplayDataSubsystem::HasInstance(this))
+		{
+			UE_LOG(LogCXCombat, Warning, TEXT("[아군 스폰] GameplayDataSubsystem 조회 실패"));
+			return false;
+		}
+
+		const UCXGameplayDataSubsystem& GameplayData = UCXGameplayDataSubsystem::Get(this);
+
 		const auto& PartyMembers = UserData->GetPartyMembers();
 		Params.PlayerClasses.Reserve(PartyMembers.Num());
 
@@ -128,6 +136,15 @@ bool UCXCombatManagerSubsystem::RequestStartBattle(FName InEncounterId, const TA
 			Entry.CharacterClass = PlayerClass;
 			Entry.InitialAttributes.MaxHealth = MaxHealth;
 			Entry.InitialAttributes.CurrentHealth = Member.CurrentHealth;
+
+			FCXInitialAttributes& Stats = Entry.InitialAttributes;
+
+			Stats.CombatSpeed = GameplayData.EvaluateCharacterStat(Definition->StatRowPrefix, "CombatSpeed", Member.Level);
+			Stats.AttackPower = GameplayData.EvaluateCharacterStat(Definition->StatRowPrefix, "AttackPower", Member.Level);
+			Stats.Defense = GameplayData.EvaluateCharacterStat(Definition->StatRowPrefix, "Defense", Member.Level);
+			Stats.CriticalChance = GameplayData.EvaluateCharacterStat(Definition->StatRowPrefix, "CriticalChance", Member.Level);
+			Stats.CriticalDamageMultiplier = GameplayData.EvaluateCharacterStat(Definition->StatRowPrefix, "CriticalDamageMultiplier", Member.Level);
+
 
 			UE_LOG(LogCXCombat, Display,
 				TEXT("[아군 스폰 준비] 슬롯=%d ID=%s Level=%d HP=%.1f/%.1f"),

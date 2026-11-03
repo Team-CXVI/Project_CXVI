@@ -33,10 +33,25 @@ struct FCXInitialAttributes
 	GENERATED_BODY()
 
 	UPROPERTY()
-	float MaxHealth = 0.f;
+	float MaxHealth = 200.f;
 
 	UPROPERTY()
-	float CurrentHealth = 0.f;
+	float CurrentHealth = 200.f;
+
+	UPROPERTY()
+	float CombatSpeed = 200.f;
+
+	UPROPERTY()
+	float AttackPower = 40.f;
+
+	UPROPERTY()
+	float Defense = 40.f;
+
+	UPROPERTY()
+	float CriticalChance = 50.f;
+
+	UPROPERTY()
+	float CriticalDamageMultiplier = 2.f;
 };
 
 USTRUCT(BlueprintType)
