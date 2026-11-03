@@ -5,8 +5,11 @@
 
 #include "CXVI/Foundation/Combat/CXCombatMessageInterface.h"
 #include "CXVI/Character/Combat/CXCombatCharacterBase.h"
+#include "AbilitySystem/Attributes/Combat/CXCombatAttributeSetBase.h"
 
+#include "GameplayEffectTypes.h"
 #include "AbilitySystemComponent.h"
+#include "Engine/World.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXTurnManager)
 
@@ -84,7 +87,34 @@ void UCXTurnManager::StartBattle(TArray<TObjectPtr<ACXCombatCharacterBase>> Play
 
 	FindNextPlayer();
 
+	// 첫턴을 시작하기 직전에 측정 시작
+	if (IsValid(CurrentTurnPlayer))
+	{
+		if (const UWorld* World = GetWorld())
+		{
+			CombatStartTimeSeconds = World->GetTimeSeconds();
+		}
+	}
+
 	StartTurn();
+}
+
+double UCXTurnManager::GetCombatElapsedSeconds() const
+{
+	const UWorld* World = GetWorld();
+
+	if (!World || CombatStartTimeSeconds < 0.f)
+	{
+		return 0.f;
+	}
+
+	return FMath::Max(0.f, World->GetTimeSeconds() - CombatStartTimeSeconds);
+}
+
+void UCXTurnManager::SetTurnPreviewCount(int32 NewCount)
+{
+	TurnPreviewCount = FMath::Max(NewCount, 1);
+	RefreshUpcomingTurns();
 }
 
 void UCXTurnManager::ResetBattle()
@@ -97,6 +127,9 @@ void UCXTurnManager::ResetBattle()
 	CurrentTurnPlayer = nullptr;
 	CurrentAttackTotalHitCount = 0;
 	ParrySuccessCounts.Reset();
+	CurrentCombatTime = 0.f;
+	UpcomingTurns.Reset();
+	CombatStartTimeSeconds = -1.f;
 	CurrentPhase = ECXCombatPhase::BeginPhase;
 }
 
@@ -150,6 +183,12 @@ void UCXTurnManager::FindNextPlayer()
 		CurrentTurnOrder = NextTurn;
 		CurrentTurnPlayer = Character;
 
+		// 선택된 턴의 예정시간까지 전투시간 진행
+		// 과거 시간이 남아 있어도 전투 시간이 뒤로 가지 않도록 제한
+		CurrentCombatTime = FMath::Max(CurrentCombatTime, NextTurn.NextActionTime);
+
+		CurrentTurnOrder.NextActionTime = CurrentCombatTime;
+
 		break;
 
 	}
@@ -173,6 +212,7 @@ void UCXTurnManager::StartTurn()
 		CurrentTurnOrder.CombatSpeed
 	);
 
+	RefreshUpcomingTurns();
 
 	CurrentAttackTotalHitCount = 0;
 	ParrySuccessCounts.Reset();
@@ -196,7 +236,8 @@ void UCXTurnManager::CompleteTurn()
 	// 이번턴 종료 시점의 속도로 다음 행동 간격 계산.
 	CurrentTurnOrder.CombatSpeed = FMath::Max(CurrentTurnPlayer->GetCombatSpeed(), 1.f);
 
-	CurrentTurnOrder.NextActionTime += BaseActionCost / CurrentTurnOrder.CombatSpeed;
+	// 현재 전투 시간을 기준으로 다음 행동 예약
+	CurrentTurnOrder.NextActionTime = CurrentCombatTime + BaseActionCost / CurrentTurnOrder.CombatSpeed;
 
 	// 현재 턴을 다시 대기 큐에 삽입
 	TurnOrderQueue.HeapPush(CurrentTurnOrder, FTurnOrderPriority{});
@@ -509,6 +550,11 @@ bool UCXTurnManager::ProcessTurnResponse(const FCXCombatMessageData& Response, F
 
 void UCXTurnManager::BindTurnResponseDelegate(ACXCombatCharacterBase* Participant)
 {
+	if (!IsValid(Participant))
+	{
+		return;
+	}
+
 	ICXCombatMessageInterface* TurnParticipant = Cast<ICXCombatMessageInterface>(Participant);
 	if (!TurnParticipant)
 	{
@@ -519,15 +565,40 @@ void UCXTurnManager::BindTurnResponseDelegate(ACXCombatCharacterBase* Participan
 	Event.RemoveAll(this);
 	Event.AddUObject(this, &UCXTurnManager::HandleTurnResponse);
 	BoundParticipants.AddUnique(TWeakObjectPtr<ACXCombatCharacterBase>(Participant));
+
+	UAbilitySystemComponent* ASC = Participant->GetAbilitySystemComponent();
+
+	if (IsValid(ASC))
+	{
+		auto& SpeedChanged = ASC->GetGameplayAttributeValueChangeDelegate(UCXCombatAttributeSetBase::GetCombatSpeedAttribute());
+
+		// 중복 등록 방지.
+		SpeedChanged.RemoveAll(this);
+
+		SpeedChanged.AddUObject(this, &UCXTurnManager::HandleCombatSpeedChanged, TWeakObjectPtr<ACXCombatCharacterBase>(Participant));
+	}
 }
 
 void UCXTurnManager::UnbindAllTurnResponseDelegates()
 {
-	for (const TWeakObjectPtr<ACXCombatCharacterBase>& Participant : BoundParticipants)
+	for (const TWeakObjectPtr<ACXCombatCharacterBase>& WeakParticipant : BoundParticipants)
 	{
-		if (ICXCombatMessageInterface* TurnParticipant = Cast<ICXCombatMessageInterface>(Participant.Get()))
+		ACXCombatCharacterBase* Participant = WeakParticipant.Get();
+
+		if (!IsValid(Participant))
+		{
+			continue;
+		}
+
+		if (ICXCombatMessageInterface* TurnParticipant = Cast<ICXCombatMessageInterface>(Participant))
 		{
 			TurnParticipant->GetPhaseFinishedDelegate().RemoveAll(this);
+		}
+
+		if (UAbilitySystemComponent* ASC = Participant->GetAbilitySystemComponent(); IsValid(ASC))
+		{
+			ASC->GetGameplayAttributeValueChangeDelegate(UCXCombatAttributeSetBase::GetCombatSpeedAttribute()).RemoveAll(this);
+			
 		}
 	}
 
@@ -586,9 +657,15 @@ void UCXTurnManager::EndBattle()
 
 	const bool bVictory = bIsAlivePlayer && !bIsAliveEnemy;
 
+	// 초기화 전에 결과에 사용할 시간을 확보
+	const double ElapsedSeconds = GetCombatElapsedSeconds();
+
+	UE_LOG(LogTemp, Display, TEXT("[전투 종료] 승리=%d, 경과 시간=%.2f"),
+		bVictory, ElapsedSeconds);
+
 	ResetBattle();
 
-	OnBattleEnded.Broadcast(bVictory);
+	OnBattleEnded.Broadcast(bVictory, ElapsedSeconds);
 }
 
 bool UCXTurnManager::CheckAllActionEnded()
@@ -737,4 +814,132 @@ void UCXTurnManager::SendPhaseRequest(const FCXCombatMessageData& OutMessage)
 	{
 		CurrentTurnPlayer->CombatMessageRequest(OutMessage);
 	}
+}
+
+void UCXTurnManager::HandleCombatSpeedChanged(const FOnAttributeChangeData& Data, TWeakObjectPtr<ACXCombatCharacterBase> Participant)
+{
+	ACXCombatCharacterBase* Character = Participant.Get();
+
+	if (!IsValid(Character))
+	{
+		return;
+	}
+
+	const float NewSpeed = FMath::Max(Data.NewValue, 1.f);
+
+	// 현재 행동자는 대기 중이 아니므로 예정 시간을 당기지않음.
+	// 자신의 턴 종료시 최신 속도로 다음 행동을 예약
+	if (Character == CurrentTurnPlayer.Get())
+	{
+		CurrentTurnOrder.CombatSpeed = NewSpeed;
+
+		RefreshUpcomingTurns();
+
+		return;
+	}
+
+	FTurnOrder* QueuedTurn = TurnOrderQueue.FindByPredicate(
+		[Character](const FTurnOrder& Turn)
+		{
+			return Turn.Character.Get() == Character;
+		}
+	);
+
+	if (!QueuedTurn)
+	{
+		return;
+	}
+
+	// 이예정시간을 계산할때 사용했던 속도.
+	const float OldSpeed = FMath::Max(QueuedTurn->CombatSpeed, 1.f);
+
+	if (OldSpeed == NewSpeed)
+	{
+		return;
+	}
+
+	const float OldActionTime = QueuedTurn->NextActionTime;
+
+	const float RemainingTime = FMath::Max(OldActionTime - CurrentCombatTime, 0.f);
+
+	// 이미 기다린 진행도는 유지하고 남은 시간만 변경.
+	QueuedTurn->NextActionTime = CurrentCombatTime + RemainingTime * (OldSpeed / NewSpeed);
+
+	QueuedTurn->CombatSpeed = NewSpeed;
+
+	UE_LOG(LogTemp, Display, TEXT("[턴 속도 변경] %s / 속도 %.1f -> %.1f / 예정 시간 %.3f -> %.3f / 현재 시간 %.3f"),
+		*GetNameSafe(Character),
+		OldSpeed,
+		NewSpeed,
+		OldActionTime,
+		QueuedTurn->NextActionTime,
+		CurrentCombatTime
+	);
+
+	// 내부 항목의 우선순위가 변경됐으므로 힙 재구성
+	TurnOrderQueue.Heapify(FTurnOrderPriority{});
+
+	RefreshUpcomingTurns();
+}
+
+void UCXTurnManager::RefreshUpcomingTurns()
+{
+	UpcomingTurns.Reset();
+
+	ACXCombatCharacterBase* CurrentPlayer = CurrentTurnPlayer.Get();
+	if (!IsValid(CurrentPlayer))
+	{
+		return;
+	}
+
+	const int32 PreviewCount = FMath::Max(TurnPreviewCount, 1);
+	TArray<FTurnOrder> PreviewQueue = TurnOrderQueue;
+	float PreviewTime = CurrentCombatTime;
+
+	if (CurrentPlayer->GetIsCharacterAlive())
+	{
+		// 이미 시작된 턴은 첫 번째 칸에 표시
+		UpcomingTurns.Emplace(CurrentPlayer);
+
+		// 현재 행동자는 대기 큐에 없으므로 다음 행동을 임시 큐에 예약
+		FTurnOrder NextCurrentTurn = CurrentTurnOrder;
+		NextCurrentTurn.NextActionTime = PreviewTime + BaseActionCost / NextCurrentTurn.CombatSpeed;
+
+		PreviewQueue.HeapPush(NextCurrentTurn, FTurnOrderPriority{});
+	}
+
+	while (UpcomingTurns.Num() < PreviewCount && !PreviewQueue.IsEmpty())
+	{
+		FTurnOrder NextTurn;
+		PreviewQueue.HeapPop(
+			NextTurn,
+			FTurnOrderPriority{},
+			EAllowShrinking::No
+		);
+
+		ACXCombatCharacterBase* Character = NextTurn.Character.Get();
+		if (!IsValid(Character) || !Character->GetIsCharacterAlive())
+		{
+			continue;
+		}
+
+		UpcomingTurns.Emplace(Character);
+
+		// 방금 예측한 턴까지 임시 시간을 진행하고 이후 행동을 예약
+		PreviewTime = FMath::Max(PreviewTime, NextTurn.NextActionTime);
+		NextTurn.NextActionTime =
+			PreviewTime + BaseActionCost / NextTurn.CombatSpeed;
+
+		PreviewQueue.HeapPush(NextTurn, FTurnOrderPriority{});
+	}
+
+	TArray<FString> TurnNames;
+	for (const auto& Turn : UpcomingTurns)
+	{
+		TurnNames.Add(GetNameSafe(Turn.Get()));
+	}
+
+	UE_LOG(LogTemp, Display, TEXT("[턴 예측] %d개 | %s"),
+		UpcomingTurns.Num(),
+		*FString::Join(TurnNames, TEXT(" -> ")));
 }

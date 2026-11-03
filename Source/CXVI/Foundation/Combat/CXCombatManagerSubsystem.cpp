@@ -201,16 +201,19 @@ const UCXLevelDefinition* UCXCombatManagerSubsystem::GetCurrentLevelDefinition()
 	return LevelTransition ? LevelTransition->GetCurrentLevelDefinition() : nullptr;
 }
 
-void UCXCombatManagerSubsystem::HandleBattleEnded(bool bInVictory)
+void UCXCombatManagerSubsystem::HandleBattleEnded(bool bInVictory, double InElapsedSeconds)
 {
 	if (ECXCombatState::InBattle != CombatState)
 	{
 		return;
 	}
 
+	LastCombatElapsedSeconds = InElapsedSeconds;
+
 	// 종료 알림만 방송. 필드 복귀와 정리 시점은 받는 쪽(전투 Scene)이 결정
 	FCXCombatEndMessage Message;
 	Message.bVictory = bInVictory;
+	Message.ElapsedSeconds = InElapsedSeconds;
 
 	UCXGameplayMessageSubsystem::Get(this).BroadcastMessage(CXVIGameplayTags::Message_Combat_End, Message);
 }
