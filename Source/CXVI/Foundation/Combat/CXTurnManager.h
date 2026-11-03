@@ -11,9 +11,10 @@
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerInputEnabledChanged, ECXCombatInputMode);
 //DECLARE_MULTICAST_DELEGATE(FCXOnBattleEnded);
-DECLARE_MULTICAST_DELEGATE_OneParam(FCXOnBattleEnded, bool /*bVictory*/);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FCXOnBattleEnded, bool /*bVictory*/, double /*ElapsedSeconds*/);
 
 class ACXCombatCharacterBase;
+struct FOnAttributeChangeData;
 
 USTRUCT()
 struct FTurnOrder
@@ -23,8 +24,17 @@ struct FTurnOrder
 	UPROPERTY()
 	TObjectPtr<ACXCombatCharacterBase> Character = nullptr;
 
+	// 다음 행동이 가능한 시간
 	UPROPERTY()
 	float NextActionTime = 0.f;
+
+	// 우선순위 계산에 사용하는 속도
+	UPROPERTY()
+	float CombatSpeed = 1.f;
+
+	// 시간과 속도가 같을 때 사용할 순서
+	UPROPERTY()
+	int32 RegistrationOrder = 0;
 };
 
 
@@ -52,13 +62,20 @@ public:
 
 	void StopBattle() { ResetBattle(); }
 
+	// 현재 진행중인 전투의 경과 시간.
+	double GetCombatElapsedSeconds() const;
+
+	const TArray<TWeakObjectPtr<ACXCombatCharacterBase>>& GetUpcomingTurns() const { return UpcomingTurns; }
+
+	void SetTurnPreviewCount(int32 NewCount);
+
 private:
 
 	// 초기화 함수.
 	void ResetBattle();
 
-	// 순서 정렬
-	void SortTurnOrder();
+	// 순서 정렬 - 우선순위 큐로 이동
+	//void SortTurnOrder();
 	// 다음 플레이어 찾기
 	void FindNextPlayer();
 	// 찾은 플레이어 실행
@@ -91,22 +108,31 @@ private:
 	// 매니저 -> 캐릭터
 	void SendPhaseRequest(const FCXCombatMessageData& OutMessage);
 
+	void HandleCombatSpeedChanged(const FOnAttributeChangeData& Data, TWeakObjectPtr<ACXCombatCharacterBase> Participant);
+
+	void RefreshUpcomingTurns();
+
 protected:
-	UPROPERTY(VisibleAnywhere, Category = "Battle")
+	UPROPERTY(VisibleAnywhere, Category = "Combat")
 	TArray<TObjectPtr<class ACXCombatCharacterBase>> PlayerCharacters;
 
-	UPROPERTY(VisibleAnywhere, Category = "Battle")
+	UPROPERTY(VisibleAnywhere, Category = "Combat")
 	TArray<TObjectPtr<class ACXCombatCharacterBase>> EnemyCharacters;
 
-	UPROPERTY(VisibleAnywhere, Category = "Battle")
-	TArray<FTurnOrder> TurnOrderArray;
+	// 대기중인 턴을 저장하는 최소 힙
+	UPROPERTY(VisibleAnywhere, Category = "Combat")
+	TArray<FTurnOrder> TurnOrderQueue;
+
+	// 큐에서 꺼내 현재 진행중인 턴
+	UPROPERTY(VisibleAnywhere, Category = "Combat")
+	FTurnOrder CurrentTurnOrder;
 
 	// Track subscriptions separately from the living participant arrays.
-	UPROPERTY(VisibleAnywhere, Category = "Battle")
+	UPROPERTY(VisibleAnywhere, Category = "Combat")
 	TArray<TWeakObjectPtr<ACXCombatCharacterBase>> BoundParticipants;
 
 	// 현재 턴 주체자
-	UPROPERTY(VisibleAnywhere, Category = "Battle")
+	UPROPERTY(VisibleAnywhere, Category = "Combat")
 	TObjectPtr<class ACXCombatCharacterBase> CurrentTurnPlayer;
 
 	// 현재 페이즈
@@ -118,6 +144,12 @@ protected:
 
 	TArray<TWeakObjectPtr<APawn>> TargetCandidates;
 	int32 SelectedTargetIndex = INDEX_NONE;
+
+	// 현재 턴부터 표시 순서대로 저장
+	UPROPERTY(Transient)
+	TArray<TWeakObjectPtr<ACXCombatCharacterBase>> UpcomingTurns;
+
+
 
 	// 순서 정리 기준 코스트
 private:
@@ -132,4 +164,15 @@ private:
 
 	// 이번 공격에 대한 캐릭터별 패링 성공 횟수
 	TMap<TWeakObjectPtr<ACXCombatCharacterBase>, int32> ParrySuccessCounts;
+
+	// 현재 턴이 시작된 전투상의 시간
+	// 실제 플레이 시간이나 애니메이션 재생 시간과는 별개
+	UPROPERTY(VisibleAnywhere, Category = "Combat")
+	float CurrentCombatTime = 0.f;
+
+	// -1이면 측정중인 전투가 없음
+	double CombatStartTimeSeconds = -1.f;
+
+	UPROPERTY(EditAnywhere, Category = "Combat|TurnOrder", meta = (ClampMin = "1", UIMin = "1"))
+	int32 TurnPreviewCount = 8;
 };
