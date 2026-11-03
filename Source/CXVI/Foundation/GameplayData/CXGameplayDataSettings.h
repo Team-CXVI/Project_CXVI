@@ -31,8 +31,11 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Stat")
 	TSoftObjectPtr<UCurveTable> CharacterStatCurve;
 
-	UPROPERTY(Config, EditAnywhere, Category = "Stat")
-	TSoftObjectPtr<UCurveTable> MonsterStatCurve;
+	/*UPROPERTY(Config, EditAnywhere, Category = "Stat")
+	TSoftObjectPtr<UCurveTable> MonsterStatCurve;*/
+
+	UPROPERTY(Config, EditAnywhere, Category = "Stat", meta = (RequiredAssetDataTags = "RowStructure=/Script/CXVI.CXMonsterStatRow"))
+	TSoftObjectPtr<UDataTable> MonsterStatTable;
 
 	// 새 게임 시작 파티 / 아이템
 	UPROPERTY(Config, EditAnywhere, Category = "UserData")

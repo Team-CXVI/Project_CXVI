@@ -52,6 +52,10 @@ struct FCXInitialAttributes
 
 	UPROPERTY()
 	float CriticalDamageMultiplier = 2.f;
+
+	UPROPERTY()
+	float DodgeChance = 0.f;
+
 };
 
 USTRUCT(BlueprintType)
@@ -62,9 +66,12 @@ struct CXVI_API FCXCombatSpawnEntry
 	UPROPERTY(BlueprintReadOnly, Category = "Combat")
 	TSubclassOf<ACXCombatCharacterBase> CharacterClass;
 
-	// 스탯과 경험치의 출처. 클래스를 직접 지정 테스트에는 비어있을수 있다,.
-	UPROPERTY(BlueprintReadOnly, Category = "Combat")
-	TObjectPtr<UCXEnemyDefinition> Definition = nullptr;
+	//// 스탯과 경험치의 출처. 클래스를 직접 지정 테스트에는 비어있을수 있다,.
+	//UPROPERTY(BlueprintReadOnly, Category = "Combat")
+	//TObjectPtr<UCXEnemyDefinition> Definition = nullptr;
+
+	UPROPERTY()
+	bool bHasInitialAttributes = false;
 
 	UPROPERTY()
 	FCXInitialAttributes InitialAttributes;

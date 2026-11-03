@@ -4,7 +4,6 @@
 
 #include "CXVI/Character/Combat/CXCombatCharacterBase.h"
 #include "Character/Combat/CXCombatCharacterEnemy.h"
-#include "Foundation/UserData/CXEnemyDefinition.h"
 #include "Character/Combat/CXCombatCharacterPlayer.h"
 
 #include "Components/ArrowComponent.h"
@@ -156,31 +155,26 @@ bool ACXCombatArena::SpawnParty(const TArray<FCXCombatSpawnEntry>& InEntries, bo
 		SpawnParams.OverrideLevel = GetLevel();
 		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-		if (bInPlayerParty && Entry.InitialAttributes.MaxHealth > 0.f)
+		if (Entry.bHasInitialAttributes)
 		{
-			if (!CharacterClass->IsChildOf(ACXCombatCharacterPlayer::StaticClass()))
+			const UClass* ExpectedClass = bInPlayerParty ? ACXCombatCharacterPlayer::StaticClass() : ACXCombatCharacterEnemy::StaticClass();
+
+			if (!CharacterClass->IsChildOf(ExpectedClass))
 			{
 				return false;
 			}
 
 			SpawnParams.CustomPreSpawnInitialization =
-				[Health = Entry.InitialAttributes](AActor* Actor)
+				[bInPlayerParty, Stats = Entry.InitialAttributes](AActor* Actor)
 				{
-					CastChecked<ACXCombatCharacterPlayer>(Actor)->SetInitialAttributes(Health);
-				};
-		}
-
-		else if (UCXEnemyDefinition* Definition = Entry.Definition.Get())
-		{
-			if (!CharacterClass->IsChildOf(ACXCombatCharacterEnemy::StaticClass()))
-			{
-				return false;
-			}
-
-			SpawnParams.CustomPreSpawnInitialization =
-				[Definition](AActor* Actor)
-				{
-					CastChecked<ACXCombatCharacterEnemy>(Actor)->SetEnemyDefinition(Definition);
+					if (bInPlayerParty)
+					{
+						CastChecked<ACXCombatCharacterPlayer>(Actor)->SetInitialAttributes(Stats);
+					}
+					else
+					{
+						CastChecked<ACXCombatCharacterEnemy>(Actor)->SetInitialAttributes(Stats);
+					}
 				};
 		}
 

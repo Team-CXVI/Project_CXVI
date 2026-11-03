@@ -147,7 +147,7 @@ bool UCXCombatManagerSubsystem::RequestStartBattle(FName InEncounterId, const TA
 			Entry.CharacterClass = PlayerClass;
 			Entry.InitialAttributes.MaxHealth = MaxHealth;
 			Entry.InitialAttributes.CurrentHealth = Member.CurrentHealth;
-
+			
 			FCXInitialAttributes& Stats = Entry.InitialAttributes;
 
 			Stats.CombatSpeed = GameplayData.EvaluateCharacterStat(Definition->StatRowPrefix, "CombatSpeed", Member.Level);
@@ -155,6 +155,7 @@ bool UCXCombatManagerSubsystem::RequestStartBattle(FName InEncounterId, const TA
 			Stats.Defense = GameplayData.EvaluateCharacterStat(Definition->StatRowPrefix, "Defense", Member.Level);
 			Stats.CriticalChance = GameplayData.EvaluateCharacterStat(Definition->StatRowPrefix, "CriticalChance", Member.Level);
 			Stats.CriticalDamageMultiplier = GameplayData.EvaluateCharacterStat(Definition->StatRowPrefix, "CriticalDamageMultiplier", Member.Level);
+			Entry.bHasInitialAttributes = true;
 
 
 			UE_LOG(LogCXCombat, Display,
@@ -225,9 +226,35 @@ bool UCXCombatManagerSubsystem::RequestStartBattle(FName InEncounterId, const TA
 				return false;
 			}
 
+			const FCXMonsterStatRow* Row = GameplayData.FindMonsterStatRow(Definition->StatRowPrefix);
+
+			if (!Row || !FMath::IsFinite(Row->MaxHealth) || Row->MaxHealth <= 0.f)
+			{
+				UE_LOG(LogCXCombat, Warning,
+					TEXT("[적 스폰] 스탯 행 확인 필요. Enemy=%s Row=%s"),
+					*EnemyId.ToString(), *Definition->StatRowPrefix.ToString());
+
+				return false;
+			}
+
 			FCXCombatSpawnEntry& Entry = Params.EnemySpawns.AddDefaulted_GetRef();
 			Entry.CharacterClass = EnemyClass;
-			Entry.Definition = Definition;
+
+			FCXInitialAttributes& Stats = Entry.InitialAttributes;
+			Stats.MaxHealth = Row->MaxHealth;
+			Stats.CurrentHealth = Row->MaxHealth;
+			Stats.CombatSpeed = Row->CombatSpeed;
+			Stats.AttackPower = Row->AttackPower;
+			Stats.Defense = Row->Defense;
+			Stats.CriticalChance = Row->CriticalChance;
+			Stats.CriticalDamageMultiplier = Row->CriticalDamageMultiplier;
+			Stats.DodgeChance = Row->DodgeChance;
+			Entry.bHasInitialAttributes = true;
+
+			UE_LOG(LogCXCombat, Display,
+				TEXT("[적 스폰 준비] Row=%s HP=%.0f ATK=%.0f SPD=%.0f"),
+				*Definition->StatRowPrefix.ToString(),
+				Stats.MaxHealth, Stats.AttackPower, Stats.CombatSpeed);
 		}
 
 	

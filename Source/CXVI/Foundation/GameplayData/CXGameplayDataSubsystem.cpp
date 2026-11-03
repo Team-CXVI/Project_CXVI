@@ -39,7 +39,8 @@ void UCXGameplayDataSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
 	ItemTable = LoadDataTable(Settings->ItemTable, FCXItemRow::StaticStruct(), TEXT("ItemTable"));
 	CharacterStatCurve = LoadCurveTable(Settings->CharacterStatCurve, TEXT("CharacterStatCurve"));
-	MonsterStatCurve = LoadCurveTable(Settings->MonsterStatCurve, TEXT("MonsterStatCurve"));
+	//MonsterStatCurve = LoadCurveTable(Settings->MonsterStatCurve, TEXT("MonsterStatCurve"));
+	MonsterStatTable = LoadDataTable(Settings->MonsterStatTable, FCXMonsterStatRow::StaticStruct(), TEXT("MonsterStatTable"));
 	EncounterTable = LoadDataTable(Settings->EncounterTable, FCXEncounterRow::StaticStruct(), TEXT("EcnounterTable"));
 
 	UE_LOG(LogGameplayData, Log, TEXT("Gameplay data loaded."));
@@ -49,7 +50,8 @@ void UCXGameplayDataSubsystem::Deinitialize()
 {
 	ItemTable = nullptr;
 	CharacterStatCurve = nullptr;
-	MonsterStatCurve = nullptr;
+	//MonsterStatCurve = nullptr;
+	MonsterStatTable = nullptr;
 	EncounterTable = nullptr;
 
 	Super::Deinitialize();
@@ -93,6 +95,11 @@ void UCXGameplayDataSubsystem::GetAllItemIds(TArray<FName>& OutItemIds) const
 const FCXEncounterRow* UCXGameplayDataSubsystem::FindEncounterRow(FName EncounterId) const
 {
 	return FindRow<FCXEncounterRow>(EncounterTable, EncounterId);
+}
+
+const FCXMonsterStatRow* UCXGameplayDataSubsystem::FindMonsterStatRow(FName RowName) const
+{
+	return FindRow<FCXMonsterStatRow>(MonsterStatTable, RowName);
 }
 
 UCXEnemyDefinition* UCXGameplayDataSubsystem::LoadEnemyDefinition(const FPrimaryAssetId& EnemyId) const

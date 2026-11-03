@@ -7,6 +7,7 @@
 #include "Engine/DataTable.h"
 #include "Types/CXItemTypes.h"
 #include "Types/CXEncounterTypes.h"
+#include "Types/CXMonsterStatTypes.h"
 
 #include "CXGameplayDataSubsystem.generated.h"
 
@@ -58,6 +59,7 @@ public:
 	void GetAllItemIds(TArray<FName>& OutItemIds) const;
 
 	const FCXEncounterRow* FindEncounterRow(FName EncounterId) const;
+	const FCXMonsterStatRow* FindMonsterStatRow(FName RowName) const;
 	UCXEnemyDefinition* LoadEnemyDefinition(const FPrimaryAssetId& EnemyId) const;
 
 public:
@@ -81,6 +83,8 @@ private:
 	UPROPERTY()
 	TObjectPtr<UCurveTable> CharacterStatCurve;
 
+	/*UPROPERTY()
+	TObjectPtr<UCurveTable> MonsterStatCurve;*/
 	UPROPERTY()
-	TObjectPtr<UCurveTable> MonsterStatCurve;
+	TObjectPtr<UDataTable> MonsterStatTable;
 };

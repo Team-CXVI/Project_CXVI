@@ -35,7 +35,4 @@ public:
     // 몬스터 스탯 커브 행을 찾을 때 사용할 접두사
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stat")
     FName StatRowPrefix = NAME_None;
-
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "EXP")
-    int32 Exp;
 };
