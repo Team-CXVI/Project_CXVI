@@ -53,6 +53,8 @@ public:
 	// 커맨드 Pawn의 카메라 전환에서 사용
 	FORCEINLINE ACXCombatArena* GetCombatArena() const { return CombatArena.Get(); }
 
+	FORCEINLINE double GetLastCombatElapsedSeconds() const { return LastCombatElapsedSeconds; }
+
 protected:
 	virtual void PostInitialize() override;
 
@@ -63,7 +65,7 @@ private:
 	// Scene 서브레벨은 현재 퍼시스턴트 레벨에 등록된 것만 로드 가능하므로 전투 Scene은 레벨 단위로 지정
 	const UCXLevelDefinition* GetCurrentLevelDefinition() const;
 
-	void HandleBattleEnded(bool bInVictory);
+	void HandleBattleEnded(bool bInVictory, double InElapsedSeconds);
 
 	void HandlePlayerInputModeChanged(ECXCombatInputMode NewInputMode);
 
@@ -78,4 +80,6 @@ private:
 	TWeakObjectPtr<ACXCommandCharacter> WeakCommandCharacter;
 
 	ECXCombatState CombatState = ECXCombatState::Idle;
+
+	double LastCombatElapsedSeconds = 0.f;
 };

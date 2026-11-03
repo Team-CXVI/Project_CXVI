@@ -95,4 +95,7 @@ public:
 	// TODO : OnBattleEnded에 결과가 추가되면 채움 (현재 항상 false)
 	UPROPERTY(BlueprintReadOnly, Category = "Combat")
 	bool bVictory = false;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Combat")
+	double ElapsedSeconds = 0.0;
 };
