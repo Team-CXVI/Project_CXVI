@@ -38,6 +38,9 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "UserData")
 	TSoftObjectPtr<UCXNewGameData> NewGameData;
 
+	UPROPERTY(Config, EditAnywhere, Category = "Encounter", meta = (RequiredAssetDataTags = "RowStructure=/Script/CXVI.CXEncounterRow"))
+	TSoftObjectPtr<UDataTable> EncounterTable;
+
 	// 수동 저장 슬롯 수 (슬롯 0은 자동 저장 전용)
 	UPROPERTY(Config, EditAnywhere, Category = "Save", meta = (ClampMin = 1))
 	int32 MaxManualSaveSlots = 3;

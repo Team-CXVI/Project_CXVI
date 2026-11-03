@@ -6,6 +6,8 @@
 #include "CXVI/Character/Combat/CXCombatCharacterBase.h"
 #include "CXCombatCharacterEnemy.generated.h"
 
+class UCXEnemyDefinition;
+
 /**
  * 
  */
@@ -17,6 +19,8 @@ class CXVI_API ACXCombatCharacterEnemy : public ACXCombatCharacterBase
 public:
 	ACXCombatCharacterEnemy();
 
+	void SetEnemyDefinition(UCXEnemyDefinition* InDefinition) { EnemyDefinition = InDefinition; }
+
 protected:
 	virtual void PostInitializeComponents() override;
 
@@ -25,4 +29,8 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Attribute")
 	TObjectPtr<class UCXCombatEnemyAttributeSet> AttributeSet;
+
+private:
+	UPROPERTY(Transient)
+	TObjectPtr<UCXEnemyDefinition> EnemyDefinition;
 };

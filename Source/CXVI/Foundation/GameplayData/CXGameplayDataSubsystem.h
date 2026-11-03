@@ -6,10 +6,12 @@
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "Engine/DataTable.h"
 #include "Types/CXItemTypes.h"
+#include "Types/CXEncounterTypes.h"
 
 #include "CXGameplayDataSubsystem.generated.h"
 
 class UCurveTable;
+class UCXEnemyDefinition;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogGameplayData, Log, All)
 
@@ -55,6 +57,9 @@ public:
 
 	void GetAllItemIds(TArray<FName>& OutItemIds) const;
 
+	const FCXEncounterRow* FindEncounterRow(FName EncounterId) const;
+	UCXEnemyDefinition* LoadEnemyDefinition(const FPrimaryAssetId& EnemyId) const;
+
 public:
 	UFUNCTION(BlueprintCallable, BlueprintPure = false, Category = "GameplayData|Item", meta = (DisplayName = "Find Item Row", ExpandBoolAsExecs = "ReturnValue"))
 	bool K2_FindItemRow(FName InItemId, FCXItemRow& OutRow) const;
@@ -69,6 +74,9 @@ private:
 private:
 	UPROPERTY()
 	TObjectPtr<UDataTable> ItemTable;
+
+	UPROPERTY()
+	TObjectPtr<UDataTable> EncounterTable;
 
 	UPROPERTY()
 	TObjectPtr<UCurveTable> CharacterStatCurve;

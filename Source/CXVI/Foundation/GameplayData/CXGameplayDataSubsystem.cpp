@@ -3,8 +3,11 @@
 
 #include "CXGameplayDataSubsystem.h"
 #include "CXGameplayDataSettings.h"
+#include "Foundation/UserData/CXEnemyDefinition.h"
+
 #include "Engine/CurveTable.h"
 #include "Engine/GameInstance.h"
+#include "Engine/AssetManager.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXGameplayDataSubsystem)
 
@@ -37,6 +40,7 @@ void UCXGameplayDataSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	ItemTable = LoadDataTable(Settings->ItemTable, FCXItemRow::StaticStruct(), TEXT("ItemTable"));
 	CharacterStatCurve = LoadCurveTable(Settings->CharacterStatCurve, TEXT("CharacterStatCurve"));
 	MonsterStatCurve = LoadCurveTable(Settings->MonsterStatCurve, TEXT("MonsterStatCurve"));
+	EncounterTable = LoadDataTable(Settings->EncounterTable, FCXEncounterRow::StaticStruct(), TEXT("EcnounterTable"));
 
 	UE_LOG(LogGameplayData, Log, TEXT("Gameplay data loaded."));
 }
@@ -46,6 +50,7 @@ void UCXGameplayDataSubsystem::Deinitialize()
 	ItemTable = nullptr;
 	CharacterStatCurve = nullptr;
 	MonsterStatCurve = nullptr;
+	EncounterTable = nullptr;
 
 	Super::Deinitialize();
 }
@@ -83,6 +88,24 @@ void UCXGameplayDataSubsystem::GetAllItemIds(TArray<FName>& OutItemIds) const
 	{
 		OutItemIds = ItemTable->GetRowNames();
 	}
+}
+
+const FCXEncounterRow* UCXGameplayDataSubsystem::FindEncounterRow(FName EncounterId) const
+{
+	return FindRow<FCXEncounterRow>(EncounterTable, EncounterId);
+}
+
+UCXEnemyDefinition* UCXGameplayDataSubsystem::LoadEnemyDefinition(const FPrimaryAssetId& EnemyId) const
+{
+	UAssetManager* AssetManager = UAssetManager::GetIfInitialized();
+	if (!AssetManager || !EnemyId.IsValid())
+	{
+		return nullptr;
+	}
+
+	const FSoftObjectPath AssetPath = AssetManager->GetPrimaryAssetPath(EnemyId);
+
+	return Cast<UCXEnemyDefinition>(AssetPath.TryLoad());
 }
 
 bool UCXGameplayDataSubsystem::K2_FindItemRow(FName InItemId, FCXItemRow& OutRow) const

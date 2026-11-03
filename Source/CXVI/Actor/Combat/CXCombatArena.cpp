@@ -3,6 +3,8 @@
 #include "Actor/Combat/CXCombatArena.h"
 
 #include "CXVI/Character/Combat/CXCombatCharacterBase.h"
+#include "Character/Combat/CXCombatCharacterEnemy.h"
+#include "Foundation/UserData/CXEnemyDefinition.h"
 
 #include "Components/ArrowComponent.h"
 #include "Camera/CameraComponent.h"
@@ -54,7 +56,7 @@ bool ACXCombatArena::SpawnCombatants(const FCXCombatEnterParams& InParams)
 		return false;
 	}
 
-	if (InParams.PlayerClasses.IsEmpty() || InParams.EnemyClasses.IsEmpty())
+	if (InParams.PlayerClasses.IsEmpty() || InParams.EnemySpawns.IsEmpty())
 	{
 		UE_LOG(LogCXCombat, Warning, TEXT("Arena : 파티 정보가 비어 있습니다."));
 		return false;
@@ -62,14 +64,24 @@ bool ACXCombatArena::SpawnCombatants(const FCXCombatEnterParams& InParams)
 
 	// 슬롯보다 파티 인원이 많으면 시작하지 않음
 	if (InParams.PlayerClasses.Num() > GetPlayerSlotCount() ||
-		InParams.EnemyClasses.Num() > GetEnemySlotCount())
+		InParams.EnemySpawns.Num() > GetEnemySlotCount())
 	{
 		UE_LOG(LogCXCombat, Warning, TEXT("Arena : 파티 인원이 슬롯 수보다 많습니다."));
 		return false;
 	}
+	
+	TArray<FCXCombatSpawnEntry> PlayerSpawns;
+	PlayerSpawns.Reserve(InParams.PlayerClasses.Num());
 
-	if (!SpawnParty(InParams.PlayerClasses, true) ||
-		!SpawnParty(InParams.EnemyClasses, false))
+	for (const auto& PlayerClass : InParams.PlayerClasses)
+	{
+		FCXCombatSpawnEntry& Entry = PlayerSpawns.AddDefaulted_GetRef();
+		Entry.CharacterClass = PlayerClass;
+	}
+
+
+	if (!SpawnParty(PlayerSpawns, true) ||
+		!SpawnParty(InParams.EnemySpawns, false))
 	{
 		UE_LOG(LogCXCombat, Warning, TEXT("Arena : 전투원 생성 실패"));
 		CleanupCombatants();
@@ -121,7 +133,7 @@ FTransform ACXCombatArena::GetEnemySlotFromIndex(int32 InIndex) const
 	return FTransform();
 }
 
-bool ACXCombatArena::SpawnParty(const TArray<TSubclassOf<ACXCombatCharacterBase>>& InClasses, bool bInPlayerParty)
+bool ACXCombatArena::SpawnParty(const TArray<FCXCombatSpawnEntry>& InEntries, bool bInPlayerParty)
 {
 	UWorld* World = GetWorld();
 	if (nullptr == World)
@@ -131,9 +143,12 @@ bool ACXCombatArena::SpawnParty(const TArray<TSubclassOf<ACXCombatCharacterBase>
 
 	TArray<TObjectPtr<ACXCombatCharacterBase>>& Characters = bInPlayerParty ? PlayerCharacters : EnemyCharacters;
 
-	for (int32 Index = 0; Index < InClasses.Num(); ++Index)
+	for (int32 Index = 0; Index < InEntries.Num(); ++Index)
 	{
-		const TSubclassOf<ACXCombatCharacterBase> CharacterClass = InClasses[Index];
+		const FCXCombatSpawnEntry& Entry = InEntries[Index];
+		const auto CharacterClass = Entry.CharacterClass;
+
+		//const TSubclassOf<ACXCombatCharacterBase> CharacterClass = InEntries[Index];
 		if (!CharacterClass || CharacterClass->HasAnyClassFlags(CLASS_Abstract))
 		{
 			return false;
@@ -148,6 +163,20 @@ bool ACXCombatArena::SpawnParty(const TArray<TSubclassOf<ACXCombatCharacterBase>
 		// 전투원이 아레나와 같은 서브레벨에 속하도록 지정
 		SpawnParams.OverrideLevel = GetLevel();
 		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+		if (UCXEnemyDefinition* Definition = Entry.Definition.Get())
+		{
+			if (!CharacterClass->IsChildOf(ACXCombatCharacterEnemy::StaticClass()))
+			{
+				return false;
+			}
+
+			SpawnParams.CustomPreSpawnInitialization =
+				[Definition](AActor* Actor)
+				{
+					CastChecked<ACXCombatCharacterEnemy>(Actor)->SetEnemyDefinition(Definition);
+				};
+		}
 
 		ACXCombatCharacterBase* Character = World->SpawnActor<ACXCombatCharacterBase>(CharacterClass, SpawnTransform, SpawnParams);
 		if (!IsValid(Character))

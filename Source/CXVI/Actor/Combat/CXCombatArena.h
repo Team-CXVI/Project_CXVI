@@ -42,7 +42,7 @@ public:
 	FTransform GetEnemySlotFromIndex(int32 InIndex) const;
 
 private:
-	bool SpawnParty(const TArray<TSubclassOf<ACXCombatCharacterBase>>& InClasses, bool bInPlayerParty);
+	bool SpawnParty(const TArray<FCXCombatSpawnEntry>& InEntries, bool bInPlayerParty);
 
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Slots")

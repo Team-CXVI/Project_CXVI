@@ -10,6 +10,10 @@
 #include "CXVI/Foundation/Combat/CXTurnManager.h"
 #include "CXVI/Foundation/Combat/CombatMessage/CXCombatMessageData.h"
 
+#include "Character/Combat/CXCombatCharacterEnemy.h"
+#include "Foundation/GameplayData/CXGameplayDataSubsystem.h"
+#include "Foundation/UserData/CXEnemyDefinition.h"
+
 #include "Foundation/GameplayMessage/CXGameplayMessageSubsystem.h"
 #include "Foundation/Scene/CXSceneSubsystem.h"
 #include "Level/CXLevelTransitionSubsystem.h"
@@ -67,7 +71,54 @@ bool UCXCombatManagerSubsystem::RequestStartBattle(FName InEncounterId, const TA
 	FCXCombatEnterParams Params;
 	Params.EncounterId = InEncounterId;
 	Params.PlayerClasses = CXCombatManager::ResolvePartyClasses(InPlayerClasses, LevelDefinition ? LevelDefinition->TestPlayerParty.Get() : nullptr);
-	Params.EnemyClasses = CXCombatManager::ResolvePartyClasses(InEnemyClasses, LevelDefinition ? LevelDefinition->TestEnemyParty.Get() : nullptr);
+	//Params.EnemyClasses = CXCombatManager::ResolvePartyClasses(InEnemyClasses, LevelDefinition ? LevelDefinition->TestEnemyParty.Get() : nullptr);
+
+	if (!InEnemyClasses.IsEmpty())
+	{
+		for (const auto& EnemyClass : InEnemyClasses)
+		{
+			FCXCombatSpawnEntry& Entry = Params.EnemySpawns.AddDefaulted_GetRef();
+			Entry.CharacterClass = EnemyClass;
+		}
+	}
+	else
+	{
+		if (!UCXGameplayDataSubsystem::HasInstance(this))
+		{
+			return false;
+		}
+		
+		const UCXGameplayDataSubsystem& GameplayData = UCXGameplayDataSubsystem::Get(this);
+
+		const FCXEncounterRow* Encounter = GameplayData.FindEncounterRow(InEncounterId);
+
+		if (!Encounter || Encounter->Enemies.IsEmpty())
+		{
+			UE_LOG(LogCXCombat, Warning, TEXT("인카운터가 없거나 적 파티가 비어있습니다. ID=%s"), *InEncounterId.ToString());
+
+			return false;
+		}
+
+		for (const FPrimaryAssetId& EnemyId : Encounter->Enemies)
+		{
+			UCXEnemyDefinition* Definition = GameplayData.LoadEnemyDefinition(EnemyId);
+			UClass* EnemyClass = Definition
+				? Definition->CombatCharacterClass.LoadSynchronous() : nullptr;
+
+			if (!EnemyClass || !EnemyClass->IsChildOf(ACXCombatCharacterEnemy::StaticClass()) || EnemyClass->HasAnyClassFlags(CLASS_Abstract))
+			{
+				UE_LOG(LogCXCombat, Warning, TEXT("몬스터 정의 또는 전투 클래스 확인 필요, Encounter=%s, Enemy=%s"), *InEncounterId.ToString(), *EnemyId.ToString());
+
+				return false;
+			}
+
+			FCXCombatSpawnEntry& Entry = Params.EnemySpawns.AddDefaulted_GetRef();
+			Entry.CharacterClass = EnemyClass;
+			Entry.Definition = Definition;
+		}
+
+	
+	}
 
 	if (!CanStartBattle(Params))
 	{
@@ -179,7 +230,7 @@ bool UCXCombatManagerSubsystem::CanStartBattle(const FCXCombatEnterParams& InPar
 		return false;
 	}
 
-	if (InParams.PlayerClasses.IsEmpty() || InParams.EnemyClasses.IsEmpty())
+	if (InParams.PlayerClasses.IsEmpty() || InParams.EnemySpawns.IsEmpty())
 	{
 		UE_LOG(LogCXCombat, Warning, TEXT("전투 요청 거절 : 파티 정보가 비어 있습니다. (요청 파티 또는 레벨 정의의 TestPlayerParty / TestEnemyParty 확인)"));
 		return false;
