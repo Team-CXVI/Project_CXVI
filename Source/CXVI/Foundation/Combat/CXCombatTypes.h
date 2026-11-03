@@ -52,7 +52,7 @@ public:
 
 	// TODO : 임시. 파티 정보 출처가 정해지면 EncounterId 조회로 변경
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
-	TArray<TSubclassOf<ACXCombatCharacterBase>> PlayerClasses;
+	TArray<FCXCombatSpawnEntry> PlayerClasses;
 
 	/*UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
 	TArray<TSubclassOf<ACXCombatCharacterBase>> EnemyClasses;*/

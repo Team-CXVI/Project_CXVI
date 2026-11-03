@@ -12,7 +12,9 @@
 
 #include "Character/Combat/CXCombatCharacterEnemy.h"
 #include "Foundation/GameplayData/CXGameplayDataSubsystem.h"
+#include "Foundation/UserData/CXUserDataSubsystem.h"
 #include "Foundation/UserData/CXEnemyDefinition.h"
+#include "Foundation/UserData/CXCharacterDefinition.h"
 
 #include "Foundation/GameplayMessage/CXGameplayMessageSubsystem.h"
 #include "Foundation/Scene/CXSceneSubsystem.h"
@@ -70,9 +72,54 @@ bool UCXCombatManagerSubsystem::RequestStartBattle(FName InEncounterId, const TA
 
 	FCXCombatEnterParams Params;
 	Params.EncounterId = InEncounterId;
-	Params.PlayerClasses = CXCombatManager::ResolvePartyClasses(InPlayerClasses, LevelDefinition ? LevelDefinition->TestPlayerParty.Get() : nullptr);
+	//Params.PlayerClasses = CXCombatManager::ResolvePartyClasses(InPlayerClasses, LevelDefinition ? LevelDefinition->TestPlayerParty.Get() : nullptr);
 	//Params.EnemyClasses = CXCombatManager::ResolvePartyClasses(InEnemyClasses, LevelDefinition ? LevelDefinition->TestEnemyParty.Get() : nullptr);
 
+	// 플레이어 생성
+	if (!InPlayerClasses.IsEmpty())
+	{
+		Params.PlayerClasses.Reserve(InPlayerClasses.Num());
+		for (const auto& PlayerClass : InPlayerClasses)
+		{
+			FCXCombatSpawnEntry& Entry = Params.PlayerClasses.AddDefaulted_GetRef();
+			Entry.CharacterClass = PlayerClass;
+		}
+	}
+	else
+	{
+		const UCXUserDataSubsystem* UserData = UCXUserDataSubsystem::TryGet(this);
+		if (!UserData)
+		{
+			UE_LOG(LogCXCombat, Warning, TEXT("유저 데이터를 읽어올수 없습니다"));
+			return false;
+		}
+
+		const auto& PartyMembers = UserData->GetPartyMembers();
+		Params.PlayerClasses.Reserve(PartyMembers.Num());
+
+		for (const FCXPartyMemberState& Member : PartyMembers)
+		{
+			const UCXCharacterDefinition* Definition = UserData->LoadCharacterDefinition(Member.CharacterId);
+
+			UClass* PlayerClass = Definition ? Definition->CombatCharacterClass.LoadSynchronous() : nullptr;
+
+			if (!PlayerClass || !PlayerClass->IsChildOf(ACXCombatCharacterPlayer::StaticClass()) || PlayerClass->HasAnyClassFlags(CLASS_Abstract))
+			{
+				UE_LOG(LogCXCombat, Warning, TEXT("아군 전투 클래스를 로드할 수 없습니다. ID=%s"), *Member.CharacterId.ToString());
+
+				return false;
+			}
+
+			FCXCombatSpawnEntry& Entry = Params.PlayerClasses.AddDefaulted_GetRef();
+
+			Entry.CharacterClass = PlayerClass;
+
+			UE_LOG(LogCXCombat, Display, TEXT("[아군 스폰 준비] ID=%s / 클래스=%s"), *Member.CharacterId.ToString(), *GetNameSafe(PlayerClass));
+		}
+
+	}
+
+	// 적 생성
 	if (!InEnemyClasses.IsEmpty())
 	{
 		for (const auto& EnemyClass : InEnemyClasses)

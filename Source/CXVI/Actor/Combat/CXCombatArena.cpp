@@ -70,17 +70,8 @@ bool ACXCombatArena::SpawnCombatants(const FCXCombatEnterParams& InParams)
 		return false;
 	}
 	
-	TArray<FCXCombatSpawnEntry> PlayerSpawns;
-	PlayerSpawns.Reserve(InParams.PlayerClasses.Num());
 
-	for (const auto& PlayerClass : InParams.PlayerClasses)
-	{
-		FCXCombatSpawnEntry& Entry = PlayerSpawns.AddDefaulted_GetRef();
-		Entry.CharacterClass = PlayerClass;
-	}
-
-
-	if (!SpawnParty(PlayerSpawns, true) ||
+	if (!SpawnParty(InParams.PlayerClasses, true) ||
 		!SpawnParty(InParams.EnemySpawns, false))
 	{
 		UE_LOG(LogCXCombat, Warning, TEXT("Arena : 전투원 생성 실패"));
