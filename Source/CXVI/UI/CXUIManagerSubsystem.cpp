@@ -11,6 +11,7 @@
 #include "Tags/CXGameplayTags.h"
 #include "UI/CXActivatableWidget.h"
 #include "UI/CXUITypes.h"
+#include "UI/CXPopupWidget.h"
 
 #include <CommonActivatableWidget.h>
 #include <Widgets/CommonActivatableWidgetContainer.h>
@@ -158,6 +159,22 @@ void UCXUIManagerSubsystem::RemoveWidget(UCommonActivatableWidget* InWidget)
 	{
 		PrimaryLayout->FindAndRemoveWidgetFromLayer(InWidget);
 	}
+}
+
+void UCXUIManagerSubsystem::ShowConfirmPopup(FName InBodyTextId, FSimpleDelegate InOnConfirm)
+{
+	PushPopup([&](UCXPopupWidget& InPopup)
+		{
+			InPopup.SetupConfirm(InBodyTextId, MoveTemp(InOnConfirm));
+		});
+}
+
+void UCXUIManagerSubsystem::ShowConfirmCancelPopup(FName InBodyTextId, FSimpleDelegate InOnConfirm, FSimpleDelegate InOnCancel)
+{
+	PushPopup([&](UCXPopupWidget& InPopup)
+		{
+			InPopup.SetupConfirmCancel(InBodyTextId, MoveTemp(InOnConfirm), MoveTemp(InOnCancel));
+		});
 }
 
 void UCXUIManagerSubsystem::ApplyUIInputMapping(bool bInApply) const
@@ -336,6 +353,25 @@ void UCXUIManagerSubsystem::HandleOpenScreen(const FGameplayTag& InChannel, cons
 		{
 			InWidget.SetScreenContext(InMessage.ContextTag);
 		});
+}
+
+void UCXUIManagerSubsystem::PushPopup(TFunctionRef<void(UCXPopupWidget&)> InSetupFunc)
+{
+	const TSubclassOf<UCXPopupWidget> PopupClass = GetDefault<UCXUISettings>()->PopupClass.LoadSynchronous();
+	if (nullptr == PopupClass)
+	{
+		UE_LOG(LogCXUI, Warning, TEXT("Popup Class가 지정되지 않았습니다. (Project Settings > Game > CXVI UI)"));
+		return;
+	}
+
+	// 맵 이동 중에는 레이아웃이 없으므로 대기하지 않고 요청을 버림
+	if (nullptr == PrimaryLayout)
+	{
+		UE_LOG(LogCXUI, Warning, TEXT("팝업 열기 실패: 레이아웃이 없습니다."));
+		return;
+	}
+
+	PushWidgetToLayer<UCXPopupWidget>(CXVIGameplayTags::UI_Layer_Modal, PopupClass, InSetupFunc);
 }
 
 void UCXUIManagerSubsystem::HandleScreenFade(const FGameplayTag& InChannel, const FCXScreenFadeMessage& InMessage)

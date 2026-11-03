@@ -97,6 +97,15 @@ void UCXSaveSlotListWidget::HandleSlotClicked(int32 InSlotIndex)
 		return;
 	}
 
+	if (UCXUIManagerSubsystem* UIManager = UCXUIManagerSubsystem::TryGet(this))
+	{
+		// TODO : 텍스트 데이터 테이블 작업 때 본문 ID 지정
+		UIManager->ShowConfirmCancelPopup(NAME_None, FSimpleDelegate::CreateUObject(this, &ThisClass::ConfirmLoad, InSlotIndex));
+	}
+}
+
+void UCXSaveSlotListWidget::ConfirmLoad(int32 InSlotIndex)
+{
 	// 페이드 동안 화면이 타이틀로 돌아가지 않도록 닫지 않음. 레벨이 바뀌면 함께 제거됨
 	if (UCXUserDataSubsystem* UserData = UCXUserDataSubsystem::TryGet(this))
 	{
