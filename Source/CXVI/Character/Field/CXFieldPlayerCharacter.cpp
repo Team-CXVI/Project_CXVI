@@ -635,8 +635,6 @@ void ACXFieldPlayerCharacter::StartUseFlag()
 
 	ActiveExpeditionFlag = Flag;
 	Flag->ActivateFlag();
-	Flag->Rest(); // 임시: 휴식 버튼 UI가 생기면 메뉴 버튼으로 이동.
-	EnterFlagMenu();
 }
 
 void ACXFieldPlayerCharacter::EnterFlagMenu()

@@ -23,6 +23,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogCXUserData, Log, All);
  * - 레벨만 저장하고 스탯은 저장하지 않음 (정의 데이터 + 커브로 계산)
  * - 변경 시 Message.UserData.PartyChanged / InventoryChanged 방송 (UI 갱신용)
  * - Message.UserData.RequestAutoSave를 받으면 자동 저장 (요청하는 쪽이 데이터 반영 후 방송)
+ * - 슬롯 파일 쓰기가 끝나면 Message.UserData.SaveFinished 방송
  * - 불러오기는 슬롯을 먼저 읽어 이동을 요청하고, 화면이 가려진 뒤 UserData에 적용
  */
 UCLASS()
@@ -147,6 +148,8 @@ private:
 
 	static FString MakeSlotName(int32 InSlotIndex);
 
+	void BroadcastSaveFinished(int32 InSlotIndex, bool bInSuccess) const;
+
 	// Party
 	void LoadCharacterDefinitions();
 
@@ -180,6 +183,9 @@ private:
 	double SessionStartSeconds = 0.0;
 
 	bool bSaveInProgress = false;
+
+	// 파일 쓰기 중인 슬롯 (쓰기 중이 아니면 INDEX_NONE)
+	int32 SavingSlotIndex = INDEX_NONE;
 
 	FCXGameplayMessageListenerHandle AutoSaveRequestListener;
 

@@ -27,6 +27,7 @@ namespace CXVIGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Message_UserData_PartyChanged, "Message.UserData.PartyChanged", "파티 데이터 변경 (UI 갱신용)");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Message_UserData_InventoryChanged, "Message.UserData.InventoryChanged", "인벤토리 변경 (UI 갱신용)");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Message_UserData_RequestAutoSave, "Message.UserData.RequestAutoSave", "자동 저장 요청 (데이터 반영이 끝난 뒤 방송)");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Message_UserData_SaveFinished, "Message.UserData.SaveFinished", "저장 파일 쓰기 완료 (UI 갱신용)");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Message_UI_OpenScreen, "Message.UI.OpenScreen", "화면 열기 요청 (UI 매니저가 수신)");
 
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Data_Damage, "Data.Damage", "GE에 전달하는 데미지 값(SetByCaller)");
@@ -39,6 +40,7 @@ namespace CXVIGameplayTags
 	
 
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(UI_Screen_SaveSlot, "UI.Screen.SaveSlot", "저장 슬롯 목록 화면");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(UI_Screen_FlagMenu, "UI.Screen.FlagMenu", "깃발 메뉴 화면");
 
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(UI_ScreenContext_SaveSlot_Load, "UI.ScreenContext.SaveSlot.Load", "저장 슬롯 목록 : 불러오기");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(UI_ScreenContext_SaveSlot_Save, "UI.ScreenContext.SaveSlot.Save", "저장 슬롯 목록 : 저장하기");

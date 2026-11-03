@@ -216,4 +216,19 @@ struct CXVI_API FCXAutoSaveRequestMessage
 	GENERATED_BODY()
 };
 
+// Message.UserData.SaveFinished 태그로 전달하는 메시지 구조체
+// 슬롯 파일 쓰기가 끝난 뒤 방송 (받는 쪽은 이 시점에 슬롯을 다시 읽을 수 있음)
+USTRUCT(BlueprintType)
+struct CXVI_API FCXSaveFinishedMessage
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(BlueprintReadOnly, Category = "UserData")
+	int32 SlotIndex = INDEX_NONE;
+
+	UPROPERTY(BlueprintReadOnly, Category = "UserData")
+	bool bSuccess = false;
+};
+
 #pragma endregion // Message

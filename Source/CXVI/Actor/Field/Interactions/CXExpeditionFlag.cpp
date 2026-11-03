@@ -86,6 +86,9 @@ void ACXExpeditionFlag::ActivateFlag()
 {
     // 앉는 순간 이 깃발을 부활 / 저장 위치로 기록
     RecordSaveLocation();
+
+	// 메뉴 뒤에 상호작용 UI가 보이지 않도록 숨김. 메뉴가 닫히면 UI 갱신 타이머가 복구
+	FlagPromptUI->SetVisibility(false);
 }
 
 void ACXExpeditionFlag::Rest()

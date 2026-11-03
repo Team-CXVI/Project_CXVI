@@ -4,21 +4,25 @@
 
 #include "CoreMinimal.h"
 #include "UI/CXActivatableWidget.h"
+#include "Foundation/GameplayMessage/CXGameplayMessageSubsystem.h"
 
 #include "CXSaveSlotListWidget.generated.h"
 
 class UCXSaveSlotEntryWidget;
 class UPanelWidget;
+struct FCXSaveFinishedMessage;
 
 /**
  * 저장 슬롯 목록 (WBP_SaveSlotList의 부모)
- * - 불러오기 화면. 타이틀의 이어하기가 UI.Layer.Menu에 Push
+ * - 불러오기 / 저장하기 화면. UI.Layer.Menu에 Push
  * - 입력 모드 Menu, 뒤로가기로 닫힘
  * - 자동 저장 슬롯 + 수동 저장 슬롯(MaxManualSaveSlots)만큼 항목을 한 번만 생성하고 활성화될 때마다 표시 갱신
  *   (Stack이 위젯을 재사용하므로 저장 내용은 활성화 시점에 다시 읽음)
- * - 저장 파일이 없는 슬롯은 비활성화 (내비게이션에서 제외)
+ * - 불러오기 : 저장 파일이 없는 슬롯은 비활성화 (내비게이션에서 제외)
+ * - 저장하기 : 자동 저장 슬롯만 비활성화. 빈 슬롯은 바로 저장, 저장 파일이 있으면 덮어쓰기 확인 후 저장
+ * - 활성화 동안 Message.UserData.SaveFinished를 받아 표시 갱신. 수동 슬롯 저장 실패는 팝업으로 알림
  * - 첫 포커스는 활성화된 첫 항목. 항목이 없을 때만 DefaultFocusWidgetName 사용
- * - Message.UI.OpenScreen의 UI.Screen.SaveSlot으로 열림. ContextTag로 불러오기 / 저장하기 구분 (저장하기는 미구현)
+ * - Message.UI.OpenScreen의 UI.Screen.SaveSlot으로 열림. ContextTag로 불러오기 / 저장하기 구분
  */
 UCLASS(Abstract)
 class CXVI_API UCXSaveSlotListWidget : public UCXActivatableWidget
@@ -35,6 +39,8 @@ protected:
 
 	virtual void NativeOnActivated() override;
 
+	virtual void NativeOnDeactivated() override;
+
 	virtual UWidget* NativeGetDesiredFocusTarget() const override;
 
 private:
@@ -44,6 +50,16 @@ private:
 
 	// 팝업의 확인 버튼에서 실행
 	void ConfirmLoad(int32 InSlotIndex);
+
+	void ConfirmSave(int32 InSlotIndex);
+
+	void HandleLoadSlotClicked(int32 InSlotIndex);
+
+	void HandleSaveSlotClicked(int32 InSlotIndex);
+
+	void HandleSaveFinished(const FGameplayTag& InChannel, const FCXSaveFinishedMessage& InMessage);
+
+	void ShowSaveFailedPopup();
 
 protected:
 	// 슬롯 항목 위젯 클래스
@@ -59,4 +75,6 @@ private:
 	TArray<TObjectPtr<UCXSaveSlotEntryWidget>> SlotEntries;
 
 	FGameplayTag ScreenContext;
+
+	FCXGameplayMessageListenerHandle SaveFinishedListener;
 };
