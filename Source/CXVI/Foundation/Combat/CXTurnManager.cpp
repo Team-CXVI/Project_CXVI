@@ -889,6 +889,7 @@ void UCXTurnManager::RefreshUpcomingTurns()
 	ACXCombatCharacterBase* CurrentPlayer = CurrentTurnPlayer.Get();
 	if (!IsValid(CurrentPlayer))
 	{
+		OnUpcomingTurnsChanged.Broadcast();
 		return;
 	}
 
@@ -942,4 +943,6 @@ void UCXTurnManager::RefreshUpcomingTurns()
 	UE_LOG(LogTemp, Display, TEXT("[턴 예측] %d개 | %s"),
 		UpcomingTurns.Num(),
 		*FString::Join(TurnNames, TEXT(" -> ")));
+
+	OnUpcomingTurnsChanged.Broadcast();
 }

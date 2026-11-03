@@ -55,6 +55,8 @@ public:
 
 	FORCEINLINE double GetLastCombatElapsedSeconds() const { return LastCombatElapsedSeconds; }
 
+	const TArray<TWeakObjectPtr<ACXCombatCharacterBase>> GetUpcomingTurns() const;
+
 protected:
 	virtual void PostInitialize() override;
 
@@ -68,6 +70,8 @@ private:
 	void HandleBattleEnded(bool bInVictory, double InElapsedSeconds);
 
 	void HandlePlayerInputModeChanged(ECXCombatInputMode NewInputMode);
+
+	void HandleUpcomingTurnsChanged();
 
 private:
 	UPROPERTY(VisibleAnywhere, Category = "Manager")

@@ -99,3 +99,10 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Combat")
 	double ElapsedSeconds = 0.0;
 };
+
+/** Message.Combat.TurnOrderChanged 채널 메시지. 받는 쪽은 UCXCombatManagerSubsystem::GetUpcomingTurns()로 다시 읽음 */
+USTRUCT(BlueprintType)
+struct CXVI_API FCXTurnOrderChangedMessage
+{
+	GENERATED_BODY()
+};
