@@ -4,10 +4,15 @@
 
 #include "CoreMinimal.h"
 #include "MVVMViewModelBase.h"
+#include "Foundation/GameplayMessage/CXGameplayMessageSubsystem.h"
+#include "UI/Combat/CXTurnOrderTypes.h"
+
 #include "CXCombatViewModel.generated.h"
 
 class ACXCombatCharacterBase;
 class UCXCombatantViewModel;
+class UTexture2D;
+struct FCXTurnOrderChangedMessage;
 
 /**
  * 전투 HUD 전체 표시 데이터
@@ -15,6 +20,7 @@ class UCXCombatantViewModel;
  * - SetCombatants : 아레나 전투원으로 파티 / 보스 ViewModel 구성
  * - Reset : 전체 구독 해제. 전투원 정리(CleanupCombatants) 전에 호출
  * - 일반 몬스터 HP는 전투 캐릭터의 WidgetComponent(전투 파트) 담당 → 여기서는 Character.Type.Boss 태그가 있는 적만
+ * - TurnOrder : Message.Combat.TurnOrderChanged를 받아 GetUpcomingTurns() 순서로 다시 구성
  */
 UCLASS(BlueprintType)
 class CXVI_API UCXCombatViewModel : public UMVVMViewModelBase
@@ -35,6 +41,12 @@ private:
 
 	void BroadcastAll();
 
+	void HandleTurnOrderChanged(const FGameplayTag& InChannel, const FCXTurnOrderChangedMessage& InMessage);
+
+	void RefreshTurnOrder();
+
+	TSoftObjectPtr<UTexture2D> FindPortrait(const ACXCombatCharacterBase& InCharacter) const;
+
 private:
 	// 파티 패널 (Set Items 바인딩)
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "CXVI|Combat", meta = (AllowPrivateAccess = true))
@@ -44,4 +56,9 @@ private:
 	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "CXVI|Combat", meta = (AllowPrivateAccess = true))
 	TObjectPtr<UCXCombatantViewModel> Boss;
 	
+	// 턴 순서 UI (맨 앞 = 현재 턴)
+	UPROPERTY(BlueprintReadOnly, FieldNotify, Category = "CXVI|Combat", meta = (AllowPrivateAccess = true))
+	TArray<FCXTurnOrderEntryData> TurnOrder;
+
+	FCXGameplayMessageListenerHandle TurnOrderChangedListener;
 };

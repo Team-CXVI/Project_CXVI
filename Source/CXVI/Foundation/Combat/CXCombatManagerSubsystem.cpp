@@ -50,6 +50,16 @@ UCXCombatManagerSubsystem* UCXCombatManagerSubsystem::TryGet(const UObject* Worl
 	return World ? World->GetSubsystem<UCXCombatManagerSubsystem>() : nullptr;
 }
 
+const TArray<TWeakObjectPtr<ACXCombatCharacterBase>> UCXCombatManagerSubsystem::GetUpcomingTurns() const
+{
+	if (!IsValid(TurnManager))
+	{
+		return TArray<TWeakObjectPtr<ACXCombatCharacterBase>>();
+	}
+
+	return TurnManager->GetUpcomingTurns();
+}
+
 void UCXCombatManagerSubsystem::PostInitialize()
 {
 	Super::PostInitialize();
@@ -58,6 +68,7 @@ void UCXCombatManagerSubsystem::PostInitialize()
 
 	TurnManager->OnBattleEnded.AddUObject(this, &ThisClass::HandleBattleEnded);
 	TurnManager->OnPlayerInputEnabledChanged.AddUObject(this, &ThisClass::HandlePlayerInputModeChanged);
+	TurnManager->OnUpcomingTurnsChanged.AddUObject(this, &ThisClass::HandleUpcomingTurnsChanged);
 }
 
 bool UCXCombatManagerSubsystem::RequestStartBattle(FName InEncounterId, const TArray<TSubclassOf<ACXCombatCharacterBase>>& InPlayerClasses, const TArray<TSubclassOf<ACXCombatCharacterBase>>& InEnemyClasses)
@@ -228,4 +239,9 @@ void UCXCombatManagerSubsystem::HandlePlayerInputModeChanged(ECXCombatInputMode 
 
 	CommandCharacter->SetCombatInputMode(NewInputMode);
 	//CommandCharacter->SetCombatInputMode(bAllowed ? ECombatInputMode::Command : ECombatInputMode::Disabled);
+}
+
+void UCXCombatManagerSubsystem::HandleUpcomingTurnsChanged()
+{
+	UCXGameplayMessageSubsystem::Get(this).BroadcastMessage(CXVIGameplayTags::Message_Combat_TurnOrderChanged, FCXTurnOrderChangedMessage());
 }
