@@ -12,6 +12,7 @@
 #include "UI/ViewModel/CXCombatViewModel.h"
 #include "UI/Combat/CXCombatHUDWidget.h"
 #include "UI/Combat/CXCombatVictoryWidget.h"
+#include "UI/Combat/CXCombatDefeatWidget.h"
 #include "UI/CXUIManagerSubsystem.h"
 #include "UI/CXUISettings.h"
 
@@ -40,11 +41,11 @@ void UCXCombatScene::OnExit()
 	CombatEndListener.Unregister();
 	UnbindSceneChanged();
 
-	if (UCXCombatVictoryWidget* Widget = VictoryWidget.Get())
+	if (UCXActivatableWidget* Widget = ResultWidget.Get())
 	{
 		Widget->DeactivateWidget();
 	}
-	VictoryWidget.Reset();
+	ResultWidget.Reset();
 
 	// 화면이 가려진 상태에서 정리. 턴 정지(바인딩 해제)가 전투원 Destroy보다 먼저
 	if (UCXCombatManagerSubsystem* CombatManager = GetCombatManager())
@@ -157,8 +158,8 @@ void UCXCombatScene::EndCombat(const FCXCombatResult& InResult)
 
 void UCXCombatScene::HandleCombatEnded(const FGameplayTag& InChannel, const FCXCombatEndMessage& InMessage)
 {
-	// 승리 화면이 떠 있는 동안 들어온 중복 종료 무시
-	if (VictoryWidget.IsValid())
+	// 결과 화면이 떠 있는 동안 들어온 중복 종료 무시
+	if (ResultWidget.IsValid())
 	{
 		return;
 	}
@@ -166,7 +167,9 @@ void UCXCombatScene::HandleCombatEnded(const FGameplayTag& InChannel, const FCXC
 	FCXCombatResult Result;
 	Result.bVictory = InMessage.bVictory;
 
-	if (Result.bVictory && ShowVictoryScreen(Result))
+	// TODO : 도망이 구현되면 패배와 구분 (TryRunaway가 비어 있어 현재 bVictory == false는 파티 전멸뿐)
+	const bool bShown = Result.bVictory ? ShowVictoryScreen(Result) : ShowDefeatScreen();
+	if (bShown)
 	{
 		return;
 	}
@@ -176,15 +179,8 @@ void UCXCombatScene::HandleCombatEnded(const FGameplayTag& InChannel, const FCXC
 
 bool UCXCombatScene::ShowVictoryScreen(const FCXCombatResult& InResult)
 {
-	// 승리 화면이 일시정지를 걸면 전환 타이머가 멈추므로 전환 중에는 띄우지 않음
-	const UCXSceneSubsystem* Subsystem = GetSceneSubsystem();
-	if (nullptr == Subsystem || Subsystem->IsTransitioning())
-	{
-		return false;
-	}
-
 	UCXUIManagerSubsystem* UIManager = UCXUIManagerSubsystem::TryGet(this);
-	if (nullptr == UIManager)
+	if (nullptr == UIManager || !CanShowResultScreen())
 	{
 		return false;
 	}
@@ -201,20 +197,49 @@ bool UCXCombatScene::ShowVictoryScreen(const FCXCombatResult& InResult)
 
 	PendingResult = InResult;
 
-	VictoryWidget = UIManager->PushWidgetToLayer<UCXCombatVictoryWidget>(CXVIGameplayTags::UI_Layer_GameMenu, WidgetClass,
+	ResultWidget = UIManager->PushWidgetToLayer<UCXCombatVictoryWidget>(CXVIGameplayTags::UI_Layer_GameMenu, WidgetClass,
 		[this](UCXCombatVictoryWidget& InWidget)
 		{
 			InWidget.SetOnConfirmed(FSimpleDelegate::CreateUObject(this, &ThisClass::HandleVictoryConfirmed));
 		});
 
-	return VictoryWidget.IsValid();
+	return ResultWidget.IsValid();
 }
 
 void UCXCombatScene::HandleVictoryConfirmed()
 {
-	VictoryWidget.Reset();
+	ResultWidget.Reset();
 
 	EndCombat(PendingResult);
+}
+
+bool UCXCombatScene::ShowDefeatScreen()
+{
+	UCXUIManagerSubsystem* UIManager = UCXUIManagerSubsystem::TryGet(this);
+	if (nullptr == UIManager || !CanShowResultScreen())
+	{
+		return false;
+	}
+
+	const TSubclassOf<UCXCombatDefeatWidget> WidgetClass = GetDefault<UCXUISettings>()->CombatDefeatClass.LoadSynchronous();
+	if (nullptr == WidgetClass)
+	{
+		UE_LOG(LogCXScene, Warning, TEXT("CombatScene : 패배 화면 클래스가 지정되지 않았습니다. (Project Settings > Game > CXVI UI)"));
+		return false;
+	}
+
+	// 전투 HUD는 다른 레이어(UI.Layer.Game)에 있어 자동으로 가려지지 않으므로 직접 닫음
+	HideSceneHUD();
+
+	ResultWidget = UIManager->PushWidgetToLayer<UCXCombatDefeatWidget>(CXVIGameplayTags::UI_Layer_GameMenu, WidgetClass);
+
+	return ResultWidget.IsValid();
+}
+
+bool UCXCombatScene::CanShowResultScreen() const
+{
+	const UCXSceneSubsystem* Subsystem = GetSceneSubsystem();
+	return Subsystem && !Subsystem->IsTransitioning();
 }
 
 void UCXCombatScene::HandleSceneChanged(UCXGameScene* InNewScene, UCXGameScene* InOldScene)

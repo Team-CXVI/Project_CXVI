@@ -15,6 +15,7 @@ struct FCXCombatEndMessage;
 
 class UCXCombatViewModel;
 class UCXCombatVictoryWidget;
+class UCXActivatableWidget;
 
 /**
 * 전투 Scene
@@ -26,7 +27,8 @@ class UCXCombatVictoryWidget;
 * - HUD : Definition의 HUDClass(UCXCombatHUDWidget)에 CombatViewModel 주입. 
 *	전투원 생성 후 SetCombatants, Exit에서 전투원 정리 전에 Reset
 * - 승리 메시지 : 전투 HUD를 닫고 승리 화면 Push -> 확인 입력 -> Pop
-* - 패배 메시지, 승리 화면을 띄울 수 없는 경우 : 바로 Pop. Exit에서 턴 정지 + 전투원 정리(화면이 가려진 뒤)
+* - 패배 메시지 : 전투 HUD를 닫고 패배 화면 Push. 이후 이동은 패배 화면의 선택지가 처리 (Pop 없음)
+* - 결과 화면을 띄울 수 없는 경우 : 바로 Pop. Exit에서 턴 정지 + 전투원 정리(화면이 가려진 뒤)
 */
 UCLASS()
 class CXVI_API UCXCombatScene : public UCXGameScene
@@ -55,6 +57,12 @@ private:
 
 	void HandleVictoryConfirmed();
 
+	// 패배 화면을 띄움. 띄울 수 없으면 false
+	bool ShowDefeatScreen();
+
+	// 결과 화면은 일시정지를 걸어 전환 타이머를 멈추므로 전환 중에는 띄우지 않음
+	bool CanShowResultScreen() const;
+
 	// 전환 중에 들어온 종료 요청을 전환이 끝난 뒤 처리
 	void HandleSceneChanged(UCXGameScene* InNewScene, UCXGameScene* InOldScene);
 
@@ -72,8 +80,8 @@ private:
 	// 전투원을 생성한 아레나 (Exit에서 정리)
 	TWeakObjectPtr<ACXCombatArena> Arena;
 
-	// 표시 중인 승리 화면 (소유 객체는 루트 레이아웃의 Layer Stack)
-	TWeakObjectPtr<UCXCombatVictoryWidget> VictoryWidget;
+	// 표시 중인 승리 / 패배 화면 (소유 객체는 루트 레이아웃의 Layer Stack)
+	TWeakObjectPtr<UCXActivatableWidget> ResultWidget;
 
 	// 전투 HUD 표시 데이터 (Enter에서 생성, HUD가 Resume으로 다시 생성되어도 유지)
 	UPROPERTY()
