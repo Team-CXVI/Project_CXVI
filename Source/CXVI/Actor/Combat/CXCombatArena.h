@@ -41,6 +41,11 @@ public:
 	FTransform GetPlayerSlotFromIndex(int32 InIndex) const;
 	FTransform GetEnemySlotFromIndex(int32 InIndex) const;
 
+	void ShowMenuCamera(ECommandMenuState MenuState, const class ACXCombatCharacterPlayer* Player);
+
+protected:
+	virtual void Tick(float DeltaSeconds) override;
+
 private:
 	bool SpawnParty(const TArray<FCXCombatSpawnEntry>& InEntries, bool bInPlayerParty);
 
@@ -54,6 +59,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Camera")
 	TObjectPtr<UCameraComponent> BattleCamera;
 
+	UPROPERTY(EditAnywhere, Category = "Camera")
+	TMap<ECommandMenuState, FCXMenuCameraPreset> MenuCameraPresets;
+
 private:
 	// 생성한 전투원 (레벨에 저장되지 않도록 Transient)
 	UPROPERTY(Transient)
@@ -63,4 +71,12 @@ private:
 	TArray<TObjectPtr<ACXCombatCharacterBase>> EnemyCharacters;
 
 	int32 MaxSlot = 3;
+
+	FVector CameraBlendStartLocation = FVector::ZeroVector;
+	FVector CameraBlendTargetLocation = FVector::ZeroVector;
+	FQuat CameraBlendStartRotation = FQuat::Identity;
+	FQuat CameraBlendTargetRotation = FQuat::Identity;
+	float CameraBlendElapsed = 0.f;
+
+	bool bIsCameraBlending = false;
 };

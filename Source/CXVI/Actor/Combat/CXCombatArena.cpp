@@ -17,6 +17,9 @@
 
 ACXCombatArena::ACXCombatArena()
 {
+	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bStartWithTickEnabled = false;
+
 	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("RootComp"));
 
 	BattleCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("BattleCamera"));
@@ -122,6 +125,63 @@ FTransform ACXCombatArena::GetEnemySlotFromIndex(int32 InIndex) const
 	}
 
 	return FTransform();
+}
+
+void ACXCombatArena::ShowMenuCamera(ECommandMenuState MenuState, const ACXCombatCharacterPlayer* Player)
+{
+	const FCXMenuCameraPreset* Preset = MenuCameraPresets.Find(MenuState);
+
+	if (!Preset || !IsValid(Player) || !IsValid(BattleCamera.Get()))
+	{
+		return;
+	}
+
+
+	const FVector WorldOffset = Player->GetOriginTransform().TransformVectorNoScale(Preset->CameraOffset);
+	const FVector TargetLocation = Player->GetActorLocation() + WorldOffset;
+	const FVector FocusLocation = Player->GetCameraFocusLocation(Preset->FocusPoint);
+	const FVector LookDirection = FocusLocation - TargetLocation;
+
+	if (LookDirection.IsNearlyZero())
+	{
+		return;
+	}
+
+	// 이동중에 메뉴가 바뀌어도 그 순간의 카메라 구도에서 이어간다.
+	CameraBlendStartLocation = BattleCamera->GetComponentLocation();
+	CameraBlendStartRotation = BattleCamera->GetComponentQuat();
+	CameraBlendTargetLocation = TargetLocation;
+	CameraBlendTargetRotation = LookDirection.Rotation().Quaternion();
+	CameraBlendElapsed = 0.f;
+	bIsCameraBlending = true;
+	SetActorTickEnabled(true);
+}
+
+void ACXCombatArena::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+	
+	if (!bIsCameraBlending || !IsValid(BattleCamera.Get()))
+	{
+		return;
+	}
+
+	constexpr float BlendDuration = 0.3;
+	CameraBlendElapsed += DeltaSeconds;
+
+	const float Alpha = FMath::Clamp(CameraBlendElapsed / BlendDuration, 0.f, 1.f);
+	const float Blend = FMath::SmoothStep(0.f, 1.f, Alpha);
+
+
+
+	BattleCamera->SetWorldLocationAndRotation(
+		FMath::Lerp(CameraBlendStartLocation, CameraBlendTargetLocation, Blend),
+		FQuat::Slerp(CameraBlendStartRotation, CameraBlendTargetRotation, Blend));
+
+	if (Alpha >= 1.f)
+	{
+		bIsCameraBlending = false;
+	}
 }
 
 bool ACXCombatArena::SpawnParty(const TArray<FCXCombatSpawnEntry>& InEntries, bool bInPlayerParty)

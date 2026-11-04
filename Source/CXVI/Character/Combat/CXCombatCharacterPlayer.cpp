@@ -29,6 +29,18 @@ ACXCombatCharacterPlayer::ACXCombatCharacterPlayer()
 
 	SpringArm->bUsePawnControlRotation = false;
 
+	CameraFocusBody = CreateDefaultSubobject<USceneComponent>(TEXT("CameraFocus_Body"));
+	CameraFocusBody->SetupAttachment(RootComponent);
+	CameraFocusBody->SetRelativeLocation(FVector(0.f, 0.f, 25.f));
+
+	CameraFocusChest = CreateDefaultSubobject<USceneComponent>(TEXT("CameraFocus_Chest"));
+	CameraFocusChest->SetupAttachment(RootComponent);
+	CameraFocusChest->SetRelativeLocation(FVector(0.f, 0.f, 55.f));
+
+	CameraFocusHand = CreateDefaultSubobject<USceneComponent>(TEXT("CameraFocus_Hand"));
+	CameraFocusHand->SetupAttachment(RootComponent);
+	CameraFocusHand->SetRelativeLocation(FVector(20.f, 35.f, 10.f));
+
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	Camera->SetupAttachment(SpringArm);
 
@@ -331,6 +343,27 @@ bool ACXCombatCharacterPlayer::PrepareSelectedSkill(int32 SlotIndex)
 		*GetName(), SlotIndex + 1, *GetNameSafe(SkillClass.Get()));
 
 	return true;
+}
+
+FVector ACXCombatCharacterPlayer::GetCameraFocusLocation(ECXCameraFocusPoint FocusPoint) const
+{
+	const USceneComponent* FocusComponent = CameraFocusBody.Get();
+
+	switch (FocusPoint)
+	{
+	case ECXCameraFocusPoint::Chest:
+		FocusComponent = CameraFocusChest.Get();
+		break;
+	case ECXCameraFocusPoint::Body:
+		FocusComponent = CameraFocusBody.Get();
+		break;
+	case ECXCameraFocusPoint::Hand:
+		FocusComponent = CameraFocusHand.Get();
+		break;
+	}
+
+	return IsValid(FocusComponent) ? FocusComponent->GetComponentLocation() : GetActorLocation();
+
 }
 
 void ACXCombatCharacterPlayer::PostInitializeComponents()

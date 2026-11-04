@@ -58,6 +58,7 @@ public:
 	FORCEINLINE bool GetIsCharacterAlive() const { return bIsCharacterAlive; }
 	FORCEINLINE bool GetIsTurn() const { return bIsTurn; }
 	FORCEINLINE void SetOriginTransform(const FTransform& NewTransform) { OriginTransform = NewTransform; }
+	FORCEINLINE const FTransform& GetOriginTransform() const { return OriginTransform; }
 	FORCEINLINE bool GetDoingAction() const { return bDoingAction; }
 	FORCEINLINE void SetDoingAction(bool NewValue) { bDoingAction = NewValue; }
 	FORCEINLINE bool GetIsDefenseTarget() const { return bIsDefenseTarget; }

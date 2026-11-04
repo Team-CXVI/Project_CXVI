@@ -130,6 +130,14 @@ void ACXCommandCharacter::SetMenuState(ECommandMenuState NewState)
 	}
 
 	MenuState = NewState;
+
+	if (UCXCombatManagerSubsystem* CombatManager = UCXCombatManagerSubsystem::TryGet(this))
+	{
+		if (ACXCombatArena* Arena = CombatManager->GetCombatArena())
+		{
+			Arena->ShowMenuCamera(MenuState, CommandCharacter.Get());
+		}
+	}
 }
 
 
