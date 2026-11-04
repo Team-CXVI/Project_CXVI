@@ -14,6 +14,7 @@
 #include <InputMappingContext.h>
 #include <InputTriggers.h>
 #include <Materials/MaterialInstanceDynamic.h>
+#include <Input/UIActionBinding.h>
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXHoldActionWidget)
 
@@ -147,6 +148,13 @@ void UCXHoldActionWidget::UnregisterHoldBinding()
 	if (false == HoldBinding.IsValid())
 	{
 		return;
+	}
+
+	// Enhanced Input 바인딩은 등록 시 HoldMappings가 비어 있어 HoldBindingsCount가 늘지 않음
+	// 입력 처리 중 채워진 상태로 해제하면 개수만 줄어 음수가 되므로(ensure) 먼저 비움
+	if (TSharedPtr<FUIActionBinding> Binding = FUIActionBinding::FindBinding(HoldBinding))
+	{
+		Binding->HoldMappings.Empty();
 	}
 
 	// RemoveActionBinding : 위젯과 입력 처리 목록에서 제거 / Unregister : 바인딩 자체를 삭제

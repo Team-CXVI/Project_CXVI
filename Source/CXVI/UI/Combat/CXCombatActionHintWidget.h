@@ -35,7 +35,7 @@ private:
 	TObjectPtr<UCXHoldActionWidget> SkipTurnHold;
 
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UCXHoldActionWidget> RunawayHold;
+	TObjectPtr<UCXHoldActionWidget> FleeHold;
 
 	FCXGameplayMessageListenerHandle CommandAvailabilityListener;
 };

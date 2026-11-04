@@ -126,7 +126,7 @@ struct CXVI_API FCXCombatCommandRequestMessage
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(BlueprintReadOnly, Category = "Combat")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
 	ECXCombatCommandRequest Request = ECXCombatCommandRequest::None;
 };
 

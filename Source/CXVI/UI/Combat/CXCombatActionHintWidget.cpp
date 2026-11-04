@@ -26,5 +26,5 @@ void UCXCombatActionHintWidget::NativeDestruct()
 void UCXCombatActionHintWidget::HandleCommandAvailabilityChanged(const FGameplayTag& InChannel, const FCXCombatCommandAvailabilityMessage& InMessage)
 {
 	SkipTurnHold->SetHoldActionActive(InMessage.bAvailable);
-	RunawayHold->SetHoldActionActive(InMessage.bAvailable);
+	FleeHold->SetHoldActionActive(InMessage.bAvailable);
 }
