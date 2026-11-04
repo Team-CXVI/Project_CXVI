@@ -435,6 +435,14 @@ bool UCXCombatManagerSubsystem::CanStartBattle(const FCXCombatEnterParams& InPar
 		return false;
 	}
 
+	// 레벨 전환이 시작되면 일시정지가 풀려 페이드 중에도 적이 움직이므로 새 전투를 시작하지 않음
+	const UCXLevelTransitionSubsystem* LevelTransition = UCXLevelTransitionSubsystem::TryGet(this);
+	if (LevelTransition && LevelTransition->IsTransitioning())
+	{
+		UE_LOG(LogCXCombat, Warning, TEXT("전투 요청 거절 : 레벨 전환 중입니다."));
+		return false;
+	}
+
 	return true;
 }
 
@@ -444,7 +452,7 @@ const UCXLevelDefinition* UCXCombatManagerSubsystem::GetCurrentLevelDefinition()
 	return LevelTransition ? LevelTransition->GetCurrentLevelDefinition() : nullptr;
 }
 
-void UCXCombatManagerSubsystem::HandleBattleEnded(bool bInVictory, double InElapsedSeconds)
+void UCXCombatManagerSubsystem::HandleBattleEnded(bool bInVictory, bool bInPartyWiped, double InElapsedSeconds)
 {
 	if (ECXCombatState::InBattle != CombatState)
 	{
@@ -456,6 +464,7 @@ void UCXCombatManagerSubsystem::HandleBattleEnded(bool bInVictory, double InElap
 	// 종료 알림만 방송. 필드 복귀와 정리 시점은 받는 쪽(전투 Scene)이 결정
 	FCXCombatEndMessage Message;
 	Message.bVictory = bInVictory;
+	Message.bPartyWiped = bInPartyWiped;
 	Message.ElapsedSeconds = InElapsedSeconds;
 	Message.EarnedExp = bInVictory ? PendingVictoryExp : 0;
 

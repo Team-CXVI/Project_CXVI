@@ -69,7 +69,7 @@ private:
 	// Scene 서브레벨은 현재 퍼시스턴트 레벨에 등록된 것만 로드 가능하므로 전투 Scene은 레벨 단위로 지정
 	const UCXLevelDefinition* GetCurrentLevelDefinition() const;
 
-	void HandleBattleEnded(bool bInVictory, double InElapsedSeconds);
+	void HandleBattleEnded(bool bInVictory, bool bInPartyWiped, double InElapsedSeconds);
 
 	void HandlePlayerInputModeChanged(ECXCombatInputMode NewInputMode);
 

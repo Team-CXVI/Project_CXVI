@@ -27,7 +27,8 @@ class UCXActivatableWidget;
 * - HUD : Definition의 HUDClass(UCXCombatHUDWidget)에 CombatViewModel 주입. 
 *	전투원 생성 후 SetCombatants, Exit에서 전투원 정리 전에 Reset
 * - 승리 메시지 : 전투 HUD를 닫고 승리 화면 Push -> 확인 입력 -> Pop
-* - 패배 메시지 : 전투 HUD를 닫고 패배 화면 Push. 이후 이동은 패배 화면의 선택지가 처리 (Pop 없음)
+* - 전멸 메시지 : 전투 HUD를 닫고 패배 화면 Push. 이후 이동은 패배 화면의 선택지가 처리 (Pop 없음)
+* - 도망 메시지 : 결과 화면 없이 바로 Pop
 * - 결과 화면을 띄울 수 없는 경우 : 바로 Pop. Exit에서 턴 정지 + 전투원 정리(화면이 가려진 뒤)
 */
 UCLASS()

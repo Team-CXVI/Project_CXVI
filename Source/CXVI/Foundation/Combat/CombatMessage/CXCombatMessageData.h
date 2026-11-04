@@ -92,9 +92,12 @@ struct CXVI_API FCXCombatEndMessage
 	GENERATED_BODY()
 
 public:
-	// TODO : OnBattleEnded에 결과가 추가되면 채움 (현재 항상 false)
 	UPROPERTY(BlueprintReadOnly, Category = "Combat")
 	bool bVictory = false;
+
+	// 살아 있는 플레이어가 없음. bVictory와 bPartyWiped가 모두 false면 도망
+	UPROPERTY(BlueprintReadOnly, Category = "Combat")
+	bool bPartyWiped = false;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Combat")
 	double ElapsedSeconds = 0.0;
@@ -108,4 +111,36 @@ USTRUCT(BlueprintType)
 struct CXVI_API FCXTurnOrderChangedMessage
 {
 	GENERATED_BODY()
+};
+
+/** 전투 HUD에서 커맨드 캐릭터에 요청하는 행동 */
+UENUM(BlueprintType)
+enum class ECXCombatCommandRequest : uint8
+{
+	None,
+	SkipTurn,	// 턴 넘기기
+	Flee		// 도망
+};
+
+/** Message.Combat.CommandRequest 채널 메시지 (UI -> 커맨드 캐릭터) */
+USTRUCT(BlueprintType)
+struct CXVI_API FCXCombatCommandRequestMessage
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+	ECXCombatCommandRequest Request = ECXCombatCommandRequest::None;
+};
+
+/** Message.Combat.CommandAvailabilityChanged 채널 메시지 (커맨드 캐릭터 -> UI). 값이 바뀔 때만 전송 */
+USTRUCT(BlueprintType)
+struct CXVI_API FCXCombatCommandAvailabilityMessage
+{
+	GENERATED_BODY()
+
+public:
+	// 내 턴의 행동 선택 메뉴일 때 true
+	UPROPERTY(BlueprintReadOnly, Category = "Combat")
+	bool bAvailable = false;
 };

@@ -10,6 +10,7 @@
 #include "CXVI/Character/Combat/Data/CXCombatInputData.h"
 #include "Subsystems/CXInputControlSubsystem.h"
 #include "CXVI/Foundation/Combat/CXCombatTypes.h"
+#include "Foundation/GameplayMessage/CXGameplayMessageSubsystem.h"
 
 #include <InputActionValue.h>
 
@@ -68,6 +69,12 @@ private:
 	void HandleInputSkipTurn();
 
 	void HandleInputJustTiming();
+
+	// UI의 커맨드 실행 요청 (Message.Combat.CommandRequest)
+	void HandleCommandRequest(const FGameplayTag& InChannel, const FCXCombatCommandRequestMessage& InMessage);
+
+	// 커맨드 입력 가능 여부가 바뀌면 Message.Combat.CommandAvailabilityChanged 전송
+	void NotifyCommandAvailability();
 
 	void SubmitActionToPlayer(const FCXActionSelection& Selection);
 
@@ -129,13 +136,7 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Input|MyTurn")
 	TObjectPtr<class UInputAction> LookAction;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Input|MyTurn")
-	TObjectPtr<class UInputAction> SkipTurnAction;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Input|MyTurn")
-	TObjectPtr<class UInputAction> FleeAction;
-
+	
 	UPROPERTY(EditDefaultsOnly, Category = "Input|EnemyTurn")
 	TObjectPtr<class UInputAction> JustTimingAction;
 
@@ -160,5 +161,10 @@ private:
 	// 인풋 핸들
 	//FCXInputModeHandle ActionModeHandle;
 	FCXInputModeHandle ReactionModeHandle;
+
+	FCXGameplayMessageListenerHandle CommandRequestListener;
+
+	// 마지막으로 전송한 커맨드 입력 가능 여부
+	bool bCommandAvailable = false;
 
 };

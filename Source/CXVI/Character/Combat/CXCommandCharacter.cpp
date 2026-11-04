@@ -69,6 +69,7 @@ void ACXCommandCharacter::SetCombatInputMode(ECXCombatInputMode NewMode)
 		}
 	}
 
+	NotifyCommandAvailability();
 
 	// 태그 부여로 다른 입력 차단
 	//UEnhancedInputLocalPlayerSubsystem* Subsystem = InputSubsystem.Get();
@@ -132,6 +133,7 @@ void ACXCommandCharacter::SetMenuState(ECommandMenuState NewState)
 
 	MenuState = NewState;
 	RefreshMenuCamera();
+	NotifyCommandAvailability();
 }
 
 void ACXCommandCharacter::RefreshMenuCamera() const
@@ -152,17 +154,18 @@ void ACXCommandCharacter::RefreshMenuCamera() const
 	}
 }
 
-
-
-
 // Called when the game starts or when spawned
 void ACXCommandCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	CommandRequestListener = UCXGameplayMessageSubsystem::Get(this).RegisterListener(CXVIGameplayTags::Message_Combat_CommandRequest, this, &ThisClass::HandleCommandRequest);
 }
 
 void ACXCommandCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	CommandRequestListener.Unregister();
+
 	InputSubsystem.Reset();
 	Super::EndPlay(EndPlayReason);
 }
@@ -198,6 +201,8 @@ void ACXCommandCharacter::UnPossessed()
 	MenuState = ECommandMenuState::ActionMenu;
 	TargetReturnMenu = ECommandMenuState::ActionMenu;
 	SavedSelection.Clear();
+
+	NotifyCommandAvailability();
 
 	for (const auto& WeakPlayer : CommandCharacters)
 	{
@@ -240,8 +245,6 @@ void ACXCommandCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 	EnhancedInput->BindAction(FireAction, ETriggerEvent::Started, this, &ACXCommandCharacter::HandleInputFire);
 	EnhancedInput->BindAction(LookAction, ETriggerEvent::Triggered, this, &ACXCommandCharacter::HandleInputLook);
 	
-	EnhancedInput->BindAction(FleeAction, ETriggerEvent::Started, this, &ACXCommandCharacter::HandleInputFlee);
-	EnhancedInput->BindAction(SkipTurnAction, ETriggerEvent::Started, this, &ACXCommandCharacter::HandleInputSkipTurn);
 	EnhancedInput->BindAction(JustTimingAction, ETriggerEvent::Started, this, &ACXCommandCharacter::HandleInputJustTiming);
 
 }
@@ -620,6 +623,44 @@ void ACXCommandCharacter::HandleInputJustTiming()
 	/*UE_LOG(LogTemp, Display, TEXT("[저스트타이밍] 스페이스 입력: %s"), *Player->GetName());*/
 }
 
+void ACXCommandCharacter::HandleCommandRequest(const FGameplayTag& InChannel, const FCXCombatCommandRequestMessage& InMessage)
+{
+	switch (InMessage.Request)
+	{
+	case ECXCombatCommandRequest::SkipTurn:
+		HandleInputSkipTurn();
+		break;
+
+	case ECXCombatCommandRequest::Flee:
+		HandleInputFlee();
+		break;
+
+	default:
+		break;
+	}
+}
+
+void ACXCommandCharacter::NotifyCommandAvailability()
+{
+	const bool bAvailable = CombatInputMode == ECXCombatInputMode::Command
+		&& MenuState != ECommandMenuState::TargetSelect
+		&& CommandCharacter.IsValid();
+
+	if (bCommandAvailable == bAvailable)
+	{
+		return;
+	}
+
+	bCommandAvailable = bAvailable;
+
+	if (UCXGameplayMessageSubsystem::HasInstance(this))
+	{
+		FCXCombatCommandAvailabilityMessage Message;
+		Message.bAvailable = bAvailable;
+
+		UCXGameplayMessageSubsystem::Get(this).BroadcastMessage(CXVIGameplayTags::Message_Combat_CommandAvailabilityChanged, Message);
+	}
+}
 
 void ACXCommandCharacter::SubmitActionToPlayer(const FCXActionSelection& Selection)
 {
