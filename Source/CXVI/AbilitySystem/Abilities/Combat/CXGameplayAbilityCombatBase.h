@@ -86,6 +86,8 @@ private:
 	UFUNCTION()
 	void OnComboBranchEvent(FGameplayEventData Payload);
 
+	float GetAPCostForSpec(FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo) const;
+
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Montage")
 	TObjectPtr<class UCXAbilityData> AbilityData;

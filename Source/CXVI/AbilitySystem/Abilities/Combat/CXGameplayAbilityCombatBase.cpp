@@ -3,6 +3,7 @@
 
 #include "AbilitySystem/Abilities/Combat/CXGameplayAbilityCombatBase.h"
 #include "CXVI/Character/Combat/CXCombatCharacterBase.h"
+#include "Character/Combat/CXCombatCharacterPlayer.h"
 #include "Character/Combat/Components/CXJustTimingComponent.h"
 
 #include "CXVI/Tags/CXGameplayTags.h"
@@ -49,7 +50,7 @@ void UCXGameplayAbilityCombatBase::ApplyCost(const FGameplayAbilitySpecHandle Ha
 		return;
 	}
 
-	const float Cost = GetAPCost();
+	const float Cost = GetAPCostForSpec(Handle, ActorInfo);
 
 	if (Cost == 0.f || !CostGameplayEffectClass)
 	{
@@ -172,7 +173,7 @@ bool UCXGameplayAbilityCombatBase::CheckCost(const FGameplayAbilitySpecHandle Ha
 		return true;
 	}
 
-	const float Cost = GetAPCost();
+	const float Cost = GetAPCostForSpec(Handle, ActorInfo);
 
 	// 무료 행동과 AP를 획득하는 행동은 잔량 검사가 필요없다.
 	if (Cost == 0.f)
@@ -541,4 +542,19 @@ void UCXGameplayAbilityCombatBase::OnComboBranchEvent(FGameplayEventData Payload
 		*CurrentSection.ToString(),
 		bSuccess ? TEXT("성공") : TEXT("실패"),
 		bSuccess ? *NextSection.ToString() : *AbilityData->EndSectionName.ToString());
+}
+
+float UCXGameplayAbilityCombatBase::GetAPCostForSpec(FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo) const
+{
+	const auto* Player = ActorInfo ? Cast<ACXCombatCharacterPlayer>(ActorInfo->AvatarActor.Get()) : nullptr;
+
+	if (Player)
+	{
+		if (const float* Cost = Player->FindPreparedSkillAPCost(Handle))
+		{
+			return *Cost;
+		}
+	}
+
+	return GetAPCost();
 }

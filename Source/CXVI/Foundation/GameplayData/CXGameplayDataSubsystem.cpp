@@ -45,15 +45,15 @@ void UCXGameplayDataSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
 	SkillTable = LoadDataTable(Settings->SkillTable, FCXSkillRow::StaticStruct(), TEXT("SkillTable"));
 
-	if (const FCXSkillRow* Row = FindSkillRow(TEXT("Player01"), TEXT("Skill01")))
-	{
-		UE_LOG(LogGameplayData, Display, TEXT("[스킬 조회] %s / AP %.0f"),
-			*Row->DisplayName.ToString(), Row->APCost);
-	}
-	else
-	{
-		UE_LOG(LogGameplayData, Warning, TEXT("[스킬 조회] Player01.Skill01 행을 찾을 수 없습니다."));
-	}
+	//if (const FCXSkillRow* Row = FindSkillRow(TEXT("Player01"), TEXT("Skill01")))
+	//{
+	//	UE_LOG(LogGameplayData, Display, TEXT("[스킬 조회] %s / AP %.0f"),
+	//		*Row->DisplayName.ToString(), Row->APCost);
+	//}
+	//else
+	//{
+	//	UE_LOG(LogGameplayData, Warning, TEXT("[스킬 조회] Player01.Skill01 행을 찾을 수 없습니다."));
+	//}
 
 	UE_LOG(LogGameplayData, Log, TEXT("Gameplay data loaded."));
 }
