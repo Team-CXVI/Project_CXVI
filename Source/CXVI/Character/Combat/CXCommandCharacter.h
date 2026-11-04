@@ -70,7 +70,7 @@ private:
 	void HandleInputToggleAimMode();
 	void HandleInputLook(const FInputActionValue& Value);
 
-	void HandleInputRunaway();
+	void HandleInputFlee();
 	void HandleInputSkipTurn();
 
 	void HandleInputJustTiming();
@@ -141,7 +141,7 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Input|MyTurn")
 	TObjectPtr<class UInputAction> LookAction;
-
+	
 	UPROPERTY(EditDefaultsOnly, Category = "Input|EnemyTurn")
 	TObjectPtr<class UInputAction> JustTimingAction;
 

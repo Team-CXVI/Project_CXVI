@@ -25,12 +25,12 @@ enum class ECXCombatMessageType : uint8
 	TeamTargetRequest,		// 우리팀 객체 배열 필요
 	SelectionCancelled,		// 선택지에서 돌아가는 선택 이전페이즈로 가서 다시 뭐할지 골라야함
 	SkippedTurn,			// 자기 턴을 스킵함.
-	Runaway,				// 도망
+	WantFlee,				// 도망
 	Action,					// 행동
 	TurnCompleted,
 	AttackStarted,
 	ParrySucceeded,
-	ReturnCompleted
+	ReturnCompleted,			
 };
 
 enum class ECXActionType : uint8
@@ -116,7 +116,7 @@ enum class ECXCombatCommandRequest : uint8
 {
 	None,
 	SkipTurn,	// 턴 넘기기
-	Runaway		// 도망
+	Flee		// 도망
 };
 
 /** Message.Combat.CommandRequest 채널 메시지 (UI -> 커맨드 캐릭터) */

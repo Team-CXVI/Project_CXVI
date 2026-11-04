@@ -584,7 +584,7 @@ void ACXCommandCharacter::HandleInputLook(const FInputActionValue& Value )
 	CommandPlayer->Look(Value);
 }
 
-void ACXCommandCharacter::HandleInputRunaway()
+void ACXCommandCharacter::HandleInputFlee()
 {
 	if (CombatInputMode != ECXCombatInputMode::Command
 		|| MenuState != ECommandMenuState::ActionMenu)
@@ -593,7 +593,7 @@ void ACXCommandCharacter::HandleInputRunaway()
 	}
 	
 	ACXCombatCharacterPlayer* CommandPlayer = CommandCharacter.Get();
-	if (!CommandPlayer || !CommandPlayer->GetIsAimMode())
+	if (!IsValid(CommandPlayer))
 	{
 		return;
 	}
@@ -650,8 +650,8 @@ void ACXCommandCharacter::HandleCommandRequest(const FGameplayTag& InChannel, co
 		HandleInputSkipTurn();
 		break;
 
-	case ECXCombatCommandRequest::Runaway:
-		HandleInputRunaway();
+	case ECXCombatCommandRequest::Flee:
+		HandleInputFlee();
 		break;
 
 	default:
