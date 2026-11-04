@@ -41,4 +41,7 @@ public:
 	// CT_CharacterStat 행 접두사
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stat")
 	FName StatRowPrefix;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Skills")
+	FName SkillRowPrefix = NAME_None;
 };

@@ -8,6 +8,8 @@
 
 #include "CXVI/AbilitySystem/Attributes/Combat/CXCombatPlayerAttributeSet.h"
 #include "Character/Combat/Components/CXJustTimingComponent.h"
+#include "Foundation/GameplayData/CXGameplayDataSubsystem.h"
+#include "AbilitySystem/Abilities/Combat/CXGameplayAbilityCombatBase.h"
 
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
@@ -194,14 +196,14 @@ void ACXCombatCharacterPlayer::FireAbility()
 
 bool ACXCombatCharacterPlayer::CanActivateSelectSkill(int32 SlotIndex) const
 {
-	if (!IsValid(ASC) || !ASC->AbilityActorInfo.IsValid() ||
-		!SkillAbilities.IsValidIndex(SlotIndex) || !SkillAbilities[SlotIndex])
+	if (!IsValid(ASC) || !ASC->AbilityActorInfo.IsValid())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("%s: 스킬 슬롯 설정을 확인해주세요. 슬롯=%d"), *GetName(), SlotIndex);
 		return false;
 	}
 
-	const FGameplayAbilitySpec* Spec = ASC->FindAbilitySpecFromClass(SkillAbilities[SlotIndex]);
+	const FGameplayAbilitySpec* Spec = FindPreparedSkillSpec(SlotIndex);
+	//const FGameplayAbilitySpec* Spec = ASC->FindAbilitySpecFromClass(SkillAbilities[SlotIndex]);
 
 	if (!Spec || !Spec->Ability)
 	{
@@ -252,6 +254,81 @@ void ACXCombatCharacterPlayer::TryRunaway()
 	
 }
 
+const FCXSkillRow* ACXCombatCharacterPlayer::GetSkillRowForSlot(int32 SlotIndex) const
+{
+	if (SlotIndex < 0 || SlotIndex >= 3 || SkillRowPrefix.IsNone() || !UCXGameplayDataSubsystem::HasInstance(this))
+	{
+		return nullptr;
+	}
+
+	const FName SkillName(*FString::Printf(TEXT("Skill%02d"), SlotIndex + 1));
+
+	return UCXGameplayDataSubsystem::Get(this).FindSkillRow(SkillRowPrefix, SkillName);
+}
+
+bool ACXCombatCharacterPlayer::PrepareSelectedSkill(int32 SlotIndex)
+{
+	if (!IsValid(ASC) || SlotIndex < 0 || SlotIndex >= 3)
+	{
+		return false;
+	}
+
+	// 같은 슬롯을 다시 선택하면 등록해둔 spec 을 재사용
+	if (FindPreparedSkillSpec(SlotIndex))
+	{
+		return true;
+	}
+
+	if (!HasAuthority())
+	{
+		return false;
+	}
+
+	// 기존 Spec이 제거된 경우 캐시도 정리
+	if (const FGameplayAbilitySpecHandle* OldHandle = PreparedSkillHandles.Find(SlotIndex))
+	{
+		PreparedSkillAPCosts.Remove(*OldHandle);
+		PreparedSkillHandles.Remove(SlotIndex);
+	}
+
+	const FCXSkillRow* Row = GetSkillRowForSlot(SlotIndex);
+
+	if (!Row || !FMath::IsFinite(Row->APCost) || Row->APCost < 0.f)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[스킬] 행 또는 AP 비용 확인. Prefix=%s 슬롯=%d"),
+			*SkillRowPrefix.ToString(), SlotIndex + 1);
+		return false;
+	}
+
+	const TSubclassOf<UGameplayAbility> SkillClass = Row->AbilityClass.LoadSynchronous();
+	
+	if (!SkillClass || SkillClass->HasAnyClassFlags(CLASS_Abstract))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[스킬] GA 클래스 확인. 슬롯=%d"), SlotIndex + 1);
+
+		return false;
+	}
+
+	const FGameplayAbilitySpecHandle Handle = ASC->GiveAbility(FGameplayAbilitySpec(SkillClass));
+
+	if (!Handle.IsValid())
+	{
+		return false;
+	}
+
+	PreparedSkillHandles.Add(SlotIndex, Handle);
+
+	if (Row)
+	{
+		PreparedSkillAPCosts.Add(Handle, Row->APCost);
+	}
+
+	UE_LOG(LogTemp, Display, TEXT("[스킬 등록] %s 슬롯=%d GA=%s"),
+		*GetName(), SlotIndex + 1, *GetNameSafe(SkillClass.Get()));
+
+	return true;
+}
+
 void ACXCombatCharacterPlayer::PostInitializeComponents()
 {
 	CharacterAttributeSet = AttributeSet;
@@ -287,21 +364,14 @@ void ACXCombatCharacterPlayer::PostInitializeComponents()
 
 bool ACXCombatCharacterPlayer::ActivateSelectedSkill(int32 SlotIndex)
 {
-	if (!ASC ||
-		!SkillAbilities.IsValidIndex(SlotIndex) ||
-		!SkillAbilities[SlotIndex])
-	{
-		return false;
-	}
-
-	FGameplayAbilitySpec* Spec = ASC->FindAbilitySpecFromClass(SkillAbilities[SlotIndex]);
-
+	const FGameplayAbilitySpec* Spec = FindPreparedSkillSpec(SlotIndex);
 	if (!Spec || Spec->IsActive())
 	{
 		return false;
 	}
 
-	return Spec ? TryStartCombatAbility(Spec->Handle) : false;
+	const FGameplayAbilitySpecHandle Handle = Spec->Handle;
+	return TryStartCombatAbility(Handle);
 }
 
 bool ACXCombatCharacterPlayer::ExecuteCombatAbility()
@@ -335,6 +405,13 @@ void ACXCombatCharacterPlayer::SelectTargetPhase()
 	OnTargetSelectionRequested.Broadcast(this, GetTargetCandidates());
 
 	// 대상 확정 전이므로 응답하지 않음.
+}
+
+const FGameplayAbilitySpec* ACXCombatCharacterPlayer::FindPreparedSkillSpec(int32 SlotIndex) const
+{
+	const FGameplayAbilitySpecHandle* Handle = PreparedSkillHandles.Find(SlotIndex);
+
+	return IsValid(ASC) && Handle ? ASC->FindAbilitySpecFromHandle(*Handle) : nullptr;
 }
 
 //void ACXCombatCharacterPlayer::ActionPhase()

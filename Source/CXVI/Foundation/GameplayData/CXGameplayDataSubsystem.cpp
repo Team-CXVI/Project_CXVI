@@ -43,6 +43,18 @@ void UCXGameplayDataSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	MonsterStatTable = LoadDataTable(Settings->MonsterStatTable, FCXMonsterStatRow::StaticStruct(), TEXT("MonsterStatTable"));
 	EncounterTable = LoadDataTable(Settings->EncounterTable, FCXEncounterRow::StaticStruct(), TEXT("EcnounterTable"));
 
+	SkillTable = LoadDataTable(Settings->SkillTable, FCXSkillRow::StaticStruct(), TEXT("SkillTable"));
+
+	//if (const FCXSkillRow* Row = FindSkillRow(TEXT("Player01"), TEXT("Skill01")))
+	//{
+	//	UE_LOG(LogGameplayData, Display, TEXT("[스킬 조회] %s / AP %.0f"),
+	//		*Row->DisplayName.ToString(), Row->APCost);
+	//}
+	//else
+	//{
+	//	UE_LOG(LogGameplayData, Warning, TEXT("[스킬 조회] Player01.Skill01 행을 찾을 수 없습니다."));
+	//}
+
 	UE_LOG(LogGameplayData, Log, TEXT("Gameplay data loaded."));
 }
 
@@ -52,6 +64,7 @@ void UCXGameplayDataSubsystem::Deinitialize()
 	CharacterStatCurve = nullptr;
 	//MonsterStatCurve = nullptr;
 	MonsterStatTable = nullptr;
+	SkillTable = nullptr;
 	EncounterTable = nullptr;
 
 	Super::Deinitialize();
@@ -114,6 +127,20 @@ UCXEnemyDefinition* UCXGameplayDataSubsystem::LoadEnemyDefinition(const FPrimary
 
 	return Cast<UCXEnemyDefinition>(AssetPath.TryLoad());
 }
+
+const FCXSkillRow* UCXGameplayDataSubsystem::FindSkillRow(FName Prefix, FName SkillName) const
+{
+	if (Prefix.IsNone() || SkillName.IsNone())
+	{
+		return nullptr;
+	}
+
+	const FName RowName(*FString::Printf(
+		TEXT("%s.%s"), *Prefix.ToString(), *SkillName.ToString()));
+
+	return FindRow<FCXSkillRow>(SkillTable, RowName);
+}
+
 
 bool UCXGameplayDataSubsystem::K2_FindItemRow(FName InItemId, FCXItemRow& OutRow) const
 {

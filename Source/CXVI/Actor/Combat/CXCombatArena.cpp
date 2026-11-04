@@ -165,11 +165,13 @@ bool ACXCombatArena::SpawnParty(const TArray<FCXCombatSpawnEntry>& InEntries, bo
 			}
 
 			SpawnParams.CustomPreSpawnInitialization =
-				[bInPlayerParty, Stats = Entry.InitialAttributes](AActor* Actor)
+				[bInPlayerParty, Stats = Entry.InitialAttributes, SkillPrefix = Entry.SkillRowPrefix](AActor* Actor)
 				{
 					if (bInPlayerParty)
 					{
-						CastChecked<ACXCombatCharacterPlayer>(Actor)->SetInitialAttributes(Stats);
+						auto* Player = CastChecked<ACXCombatCharacterPlayer>(Actor);
+						Player->SetInitialAttributes(Stats);
+						Player->SetSkillRowPrefix(SkillPrefix);
 					}
 					else
 					{
