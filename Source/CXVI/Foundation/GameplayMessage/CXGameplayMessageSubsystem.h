@@ -116,7 +116,7 @@ public:
 protected:
 	// CustomThunk -> Thunk 함수를 UHT에게 맡기는 것이 아닌 직접 생성하겠다는 선언
 	// 지금 같은 경우는 InMessage를 와일드카드 핀(어떤 타입이든 받는 핀 -> 메시지 구조체)으로 사용하기 위함
-	UFUNCTION(BlueprintCallable, CustomThunk, Category = Messaging, meta = (CustomStructureParam = "Message", AllowAbstract = "false", DisplayName = "Broadcast Message"))
+	UFUNCTION(BlueprintCallable, CustomThunk, Category = Messaging, meta = (CustomStructureParam = "InMessage", AllowAbstract = "false", DisplayName = "Broadcast Message"))
 	void K2_BroadcastMessage(const FGameplayTag& InChannel, const int32& InMessage);
 
 	// BP쪽에서 C++함수를 호출할 때 쓰는 Thunk(썽크) 함수를 직접 처리하는 정의부

@@ -10,6 +10,21 @@
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXInputIconWidget)
 
+void UCXInputIconWidget::SetKeys(const FKey& InKeyboardKey, const FKey& InGamepadKey)
+{
+	KeyboardKey = InKeyboardKey;
+	GamepadKey = InGamepadKey;
+
+	// 표시 전이면 NativeConstruct에서 갱신됨
+	if (GetCachedWidget().IsValid())
+	{
+		if (const UCommonInputSubsystem* InputSubsystem = UCommonInputSubsystem::Get(GetOwningLocalPlayer()))
+		{
+			RefreshIcon(InputSubsystem->GetCurrentInputType());
+		}
+	}
+}
+
 void UCXInputIconWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
@@ -45,13 +60,22 @@ void UCXInputIconWidget::RefreshIcon(ECommonInputType InInputType)
 	}
 
 	const UCommonInputSubsystem* InputSubsystem = UCommonInputSubsystem::Get(GetOwningLocalPlayer());
-	if(nullptr == InputSubsystem)
+	if (nullptr == InputSubsystem)
 	{
 		return;
 	}
 
 	const FKey& Key = (InInputType == ECommonInputType::Gamepad) ? GamepadKey : KeyboardKey;
 	const FName GamepadName = InputSubsystem->GetCurrentGamepadName();
+
+	// 현재 입력 장치에 지정된 키가 없으면 표시하지 않음
+	if (false == Key.IsValid())
+	{
+		InputIcon->SetVisibility(ESlateVisibility::Collapsed);
+		return;
+	}
+
+	InputIcon->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
 
 	// 입력 키 아이콘 브러쉬
 	FSlateBrush Brush;
