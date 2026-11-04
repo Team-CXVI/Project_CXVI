@@ -92,9 +92,12 @@ struct CXVI_API FCXCombatEndMessage
 	GENERATED_BODY()
 
 public:
-	// TODO : OnBattleEnded에 결과가 추가되면 채움 (현재 항상 false)
 	UPROPERTY(BlueprintReadOnly, Category = "Combat")
 	bool bVictory = false;
+
+	// 살아 있는 플레이어가 없음. bVictory와 bPartyWiped가 모두 false면 도망
+	UPROPERTY(BlueprintReadOnly, Category = "Combat")
+	bool bPartyWiped = false;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Combat")
 	double ElapsedSeconds = 0.0;

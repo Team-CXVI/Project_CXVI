@@ -131,6 +131,7 @@ void UCXTurnManager::ResetBattle()
 	UpcomingTurns.Reset();
 	CombatStartTimeSeconds = -1.f;
 	CurrentPhase = ECXCombatPhase::BeginPhase;
+	bIsFleeing = false;
 }
 
 //void UCXTurnManager::SortTurnOrder()
@@ -651,9 +652,10 @@ bool UCXTurnManager::ShouldEndBattle()
 
 void UCXTurnManager::EndBattle()
 {
-	// TODO : 전투 결과 조건 정립
 	// ResetBattle이 전투원 배열을 비우므로 그 전에 결과 판정
-	// 승리 = 살아 있는 플레이어가 있고 살아 있는 적이 없음 (도망은 적이 살아 있으므로 패배 처리)
+	// 승리 = 살아 있는 플레이어가 있고 살아 있는 적이 없음
+	// 전멸 = 살아 있는 플레이어가 없음 (도망을 시도한 뒤 전멸할 수 있으므로 bIsFleeing으로 판정하지 않음)
+	// 둘 다 아니면 도망
 	bool bIsAlivePlayer = false;
 	for (const TObjectPtr<ACXCombatCharacterBase>& Player : PlayerCharacters)
 	{
@@ -675,16 +677,17 @@ void UCXTurnManager::EndBattle()
 	}
 
 	const bool bVictory = bIsAlivePlayer && !bIsAliveEnemy;
+	const bool bPartyWiped = !bIsAlivePlayer;
 
 	// 초기화 전에 결과에 사용할 시간을 확보
 	const double ElapsedSeconds = GetCombatElapsedSeconds();
 
-	UE_LOG(LogTemp, Display, TEXT("[전투 종료] 승리=%d, 경과 시간=%.2f"),
-		bVictory, ElapsedSeconds);
+	UE_LOG(LogTemp, Display, TEXT("[전투 종료] 승리=%d, 전멸=%d, 경과 시간=%.2f"),
+		bVictory, bPartyWiped, ElapsedSeconds);
 
 	ResetBattle();
 
-	OnBattleEnded.Broadcast(bVictory, ElapsedSeconds);
+	OnBattleEnded.Broadcast(bVictory, bPartyWiped, ElapsedSeconds);
 }
 
 bool UCXTurnManager::CheckAllActionEnded()

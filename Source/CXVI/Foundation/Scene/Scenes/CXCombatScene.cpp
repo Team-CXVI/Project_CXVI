@@ -168,11 +168,20 @@ void UCXCombatScene::HandleCombatEnded(const FGameplayTag& InChannel, const FCXC
 	Result.bVictory = InMessage.bVictory;
 	Result.EarnedExp = InMessage.EarnedExp;
 
-	UE_LOG(LogCXScene, Display, TEXT("[전투 결과] 승리=%d 획득 EXP=%d"),
-		Result.bVictory, Result.EarnedExp);
+	UE_LOG(LogCXScene, Display, TEXT("[전투 결과] 승리=%d 전멸=%d 획득 EXP=%d"),
+		Result.bVictory, InMessage.bPartyWiped, Result.EarnedExp);
 
-	// TODO : 도망이 구현되면 패배와 구분 (TryRunaway가 비어 있어 현재 bVictory == false는 파티 전멸뿐)
-	const bool bShown = Result.bVictory ? ShowVictoryScreen(Result) : ShowDefeatScreen();
+	// 승리도 전멸도 아니면 도망. 결과 화면 없이 바로 복귀
+	bool bShown = false;
+	if (Result.bVictory)
+	{
+		bShown = ShowVictoryScreen(Result);
+	}
+	else if (InMessage.bPartyWiped)
+	{
+		bShown = ShowDefeatScreen();
+	}
+
 	if (bShown)
 	{
 		return;

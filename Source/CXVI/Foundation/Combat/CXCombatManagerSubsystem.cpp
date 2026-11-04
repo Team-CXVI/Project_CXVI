@@ -400,7 +400,7 @@ const UCXLevelDefinition* UCXCombatManagerSubsystem::GetCurrentLevelDefinition()
 	return LevelTransition ? LevelTransition->GetCurrentLevelDefinition() : nullptr;
 }
 
-void UCXCombatManagerSubsystem::HandleBattleEnded(bool bInVictory, double InElapsedSeconds)
+void UCXCombatManagerSubsystem::HandleBattleEnded(bool bInVictory, bool bInPartyWiped, double InElapsedSeconds)
 {
 	if (ECXCombatState::InBattle != CombatState)
 	{
@@ -412,6 +412,7 @@ void UCXCombatManagerSubsystem::HandleBattleEnded(bool bInVictory, double InElap
 	// 종료 알림만 방송. 필드 복귀와 정리 시점은 받는 쪽(전투 Scene)이 결정
 	FCXCombatEndMessage Message;
 	Message.bVictory = bInVictory;
+	Message.bPartyWiped = bInPartyWiped;
 	Message.ElapsedSeconds = InElapsedSeconds;
 	Message.EarnedExp = bInVictory ? PendingVictoryExp : 0;
 
