@@ -171,6 +171,12 @@ bool UCXLevelTransitionSubsystem::BeginTransition(UCXLevelDefinition* InDefiniti
 	bScreenCovered = true;
 	CoverColor = InDefinition->FadeColor;
 
+	// 일시정지 중에는 페이드 타이머와 카메라 페이드가 진행되지 않으므로 이동이 확정되면 해제
+	if (World)
+	{
+		UGameplayStatics::SetGamePaused(World, false);
+	}
+
 	UE_LOG(LogCXLevelTransition, Log, TEXT("Level transition started: %s -> %s (Entry: %s)"),
 		*GetNameSafe(CurrentDefinition), *InDefinition->GetName(), *InEntryTag.ToString());
 
