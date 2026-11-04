@@ -34,6 +34,12 @@ EDataValidationResult UCXLevelDefinition::IsDataValid(FDataValidationContext& Co
 		Context.AddWarning(FText::FromString(TEXT("CombatScene이 없습니다. 이 레벨에서는 전투에 진입할 수 없습니다.")));
 	}
 
+	// 태그 없이 동작은 하므로 경고만 (시작 위치가 무작위가 됨)
+	if (ECXLevelType::InGame == LevelType && DefaultEntryTag.IsNone())
+	{
+		Context.AddWarning(FText::FromString(TEXT("DefaultEntryTag가 없습니다. 진입 위치를 지정하지 않으면 PlayerStart 중 무작위로 시작합니다.")));
+	}
+
 	return Result;
 }
 #endif //WITH_EDITOR

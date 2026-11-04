@@ -75,4 +75,9 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Transition")
 	FLinearColor FadeColor = FLinearColor::Black;
+
+	// 진입 위치를 지정하지 않고 이 레벨로 올 때(새 게임 등) 사용할 PlayerStart의 PlayerStartTag
+	// 비어 있으면 엔진 기본 선택 (깃발의 PlayerStart를 포함한 전체 PlayerStart 중 무작위)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Level")
+	FName DefaultEntryTag;
 };
