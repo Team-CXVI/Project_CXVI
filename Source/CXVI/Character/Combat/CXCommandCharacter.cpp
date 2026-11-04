@@ -220,7 +220,7 @@ void ACXCommandCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 	EnhancedInput->BindAction(FireAction, ETriggerEvent::Started, this, &ACXCommandCharacter::HandleInputFire);
 	EnhancedInput->BindAction(LookAction, ETriggerEvent::Triggered, this, &ACXCommandCharacter::HandleInputLook);
 	
-	EnhancedInput->BindAction(RunawayAction, ETriggerEvent::Started, this, &ACXCommandCharacter::HandleInputRunaway);
+	EnhancedInput->BindAction(FleeAction, ETriggerEvent::Started, this, &ACXCommandCharacter::HandleInputFlee);
 	EnhancedInput->BindAction(SkipTurnAction, ETriggerEvent::Started, this, &ACXCommandCharacter::HandleInputSkipTurn);
 	EnhancedInput->BindAction(JustTimingAction, ETriggerEvent::Started, this, &ACXCommandCharacter::HandleInputJustTiming);
 
@@ -581,7 +581,7 @@ void ACXCommandCharacter::HandleInputLook(const FInputActionValue& Value )
 	CommandPlayer->Look(Value);
 }
 
-void ACXCommandCharacter::HandleInputRunaway()
+void ACXCommandCharacter::HandleInputFlee()
 {
 	if (CombatInputMode != ECXCombatInputMode::Command
 		|| MenuState != ECommandMenuState::ActionMenu)
@@ -590,7 +590,7 @@ void ACXCommandCharacter::HandleInputRunaway()
 	}
 	
 	ACXCombatCharacterPlayer* CommandPlayer = CommandCharacter.Get();
-	if (!CommandPlayer || !CommandPlayer->GetIsAimMode())
+	if (!IsValid(CommandPlayer))
 	{
 		return;
 	}
