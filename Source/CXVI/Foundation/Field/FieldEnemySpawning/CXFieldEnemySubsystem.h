@@ -61,6 +61,9 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Field|Enemy")
 	ACXFieldEnemySpawner* FindSpawner(FName SpawnId) const;
+
+	void SetSpawnedId(FName InName) { SpawnedId = InName; }
+	FName GetSpawnedId() { return SpawnedId; }
 	
 	// 휴식 섹션.
 public:
@@ -84,4 +87,8 @@ private:
 	// 현재 등록한 스포너.
 	UPROPERTY(Transient)
 	TMap<FName, TWeakObjectPtr<ACXFieldEnemySpawner>> RegisteredSpawner;
+
+	// 현재 배틀에 들어간 스포너.
+	UPROPERTY(Transient)
+	FName SpawnedId = NAME_None;
 };

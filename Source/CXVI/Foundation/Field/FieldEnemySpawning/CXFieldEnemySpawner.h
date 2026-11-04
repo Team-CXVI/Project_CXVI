@@ -23,6 +23,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Spawner")
 	ACXFieldEnemy* SpawnEnemy();
 
+	ACXFieldEnemy* GetSpawnedEnemy() const { return SpawnedEnemy; }
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;

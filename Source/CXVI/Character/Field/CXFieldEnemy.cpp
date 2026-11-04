@@ -92,6 +92,7 @@ void ACXFieldEnemy::InitializeSpawnId(FName InSpawnId)
 	SpawnId = InSpawnId;
 }
 
+
 bool ACXFieldEnemy::Defeat()
 {
 	// 이미 처리했다면 다시 실행하지 않음.
@@ -241,6 +242,13 @@ void ACXFieldEnemy::NotifyAttackHit()
 	{
 		Subsystem->RequestStartBattle(GetEncounterId());
 	}
+
+	UCXFieldEnemySubsystem* EnemySubsystem = World->GetSubsystem<UCXFieldEnemySubsystem>();
+	if (!IsValid(EnemySubsystem))
+	{
+		return;
+	}
+	EnemySubsystem->SetSpawnedId(GetSpawnId());
 }
 
 void ACXFieldEnemy::BeginPlay()
