@@ -20,6 +20,10 @@ class CXVI_API UCXInputIconWidget : public UCommonUserWidget
 {
 	GENERATED_BODY()
 
+public:
+	// 코드에서 키 지정 (없는 입력 장치는 빈 FKey). 이미 표시 중이면 바로 갱신
+	void SetKeys(const FKey& InKeyboardKey, const FKey& InGamepadKey);
+
 protected:
 	virtual void NativeConstruct() override;
 
