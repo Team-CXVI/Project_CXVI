@@ -212,6 +212,13 @@ void UCXTurnManager::StartTurn()
 		CurrentTurnOrder.CombatSpeed
 	);
 
+	if (bIsFleeing && PlayerCharacters.Contains(CurrentTurnPlayer))
+	{
+		UE_LOG(LogTemp, Display, TEXT("[도주] 성공"));
+		EndBattle();
+		return;
+	}
+
 	RefreshUpcomingTurns();
 
 	CurrentAttackTotalHitCount = 0;
@@ -410,10 +417,22 @@ bool UCXTurnManager::ProcessTurnResponse(const FCXCombatMessageData& Response, F
 		break;
 	}
 
-	case ECXCombatMessageType::Runaway:
+	case ECXCombatMessageType::WantFlee:
 	{
-		EndBattle();
-		return false;
+		if (CurrentPhase != ECXCombatPhase::SelectActionPhase || 
+			Response.Character.Get() != CurrentTurnPlayer.Get() ||
+			!PlayerCharacters.Contains(CurrentTurnPlayer))
+		{
+			return false;
+		}
+		bIsFleeing = true;
+
+		UE_LOG(LogTemp, Display, TEXT("[도망] 도망 시도"));
+
+		CurrentPhase = ECXCombatPhase::EndPhase;
+		OutNextPhaseRequest.Phase = CurrentPhase;
+
+		break;
 	}
 
 	case ECXCombatMessageType::Action:
@@ -676,7 +695,7 @@ bool UCXTurnManager::CheckAllActionEnded()
 		return true;
 	}
 
-	if (CurrentTurnPlayer->GetDoingAction())
+	if (CurrentTurnPlayer->GetIsCharacterAlive() && CurrentTurnPlayer->GetDoingAction())
 	{
 		// 현재 턴 주체자가 행동중 
 		return false;
@@ -706,7 +725,7 @@ bool UCXTurnManager::CheckAllReturnEnded() const
 {
 	for (const auto& Character : PlayerCharacters)
 	{
-		if (IsValid(Character) && Character->GetWaitingForReturn())
+		if (IsValid(Character) && Character->GetWaitingForReturn() && Character->GetIsCharacterAlive())
 		{
 			return false;
 		}
@@ -714,7 +733,7 @@ bool UCXTurnManager::CheckAllReturnEnded() const
 
 	for (const auto& Character : EnemyCharacters)
 	{
-		if (IsValid(Character) && Character->GetWaitingForReturn())
+		if (IsValid(Character) && Character->GetWaitingForReturn() && Character->GetIsCharacterAlive())
 		{
 			return false;
 		}
@@ -793,7 +812,7 @@ void UCXTurnManager::SendPhaseRequest(const FCXCombatMessageData& OutMessage)
 
 		for (const auto& Character : PlayerCharacters)
 		{
-			if (IsValid(Character) && Character->GetWaitingForReturn())
+			if (IsValid(Character) && Character->GetWaitingForReturn() && Character->GetIsCharacterAlive())
 			{
 				Character->CombatMessageRequest(ReturnMessage);
 			}
@@ -801,7 +820,7 @@ void UCXTurnManager::SendPhaseRequest(const FCXCombatMessageData& OutMessage)
 
 		for (const auto& Character : EnemyCharacters)
 		{
-			if (IsValid(Character) && Character->GetWaitingForReturn())
+			if (IsValid(Character) && Character->GetWaitingForReturn() && Character->GetIsCharacterAlive())
 			{
 				Character->CombatMessageRequest(ReturnMessage);
 			}

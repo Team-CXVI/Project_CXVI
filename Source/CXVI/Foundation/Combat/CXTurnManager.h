@@ -179,4 +179,6 @@ private:
 
 	UPROPERTY(EditAnywhere, Category = "Combat|TurnOrder", meta = (ClampMin = "1", UIMin = "1"))
 	int32 TurnPreviewCount = 8;
+
+	bool bIsFleeing = false;
 };

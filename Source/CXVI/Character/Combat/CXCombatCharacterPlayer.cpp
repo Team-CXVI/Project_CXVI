@@ -251,7 +251,11 @@ void ACXCombatCharacterPlayer::SkipTurn()
 
 void ACXCombatCharacterPlayer::TryRunaway()
 {
-	
+	FCXCombatMessageData Response;
+	Response.Character = this;
+	Response.Phase = SavedMessage.Phase;
+	Response.MessageType = ECXCombatMessageType::WantFlee;
+	CombatMessageResponse(Response);
 }
 
 const FCXSkillRow* ACXCombatCharacterPlayer::GetSkillRowForSlot(int32 SlotIndex) const
