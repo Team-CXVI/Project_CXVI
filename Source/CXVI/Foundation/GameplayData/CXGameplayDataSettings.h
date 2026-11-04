@@ -31,12 +31,18 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Stat")
 	TSoftObjectPtr<UCurveTable> CharacterStatCurve;
 
-	UPROPERTY(Config, EditAnywhere, Category = "Stat")
-	TSoftObjectPtr<UCurveTable> MonsterStatCurve;
+	/*UPROPERTY(Config, EditAnywhere, Category = "Stat")
+	TSoftObjectPtr<UCurveTable> MonsterStatCurve;*/
+
+	UPROPERTY(Config, EditAnywhere, Category = "Stat", meta = (RequiredAssetDataTags = "RowStructure=/Script/CXVI.CXMonsterStatRow"))
+	TSoftObjectPtr<UDataTable> MonsterStatTable;
 
 	// 새 게임 시작 파티 / 아이템
 	UPROPERTY(Config, EditAnywhere, Category = "UserData")
 	TSoftObjectPtr<UCXNewGameData> NewGameData;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Encounter", meta = (RequiredAssetDataTags = "RowStructure=/Script/CXVI.CXEncounterRow"))
+	TSoftObjectPtr<UDataTable> EncounterTable;
 
 	// 수동 저장 슬롯 수 (슬롯 0은 자동 저장 전용)
 	UPROPERTY(Config, EditAnywhere, Category = "Save", meta = (ClampMin = 1))

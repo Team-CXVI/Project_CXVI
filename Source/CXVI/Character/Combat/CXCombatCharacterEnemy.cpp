@@ -54,14 +54,14 @@ void ACXCombatCharacterEnemy::PostInitializeComponents()
 
 	InitializeGAS();
 
-	ASC->SetNumericAttributeBase(AttributeSet->GetMaxHealthAttribute(), 300.f);
-	ASC->SetNumericAttributeBase(AttributeSet->GetHealthAttribute(), 300.f);
-	ASC->SetNumericAttributeBase(AttributeSet->GetCombatSpeedAttribute(), 100.f);
-	ASC->SetNumericAttributeBase(AttributeSet->GetAttackPowerAttribute(), 40.f);
-	ASC->SetNumericAttributeBase(AttributeSet->GetDefenseAttribute(), 20.f);
-	ASC->SetNumericAttributeBase(AttributeSet->GetCriticalChanceAttribute(), 20.f);
-	ASC->SetNumericAttributeBase(AttributeSet->GetCriticalDamageMultiplierAttribute(), 2.f);
-	ASC->SetNumericAttributeBase(AttributeSet->GetDodgeChanceAttribute(), 30.f);
+	ASC->SetNumericAttributeBase(AttributeSet->GetMaxHealthAttribute(), InitialAttributes.MaxHealth);
+	ASC->SetNumericAttributeBase(AttributeSet->GetHealthAttribute(), InitialAttributes.CurrentHealth);
+	ASC->SetNumericAttributeBase(AttributeSet->GetCombatSpeedAttribute(), InitialAttributes.CombatSpeed);
+	ASC->SetNumericAttributeBase(AttributeSet->GetAttackPowerAttribute(), InitialAttributes.AttackPower);
+	ASC->SetNumericAttributeBase(AttributeSet->GetDefenseAttribute(), InitialAttributes.Defense);
+	ASC->SetNumericAttributeBase(AttributeSet->GetCriticalChanceAttribute(), InitialAttributes.CriticalChance);
+	ASC->SetNumericAttributeBase(AttributeSet->GetCriticalDamageMultiplierAttribute(), InitialAttributes.CriticalDamageMultiplier);
+	ASC->SetNumericAttributeBase(AttributeSet->GetDodgeChanceAttribute(), InitialAttributes.DodgeChance);
 
 	// 이동용 캡슐은 자유조준 레이를 통과시킨다.
 	GetCapsuleComponent()->SetCollisionResponseToChannel(CX_TRACE_COMBAT_AIM, ECR_Ignore);

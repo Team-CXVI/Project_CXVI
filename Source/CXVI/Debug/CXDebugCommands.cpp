@@ -223,6 +223,33 @@ namespace CXCombatDebug
 				CombatManager->RequestStartBattle(EncounterId, PlayerParty->CharacterArray, EnemyParty->CharacterArray);
 			}));
 
+	// CXVI.Combat.StartEncounter Field_01
+	static FAutoConsoleCommandWithWorldAndArgs CombatStartEncounterCommand(
+		TEXT("CXVI.Combat.StartEncounter"),
+		TEXT("현재 파티로 전투를 시작합니다. 사용법: CXVI.Combat.StartEncounter <EncounterId>"),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateLambda(
+			[](const TArray<FString>& InArgs, UWorld* InWorld)
+			{
+				if (InArgs.Num() != 1)
+				{
+					UE_LOG(LogCXCombat, Warning,
+						TEXT("사용법: CXVI.Combat.StartEncounter <EncounterId>"));
+					return;
+				}
+
+				UCXCombatManagerSubsystem* CombatManager =
+					UCXCombatManagerSubsystem::TryGet(InWorld);
+
+				if (!CombatManager)
+				{
+					UE_LOG(LogCXCombat, Warning,
+						TEXT("전투 매니저가 없습니다. 인게임 맵에서 실행하세요."));
+					return;
+				}
+
+				CombatManager->RequestStartBattle(FName(*InArgs[0]));
+			}));
+
 	// CXVI.Combat.End [win|lose]
 	static FAutoConsoleCommandWithWorldAndArgs CombatEndCommand(
 		TEXT("CXVI.Combat.End"),

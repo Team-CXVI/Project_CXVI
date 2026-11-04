@@ -150,6 +150,10 @@ void UCXCombatScene::HandleCombatEnded(const FGameplayTag& InChannel, const FCXC
 {
 	FCXCombatResult Result;
 	Result.bVictory = InMessage.bVictory;
+	Result.EarnedExp = InMessage.EarnedExp;
+
+	UE_LOG(LogCXScene, Display, TEXT("[전투 결과] 승리=%d 획득 EXP=%d"),
+		Result.bVictory, Result.EarnedExp);
 
 	EndCombat(Result);
 }

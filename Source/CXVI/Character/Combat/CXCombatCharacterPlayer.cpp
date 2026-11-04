@@ -260,13 +260,29 @@ void ACXCombatCharacterPlayer::PostInitializeComponents()
 
 	InitializeGAS();
 
-	ASC->SetNumericAttributeBase(AttributeSet->GetMaxHealthAttribute(), 200.f);
-	ASC->SetNumericAttributeBase(AttributeSet->GetHealthAttribute(), 200.f);
-	ASC->SetNumericAttributeBase(AttributeSet->GetCombatSpeedAttribute(), 200.f);
-	ASC->SetNumericAttributeBase(AttributeSet->GetAttackPowerAttribute(), 40.f);
-	ASC->SetNumericAttributeBase(AttributeSet->GetDefenseAttribute(), 40.f);
-	ASC->SetNumericAttributeBase(AttributeSet->GetCriticalChanceAttribute(), 50.f);
-	ASC->SetNumericAttributeBase(AttributeSet->GetCriticalDamageMultiplierAttribute(), 2.f);
+	//ASC->SetNumericAttributeBase(AttributeSet->GetMaxHealthAttribute(), 200.f);
+	//ASC->SetNumericAttributeBase(AttributeSet->GetHealthAttribute(), 200.f);
+	const bool bHasInitialHealth = InitialAttributes.MaxHealth > 0.f;
+	const float MaxHealth = bHasInitialHealth ? InitialAttributes.MaxHealth : 200.f;
+	const float CurrentHealth = bHasInitialHealth ? InitialAttributes.CurrentHealth : 200.f;
+
+	ASC->SetNumericAttributeBase(AttributeSet->GetMaxHealthAttribute(), MaxHealth);
+	ASC->SetNumericAttributeBase(AttributeSet->GetHealthAttribute(), CurrentHealth);
+	ASC->SetNumericAttributeBase(AttributeSet->GetCombatSpeedAttribute(), InitialAttributes.CombatSpeed);
+	ASC->SetNumericAttributeBase(AttributeSet->GetAttackPowerAttribute(), InitialAttributes.AttackPower);
+	ASC->SetNumericAttributeBase(AttributeSet->GetDefenseAttribute(), InitialAttributes.Defense);
+	ASC->SetNumericAttributeBase(AttributeSet->GetCriticalChanceAttribute(), InitialAttributes.CriticalChance);
+	ASC->SetNumericAttributeBase(AttributeSet->GetCriticalDamageMultiplierAttribute(), InitialAttributes.CriticalDamageMultiplier);
+
+	if (AttributeSet->GetHealth() <= 0.f)
+	{
+		OnOutOfHealthCpp(nullptr);
+	}
+
+	UE_LOG(LogTemp, Display, TEXT("[전투 HP 적용] %s HP=%.1f/%.1f"),
+		*GetName(), AttributeSet->GetHealth(), AttributeSet->GetMaxHealth());
+
+
 }
 
 bool ACXCombatCharacterPlayer::ActivateSelectedSkill(int32 SlotIndex)

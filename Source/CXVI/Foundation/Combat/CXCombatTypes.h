@@ -9,6 +9,7 @@
 class ACXCombatCharacterBase;
 class ACXCombatArena;
 class ACXCommandCharacter;
+class UCXEnemyDefinition;
 
 //DECLARE_LOG_CATEGORY_EXTERN(LogCXCombat, Log, All);
 
@@ -26,6 +27,56 @@ enum class ECXCombatState : uint8
 	InBattle,	// 턴 진행 중
 };
 
+USTRUCT()
+struct FCXInitialAttributes
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	float MaxHealth = 200.f;
+
+	UPROPERTY()
+	float CurrentHealth = 200.f;
+
+	UPROPERTY()
+	float CombatSpeed = 200.f;
+
+	UPROPERTY()
+	float AttackPower = 40.f;
+
+	UPROPERTY()
+	float Defense = 40.f;
+
+	UPROPERTY()
+	float CriticalChance = 50.f;
+
+	UPROPERTY()
+	float CriticalDamageMultiplier = 2.f;
+
+	UPROPERTY()
+	float DodgeChance = 0.f;
+
+};
+
+USTRUCT(BlueprintType)
+struct CXVI_API FCXCombatSpawnEntry
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "Combat")
+	TSubclassOf<ACXCombatCharacterBase> CharacterClass;
+
+	//// 스탯과 경험치의 출처. 클래스를 직접 지정 테스트에는 비어있을수 있다,.
+	//UPROPERTY(BlueprintReadOnly, Category = "Combat")
+	//TObjectPtr<UCXEnemyDefinition> Definition = nullptr;
+
+	UPROPERTY()
+	bool bHasInitialAttributes = false;
+
+	UPROPERTY()
+	FCXInitialAttributes InitialAttributes;
+};
+
 // 필드 -> 전투 (FCXSceneContext Payload)
 USTRUCT(BlueprintType)
 struct CXVI_API FCXCombatEnterParams
@@ -38,10 +89,12 @@ public:
 
 	// TODO : 임시. 파티 정보 출처가 정해지면 EncounterId 조회로 변경
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
-	TArray<TSubclassOf<ACXCombatCharacterBase>> PlayerClasses;
+	TArray<FCXCombatSpawnEntry> PlayerClasses;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
-	TArray<TSubclassOf<ACXCombatCharacterBase>> EnemyClasses;
+	/*UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+	TArray<TSubclassOf<ACXCombatCharacterBase>> EnemyClasses;*/
+	UPROPERTY(BlueprintReadOnly, Category = "Combat")
+	TArray<FCXCombatSpawnEntry> EnemySpawns;
 };
 
 // 전투 -> 필드 (PopScene Payload)
