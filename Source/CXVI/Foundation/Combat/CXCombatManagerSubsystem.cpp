@@ -391,6 +391,14 @@ bool UCXCombatManagerSubsystem::CanStartBattle(const FCXCombatEnterParams& InPar
 		return false;
 	}
 
+	// 레벨 전환이 시작되면 일시정지가 풀려 페이드 중에도 적이 움직이므로 새 전투를 시작하지 않음
+	const UCXLevelTransitionSubsystem* LevelTransition = UCXLevelTransitionSubsystem::TryGet(this);
+	if (LevelTransition && LevelTransition->IsTransitioning())
+	{
+		UE_LOG(LogCXCombat, Warning, TEXT("전투 요청 거절 : 레벨 전환 중입니다."));
+		return false;
+	}
+
 	return true;
 }
 
