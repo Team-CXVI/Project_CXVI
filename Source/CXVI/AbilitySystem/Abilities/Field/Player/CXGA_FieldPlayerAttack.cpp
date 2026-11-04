@@ -8,6 +8,10 @@
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 #include "CXVI/Foundation/Scene/CXSceneSubsystem.h"
 #include "CXVI/Foundation/Scene/Scenes/CXFieldScene.h"
+#include "CXVI/Foundation/Scene/CXSceneSubsystem.h"
+#include "CXVI/Foundation/Field/FieldEnemySpawning/CXFieldEnemySubsystem.h"
+
+#include "Foundation/Combat/CXCombatManagerSubsystem.h"
 
 #include "Engine/World.h"
 #include "DrawDebugHelpers.h"
@@ -166,5 +170,15 @@ void UCXGA_FieldPlayerAttack::OnAttackHitEvent(FGameplayEventData Payload)
 		return;
 	}
 
-	//const bool bAccepted = FieldScene->RequestCombat(/*컴뱃 씬*/,/*EncounterId*/)
+	if (UCXCombatManagerSubsystem* Subsystem = UCXCombatManagerSubsystem::TryGet(GetWorld()))
+	{
+		Subsystem->RequestStartBattle(Enemy->GetEncounterId());
+	}
+
+	UCXFieldEnemySubsystem* EnemySubsystem = World->GetSubsystem<UCXFieldEnemySubsystem>();
+	if (!IsValid(EnemySubsystem))
+	{
+		return;
+	}
+	EnemySubsystem->SetSpawnedId(Enemy->GetSpawnId());
 }
