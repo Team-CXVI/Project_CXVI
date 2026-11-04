@@ -16,7 +16,16 @@
 AActor* ACXGameMode::ChoosePlayerStart_Implementation(AController* Player)
 {
 	const UCXLevelTransitionSubsystem* LevelTransition = UCXLevelTransitionSubsystem::TryGet(this);
-	const FName EntryTag = LevelTransition ? LevelTransition->GetPendingEntryTag() : NAME_None;
+	FName EntryTag = LevelTransition ? LevelTransition->GetPendingEntryTag() : NAME_None;
+
+	// 진입 위치를 지정하지 않은 경우(새 게임 등)는 레벨의 기본 시작 위치 사용
+	if (EntryTag.IsNone() && LevelTransition)
+	{
+		if (const UCXLevelDefinition* LevelDefinition = LevelTransition->GetCurrentLevelDefinition())
+		{
+			EntryTag = LevelDefinition->DefaultEntryTag;
+		}
+	}
 
 	if (!EntryTag.IsNone())
 	{

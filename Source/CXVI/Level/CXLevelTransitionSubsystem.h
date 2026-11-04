@@ -47,7 +47,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "CXVI|LevelTransition")
 	bool TravelToTitle();
 
-	// 인게임 레벨로 이동. InEntryTag가 None이면 도착 레벨의 기본 PlayerStart 사용
+	// 인게임 레벨로 이동. InEntryTag가 None이면 도착 레벨 정의의 DefaultEntryTag 사용
 	// 타이틀 레벨 ID는 거부 (TravelToTitle 사용)
 	UFUNCTION(BlueprintCallable, Category = "CXVI|LevelTransition")
 	bool TravelToLevel(UPARAM(meta = (AllowedTypes = "CXLevelDefinition")) FPrimaryAssetId InLevelId, FName InEntryTag);

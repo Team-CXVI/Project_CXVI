@@ -130,6 +130,12 @@ void UCXGA_FieldPlayerAttack::OnAttackHitEvent(FGameplayEventData Payload)
 
 	ACXFieldEnemy* Enemy = bHit ? Cast<ACXFieldEnemy>(Hit.GetActor()) : nullptr;
 	
+	// AI 정지 중에는 에너미 타격이 불가능.
+	if (IsValid(Enemy) && !Enemy->CanBeAttacked())
+	{
+		Enemy = nullptr;
+	}
+	
 	// 드로우 디버그 모드이면.
 	if (bDrawAttackDebug)
 	{

@@ -17,6 +17,8 @@ class UCXSceneDefinition;
 * - 첫 Scene에 PawnClass가 있으면 Pawn은 Scene이 생성/빙의 (GameMode는 PC만 생성)
 * - BeginPlay에서 첫 Scene을 화면 제어 없이 Push (레벨 전환 구간의 화면은 레벨 전환이 담당)
 * - 첫 Scene 전환이 끝나면 레벨 전환에 준비 완료를 알림
+* - 스폰 위치는 레벨 전환의 진입 태그와 PlayerStartTag가 같은 PlayerStart. 
+* - 진입 태그가 없으면 레벨 정의의 DefaultEntryTag 사용
 */
 UCLASS()
 class CXVI_API ACXGameMode : public AGameModeBase

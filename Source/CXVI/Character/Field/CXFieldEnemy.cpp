@@ -8,6 +8,8 @@
 #include "Character/Field/CXFIeldPlayerCharacter.h"
 #include "CXVI/Foundation/Scene/CXSceneSubsystem.h"
 #include "CXVI/Foundation/Scene/Scenes/CXFieldScene.h"
+#include "CXVI/AI/Field/CXFieldAIController.h"
+#include "TimerManager.h"
 
 #include "BehaviorTree/BlackboardComponent.h"
 #include "Engine/World.h"
@@ -85,6 +87,21 @@ void ACXFieldEnemy::InitializePatrolArea(const FVector& InPatrolCenter, float In
 	PatrolCenter = InPatrolCenter;
 	PatrolRadius = FMath::Max(0.0f, InPatrolRadius);
 	bPatrolAreaInitialize = true;
+}
+
+void ACXFieldEnemy::PauseAIForSeconds(float Duration)
+{
+	ACXFieldAIController* AIController = Cast<ACXFieldAIController>(GetController());
+	if (!IsValid(AIController))
+	{
+		return;
+	}
+
+	AIController->StopAI();
+	AIController->StopMovement();
+	bPlayerCollisionIgnored = true;
+
+	GetWorldTimerManager().SetTimer(AIPauseTimerHandle, this, &ThisClass::ResumeAI, Duration, false);
 }
 
 void ACXFieldEnemy::InitializeSpawnId(FName InSpawnId)
@@ -254,7 +271,8 @@ void ACXFieldEnemy::NotifyAttackHit()
 void ACXFieldEnemy::BeginPlay()
 {
 	Super::BeginPlay();
-
+	
+	PauseAIForSeconds(3.0f);
 }
 
 void ACXFieldEnemy::AttackEnded(UAnimMontage* Montage, bool bInterrupted)
@@ -346,6 +364,15 @@ void ACXFieldEnemy::FinishAttackAction()
 	}
 	
 	NotifyActionEnd();
+}
+
+void ACXFieldEnemy::ResumeAI()
+{
+	if (ACXFieldAIController* AIController = Cast<ACXFieldAIController>(GetController()))
+	{
+		AIController->RunAI();
+		bPlayerCollisionIgnored = false;
+	}
 }
 
 float ACXFieldEnemy::GetAIPatrolRadius()
