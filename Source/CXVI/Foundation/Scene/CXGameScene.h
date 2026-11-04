@@ -91,6 +91,9 @@ protected:
 	// Definition의 HUDClass가 Push된 직후 호출 (Enter / Resume마다 새 인스턴스) → ViewModel 주입 등
 	virtual void InitializeSceneHUD(UCXActivatableWidget& InHUD) {}
 
+	// HUD를 닫음 (Stack에서 자동 제거)
+	void HideSceneHUD();
+
 	// Scene Input
 protected:
 	virtual void SetupSceneInput() {}
@@ -131,9 +134,6 @@ protected:
 private:
 	// UI.Layer.Game에 Definition의 HUD 위젯을 Push
 	void ShowSceneHUD();
-
-	// HUD를 닫음 (Stack에서 자동 제거)
-	void HideSceneHUD();
 
 	APlayerController* GetPlayerController() const;
 
