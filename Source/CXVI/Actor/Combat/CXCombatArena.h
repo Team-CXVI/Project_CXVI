@@ -41,7 +41,8 @@ public:
 	FTransform GetPlayerSlotFromIndex(int32 InIndex) const;
 	FTransform GetEnemySlotFromIndex(int32 InIndex) const;
 
-	void ShowMenuCamera(ECommandMenuState MenuState, const class ACXCombatCharacterPlayer* Player);
+	void ShowMenuCamera(ECommandMenuState MenuState, const ACXCombatCharacterBase* CameraSubject);
+	void ShowCameraPreset(FName PresetId, const ACXCombatCharacterBase* CameraSubject);
 
 protected:
 	virtual void Tick(float DeltaSeconds) override;
@@ -60,7 +61,7 @@ protected:
 	TObjectPtr<UCameraComponent> BattleCamera;
 
 	UPROPERTY(EditAnywhere, Category = "Camera")
-	TMap<ECommandMenuState, FCXMenuCameraPreset> MenuCameraPresets;
+	TObjectPtr<class UCXCombatMenuCameraData> MenuCameraData;
 
 private:
 	// 생성한 전투원 (레벨에 저장되지 않도록 Transient)

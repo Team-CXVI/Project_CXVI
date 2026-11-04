@@ -18,10 +18,6 @@
 #include "InputAction.h"
 #include "UObject/ConstructorHelpers.h"
 
-#include "CXVI/Actor/Combat/CXCombatArena.h"
-
-
-
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXCommandCharacter)
 
 // Sets default values
@@ -66,6 +62,11 @@ void ACXCommandCharacter::SetCombatInputMode(ECXCombatInputMode NewMode)
 		MenuState = ECommandMenuState::ActionMenu;
 		TargetReturnMenu = ECommandMenuState::ActionMenu;
 		SavedSelection.Clear();
+
+		if (NewMode == ECXCombatInputMode::Command)
+		{
+			RefreshMenuCamera();
+		}
 	}
 
 
@@ -130,13 +131,24 @@ void ACXCommandCharacter::SetMenuState(ECommandMenuState NewState)
 	}
 
 	MenuState = NewState;
+	RefreshMenuCamera();
+}
 
-	if (UCXCombatManagerSubsystem* CombatManager = UCXCombatManagerSubsystem::TryGet(this))
+void ACXCommandCharacter::RefreshMenuCamera() const
+{
+	const ACXCombatCharacterBase* CameraSubject = CommandCharacter.Get();
+	if (MenuState == ECommandMenuState::TargetSelect)
 	{
-		if (ACXCombatArena* Arena = CombatManager->GetCombatArena())
+		if (!TargetCandidates.IsValidIndex(SelectedTargetIndex))
 		{
-			Arena->ShowMenuCamera(MenuState, CommandCharacter.Get());
+			return;
 		}
+		CameraSubject = Cast<ACXCombatCharacterBase>(TargetCandidates[SelectedTargetIndex].Get());
+	}
+
+	if (const UCXCombatManagerSubsystem* CombatManager = UCXCombatManagerSubsystem::TryGet(this))
+	{
+		CombatManager->RequestMenuCamera(MenuState, CameraSubject);
 	}
 }
 
@@ -530,45 +542,6 @@ void ACXCommandCharacter::HandleInputFire()
 
 void ACXCommandCharacter::HandleInputToggleAimMode()
 {
-	//if (CombatInputMode != ECXCombatInputMode::Command
-	//	|| MenuState != ECommandMenuState::ActionMenu)
-	//{
-	//	return;
-	//}
-
-	//ACXCombatCharacterPlayer* CommandPlayer = CommandCharacter.Get();
-	//APlayerController* PlayerController = Cast<APlayerController>(GetController());
-	//UWorld* World = GetWorld();
-
-	//if (!IsValid(CommandPlayer) || !IsValid(PlayerController) || !World)
-	//{
-	//	return;
-	//}
-
-	//UCXCombatManagerSubsystem* CombatManager = World->GetSubsystem<UCXCombatManagerSubsystem>();
-
-	///*ACXTestCombatArena* Arena = CombatManager ? CombatManager->GetCombatArena() : nullptr;
-
-	//if (!IsValid(Arena))
-	//{
-	//	return;
-	//}*/
-
-	//if (CommandPlayer->ToggleAimMode())
-	//{
-	//	//SwitchInputMappintContext(BattleLookMappingContext);
-	//	PlayerController->SetViewTargetWithBlend(CommandPlayer, 0.25f);
-	//}
-	//else
-	//{
-	//	//PlayerController->SetViewTargetWithBlend(Arena, 0.25f);
-	//	//AGASGameMode* GameMode = Cast<AGASGameMode>(GetWorld()->GetAuthGameMode());
-	//	//if (GameMode)
-	//	//{
-	//	//	//SwitchInputMappintContext(BattleLookMappingContext);
-	//	//	SetViewTargetWithBlend(GameMode->GetBattleArena(), 0.25f);
-	//	//}
-	//}
 	OnAimModeInput();
 }
 
@@ -663,6 +636,8 @@ void ACXCommandCharacter::SubmitActionToPlayer(const FCXActionSelection& Selecti
 		return;
 	}
 
+	
+
 	// SubmitAction 내부의 델리게이트가 동기 실행될 수 있어 전송 전에 메뉴를 준비한다.
 	TargetReturnMenu = MenuState;
 	Player->SubmitAction(Selection);
@@ -681,40 +656,9 @@ void ACXCommandCharacter::OnAimModeInput()
 		return;
 	}
 
-	ACXCombatCharacterPlayer* CommandPlayer = CommandCharacter.Get();
-	APlayerController* PlayerController = Cast<APlayerController>(GetController());
-	UWorld* World = GetWorld();
-
-	if (!IsValid(CommandPlayer) || !IsValid(PlayerController) || !World)
+	if (const UCXCombatManagerSubsystem* CombatManager = UCXCombatManagerSubsystem::TryGet(this))
 	{
-		return;
-	}
-
-	//UCXCombatManagerSubsystem* CombatManager = World->GetSubsystem<UCXCombatManagerSubsystem>();
-	UCXCombatManagerSubsystem* CombatManager = World->GetSubsystem<UCXCombatManagerSubsystem>();
-
-	//ACXTestCombatArena* Arena = CombatManager ? CombatManager->GetCombatArena() : nullptr;
-	ACXCombatArena* Arena = CombatManager ? CombatManager->GetCombatArena() : nullptr;
-
-	if (!IsValid(Arena))
-	{
-		return;
-	}
-
-	if (CommandPlayer->ToggleAimMode())
-	{
-		//SwitchInputMappintContext(BattleLookMappingContext);
-		PlayerController->SetViewTargetWithBlend(CommandPlayer, 0.25f);
-	}
-	else
-	{
-		PlayerController->SetViewTargetWithBlend(Arena, 0.25f);
-		//AGASGameMode* GameMode = Cast<AGASGameMode>(GetWorld()->GetAuthGameMode());
-		//if (GameMode)
-		//{
-		//	//SwitchInputMappintContext(BattleLookMappingContext);
-		//	SetViewTargetWithBlend(GameMode->GetBattleArena(), 0.25f);
-		//}
+		CombatManager->RequestToggleAimCamera(CommandCharacter.Get());
 	}
 }
 
@@ -792,6 +736,7 @@ void ACXCommandCharacter::MoveTargetSelection(int32 Direction)
 		return;
 	}
 
+	const int32 PreviousTargetIndex = SelectedTargetIndex;
 	for (int32 Attempt = 0; Attempt < Count; ++Attempt)
 	{
 		SelectedTargetIndex = (SelectedTargetIndex + Direction + Count) % Count;
@@ -801,6 +746,10 @@ void ACXCommandCharacter::MoveTargetSelection(int32 Direction)
 		if (IsValid(Target) && Target->GetIsCharacterAlive())
 		{
 			UE_LOG(LogTemp, Display, TEXT("선택 대상: %s"), *Target->GetName());
+			if (SelectedTargetIndex != PreviousTargetIndex)
+			{
+				RefreshMenuCamera();
+			}
 
 			// 이전 대상 표시 해제 → 현재 대상 표시
 			return;

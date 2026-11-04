@@ -10,6 +10,7 @@
 #include "Character/Combat/Components/CXJustTimingComponent.h"
 #include "Foundation/GameplayData/CXGameplayDataSubsystem.h"
 #include "AbilitySystem/Abilities/Combat/CXGameplayAbilityCombatBase.h"
+#include "Foundation/Combat/CXCombatManagerSubsystem.h"
 
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
@@ -28,18 +29,6 @@ ACXCombatCharacterPlayer::ACXCombatCharacterPlayer()
 	SpringArm->TargetArmLength = 400.f;
 
 	SpringArm->bUsePawnControlRotation = false;
-
-	CameraFocusBody = CreateDefaultSubobject<USceneComponent>(TEXT("CameraFocus_Body"));
-	CameraFocusBody->SetupAttachment(RootComponent);
-	CameraFocusBody->SetRelativeLocation(FVector(0.f, 0.f, 25.f));
-
-	CameraFocusChest = CreateDefaultSubobject<USceneComponent>(TEXT("CameraFocus_Chest"));
-	CameraFocusChest->SetupAttachment(RootComponent);
-	CameraFocusChest->SetRelativeLocation(FVector(0.f, 0.f, 55.f));
-
-	CameraFocusHand = CreateDefaultSubobject<USceneComponent>(TEXT("CameraFocus_Hand"));
-	CameraFocusHand->SetupAttachment(RootComponent);
-	CameraFocusHand->SetRelativeLocation(FVector(20.f, 35.f, 10.f));
 
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	Camera->SetupAttachment(SpringArm);
@@ -345,27 +334,6 @@ bool ACXCombatCharacterPlayer::PrepareSelectedSkill(int32 SlotIndex)
 	return true;
 }
 
-FVector ACXCombatCharacterPlayer::GetCameraFocusLocation(ECXCameraFocusPoint FocusPoint) const
-{
-	const USceneComponent* FocusComponent = CameraFocusBody.Get();
-
-	switch (FocusPoint)
-	{
-	case ECXCameraFocusPoint::Chest:
-		FocusComponent = CameraFocusChest.Get();
-		break;
-	case ECXCameraFocusPoint::Body:
-		FocusComponent = CameraFocusBody.Get();
-		break;
-	case ECXCameraFocusPoint::Hand:
-		FocusComponent = CameraFocusHand.Get();
-		break;
-	}
-
-	return IsValid(FocusComponent) ? FocusComponent->GetComponentLocation() : GetActorLocation();
-
-}
-
 void ACXCombatCharacterPlayer::PostInitializeComponents()
 {
 	CharacterAttributeSet = AttributeSet;
@@ -442,6 +410,27 @@ void ACXCombatCharacterPlayer::SelectTargetPhase()
 	OnTargetSelectionRequested.Broadcast(this, GetTargetCandidates());
 
 	// 대상 확정 전이므로 응답하지 않음.
+}
+
+bool ACXCombatCharacterPlayer::ActionPhase()
+{
+	if (!Super::ActionPhase())
+	{
+		return false;
+	}
+
+	const ECXActionType ActionType = GetPendingAction().Type;
+	if (ActionType == ECXActionType::BasicAttack ||
+		ActionType == ECXActionType::Skill)
+	{
+		if (const UCXCombatManagerSubsystem* CombatManager =
+			UCXCombatManagerSubsystem::TryGet(this))
+		{
+			CombatManager->RequestCameraPreset(TEXT("Menu.Action"), this);
+		}
+	}
+
+	return true;
 }
 
 const FGameplayAbilitySpec* ACXCombatCharacterPlayer::FindPreparedSkillSpec(int32 SlotIndex) const

@@ -27,15 +27,6 @@ enum class ECXCombatState : uint8
 	InBattle,	// 턴 진행 중
 };
 
-
-UENUM()
-enum class ECXCameraFocusPoint : uint8
-{
-	Body,
-	Chest,
-	Hand
-};
-
 USTRUCT()
 struct FCXMenuCameraPreset
 {
@@ -47,7 +38,10 @@ struct FCXMenuCameraPreset
 
 	// 플레이어 BP에 배치한 시선 기준점
 	UPROPERTY(EditAnywhere, Category = "Camera")
-	ECXCameraFocusPoint FocusPoint = ECXCameraFocusPoint::Body;
+	FName FocusName = NAME_None;
+
+	UPROPERTY(EditAnywhere, Category = "Camera")
+	bool bUseOriginLocation = false;
 };
 
 UENUM()

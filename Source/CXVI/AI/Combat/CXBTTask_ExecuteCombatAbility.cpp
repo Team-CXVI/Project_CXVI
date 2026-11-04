@@ -4,6 +4,9 @@
 #include "AI/Combat/CXBTTask_ExecuteCombatAbility.h"
 
 #include "Character/Combat/CXCombatCharacterBase.h"
+#include "Character/Combat/CXCombatCharacterPlayer.h"
+#include "Foundation/Combat/CXCombatManagerSubsystem.h"
+
 #include "AIController.h"
 
 #include "BehaviorTree/BehaviorTreeComponent.h"
@@ -38,6 +41,12 @@ EBTNodeResult::Type UCXBTTask_ExecuteCombatAbility::ExecuteTask(UBehaviorTreeCom
 	UE_LOG(LogTemp, Warning, TEXT("공격 태스크 진입: %s"), *Character->GetName());
 
 	AbilityFinishedHandle = Character->OnCombatAbilityFinished.AddUObject(this, &UCXBTTask_ExecuteCombatAbility::HandleAbilityFinished);
+
+	if (const UCXCombatManagerSubsystem* Manager =
+		UCXCombatManagerSubsystem::TryGet(Character))
+	{
+		Manager->RequestCameraPreset(TEXT("Attack.CloseUp"), Character);
+	}
 
 	if (!Character->ExecuteCombatAbility())
 	{
@@ -104,6 +113,15 @@ void UCXBTTask_ExecuteCombatAbility::HandleAbilityFinished(bool bWasCancelled)
 	// ExecuteTask 실행 도중에도 신호가 올 수 있어
 	// 여기서 즉시 FinishLatentTask를 호출하지 않음.
 	bAbilityFinished = true;
+
+	if (const ACXCombatCharacterPlayer* Player = Cast<ACXCombatCharacterPlayer>(CombatCharacter.Get());	IsValid(Player))
+	{
+		if (const UCXCombatManagerSubsystem* Manager =
+			UCXCombatManagerSubsystem::TryGet(CombatCharacter.Get()))
+		{
+			Manager->RequestCameraPreset(TEXT("Attack.Return"), Player);
+		}
+	}
 }
 
 void UCXBTTask_ExecuteCombatAbility::Cleanup()

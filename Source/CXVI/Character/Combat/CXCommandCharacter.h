@@ -31,6 +31,7 @@ public:
 	// Setter
 	void SetCombatInputMode(ECXCombatInputMode NewMode);
 	void SetMenuState(ECommandMenuState NewState);
+	void RefreshMenuCamera() const;
 
 
 

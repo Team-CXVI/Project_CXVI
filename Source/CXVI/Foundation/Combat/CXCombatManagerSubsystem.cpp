@@ -338,6 +338,50 @@ bool UCXCombatManagerSubsystem::BeginBattle(const FCXBattleSetup& InSetup)
 	return true;
 }
 
+void UCXCombatManagerSubsystem::RequestMenuCamera(
+	ECommandMenuState MenuState, const ACXCombatCharacterBase* CameraSubject) const
+{
+	ACXCombatArena* Arena = CombatArena.Get();
+	if (CombatState == ECXCombatState::InBattle && IsValid(Arena) && IsValid(CameraSubject))
+	{
+		Arena->ShowMenuCamera(MenuState, CameraSubject);
+	}
+}
+
+void UCXCombatManagerSubsystem::RequestCameraPreset(
+	FName PresetId, const ACXCombatCharacterBase* CameraSubject) const
+{
+	ACXCombatArena* Arena = CombatArena.Get();
+	if (CombatState == ECXCombatState::InBattle && IsValid(Arena))
+	{
+		Arena->ShowCameraPreset(PresetId, CameraSubject);
+	}
+}
+
+void UCXCombatManagerSubsystem::RequestToggleAimCamera(ACXCombatCharacterPlayer* Player) const
+{
+	ACXCombatArena* Arena = CombatArena.Get();
+	const ACXCommandCharacter* CommandPawn = WeakCommandCharacter.Get();
+	if (CombatState != ECXCombatState::InBattle ||
+		!IsValid(Arena) || !IsValid(CommandPawn) || !IsValid(Player))
+	{
+		return;
+	}
+
+	APlayerController* PlayerController = Cast<APlayerController>(CommandPawn->GetController());
+	if (!IsValid(PlayerController))
+	{
+		return;
+	}
+
+	AActor* ViewTarget = Arena;
+	if (Player->ToggleAimMode())
+	{
+		ViewTarget = Player;
+	}
+	PlayerController->SetViewTargetWithBlend(ViewTarget, 0.25f);
+}
+
 void UCXCombatManagerSubsystem::EndBattle()
 {
 	if (ECXCombatState::Idle == CombatState)

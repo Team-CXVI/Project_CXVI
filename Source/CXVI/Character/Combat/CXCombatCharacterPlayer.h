@@ -52,8 +52,6 @@ public:
 
 	const float* FindPreparedSkillAPCost(FGameplayAbilitySpecHandle Handle) const { return PreparedSkillAPCosts.Find(Handle); }
 
-	FVector GetCameraFocusLocation(ECXCameraFocusPoint FocusPoint) const;
-
 
 protected:
 	virtual void PostInitializeComponents() override;
@@ -64,7 +62,7 @@ protected:
 
 	virtual void SelectActionPhase() override;
 	virtual void SelectTargetPhase() override;
-	//virtual void ActionPhase() override;
+	virtual bool ActionPhase() override;
 
 private:
 	const FGameplayAbilitySpec* FindPreparedSkillSpec(int32 SlotIndex) const;
@@ -82,14 +80,7 @@ protected:
 	//UPROPERTY(EditDefaultsOnly, Category = "Combat|Skills")
 	//TArray<TSubclassOf<class UGameplayAbility>> SkillAbilities;
 
-	UPROPERTY(VisibleAnywhere, Category = "Camera")
-	TObjectPtr<class USceneComponent> CameraFocusBody;
 
-	UPROPERTY(VisibleAnywhere, Category = "Camera")
-	TObjectPtr<class USceneComponent> CameraFocusChest;
-
-	UPROPERTY(VisibleAnywhere, Category = "Camera")
-	TObjectPtr<class USceneComponent> CameraFocusHand;
 
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Attribute")
