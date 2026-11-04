@@ -190,15 +190,15 @@ namespace CXLevelDebug
 
 namespace CXCombatDebug
 {
-	// CXVI.Combat.Start <PlayerPartyData> <EnemyPartyData> [EncounterId]
+	// CXVI.Combat.Start <EncounterId>
 	static FAutoConsoleCommandWithWorldAndArgs CombatStartCommand(
 		TEXT("CXVI.Combat.Start"),
-		TEXT("전투 매니저에 전투 진입을 요청합니다. (전투 씬 = 현재 레벨 정의의 CombatScene) 사용법: CXVI.Combat.Start <플레이어 파티 데이터> <적 파티 데이터> [EncounterId]"),
+		TEXT("전투 매니저에 전투 진입을 요청합니다. (전투 씬 = 현재 레벨 정의의 CombatScene) 사용법: CXVI.Combat.Start <EncounterId>"),
 		FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& InArgs, UWorld* InWorld)
 			{
-				if (InArgs.Num() < 2)
+				if (InArgs.Num() != 1)
 				{
-					UE_LOG(LogCXCombat, Warning, TEXT("사용법: CXVI.Combat.Start <플레이어 파티 데이터> <적 파티 데이터> [EncounterId]"));
+					UE_LOG(LogCXCombat, Warning, TEXT("사용법: CXVI.Combat.Start <EncounterId>"));
 					return;
 				}
 
@@ -209,44 +209,7 @@ namespace CXCombatDebug
 					return;
 				}
 
-				const UCXCharacterPartyData* PlayerParty = CXSceneDebug::FindAssetByName<UCXCharacterPartyData>(InArgs[0]);
-				const UCXCharacterPartyData* EnemyParty = CXSceneDebug::FindAssetByName<UCXCharacterPartyData>(InArgs[1]);
-				if (!PlayerParty || !EnemyParty)
-				{
-					UE_LOG(LogCXCombat, Warning, TEXT("파티 데이터를 찾을 수 없습니다. (%s, %s)"), *InArgs[0], *InArgs[1]);
-					return;
-				}
-
-				const FName EncounterId = InArgs.IsValidIndex(2) ? FName(*InArgs[2]) : FName(TEXT("Debug"));
-
 				// 거절 사유는 매니저가 로그로 남김
-				CombatManager->RequestStartBattle(EncounterId, PlayerParty->CharacterArray, EnemyParty->CharacterArray);
-			}));
-
-	// CXVI.Combat.StartEncounter Field_01
-	static FAutoConsoleCommandWithWorldAndArgs CombatStartEncounterCommand(
-		TEXT("CXVI.Combat.StartEncounter"),
-		TEXT("현재 파티로 전투를 시작합니다. 사용법: CXVI.Combat.StartEncounter <EncounterId>"),
-		FConsoleCommandWithWorldAndArgsDelegate::CreateLambda(
-			[](const TArray<FString>& InArgs, UWorld* InWorld)
-			{
-				if (InArgs.Num() != 1)
-				{
-					UE_LOG(LogCXCombat, Warning,
-						TEXT("사용법: CXVI.Combat.StartEncounter <EncounterId>"));
-					return;
-				}
-
-				UCXCombatManagerSubsystem* CombatManager =
-					UCXCombatManagerSubsystem::TryGet(InWorld);
-
-				if (!CombatManager)
-				{
-					UE_LOG(LogCXCombat, Warning,
-						TEXT("전투 매니저가 없습니다. 인게임 맵에서 실행하세요."));
-					return;
-				}
-
 				CombatManager->RequestStartBattle(FName(*InArgs[0]));
 			}));
 
@@ -272,6 +235,7 @@ namespace CXCombatDebug
 				// 실제 전투 종료와 같은 경로(메시지 -> CombatScene -> Pop -> 정리)로 진행
 				FCXCombatEndMessage Message;
 				Message.bVictory = !(InArgs.IsValidIndex(0) && InArgs[0].Equals(TEXT("lose"), ESearchCase::IgnoreCase));
+				Message.bPartyWiped = !Message.bVictory;
 
 				UCXGameplayMessageSubsystem::Get(InWorld).BroadcastMessage(CXVIGameplayTags::Message_Combat_End, Message);
 			}));
