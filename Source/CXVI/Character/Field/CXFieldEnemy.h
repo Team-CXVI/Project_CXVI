@@ -33,6 +33,9 @@ public:
 	// 생성 완료 전에 스포너가 담당 구역 정보를 전달.
 	void InitializePatrolArea(const FVector& InPatrolCenter,float InPatrolRadius);
 
+	// AI를 Duration 동안 멈춘 다음 정찰 시작.
+	void PauseAIForSeconds(float Duration);
+
 	// 스포너 섹션.
 public:
 	// 생성 완료 전에 스포너가 호출.
@@ -55,6 +58,8 @@ public:
 	// 공격 몽타주의 타격 Notify에서 호출.
 	void NotifyAttackHit();
 
+	bool CanBeAttacked() const { return !bPlayerCollisionIgnored; }
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -68,6 +73,8 @@ protected:
 
 	// 회전까지 끝난 뒤 이동 복구와 공격 온료 알림 처리.
 	void FinishAttackAction();
+
+	void ResumeAI();
 
 	// AI Interface섹션.
 protected:
@@ -158,4 +165,9 @@ protected:
 	// 처치 처리를 중복 실행하지 않도록 구분.
 	UPROPERTY(Transient)
 	bool bDefeatHandled = false;
+
+	FTimerHandle AIPauseTimerHandle;
+
+	UPROPERTY(Transient)
+	bool bPlayerCollisionIgnored = false;
 };
