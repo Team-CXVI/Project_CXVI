@@ -10,6 +10,12 @@
 #include "CXVI/Foundation/Combat/CXTurnManager.h"
 #include "CXVI/Foundation/Combat/CombatMessage/CXCombatMessageData.h"
 
+#include "Character/Combat/CXCombatCharacterEnemy.h"
+#include "Foundation/GameplayData/CXGameplayDataSubsystem.h"
+#include "Foundation/UserData/CXUserDataSubsystem.h"
+#include "Foundation/UserData/CXEnemyDefinition.h"
+#include "Foundation/UserData/CXCharacterDefinition.h"
+
 #include "Foundation/GameplayMessage/CXGameplayMessageSubsystem.h"
 #include "Foundation/Scene/CXSceneSubsystem.h"
 #include "Level/CXLevelTransitionSubsystem.h"
@@ -77,8 +83,186 @@ bool UCXCombatManagerSubsystem::RequestStartBattle(FName InEncounterId, const TA
 
 	FCXCombatEnterParams Params;
 	Params.EncounterId = InEncounterId;
-	Params.PlayerClasses = CXCombatManager::ResolvePartyClasses(InPlayerClasses, LevelDefinition ? LevelDefinition->TestPlayerParty.Get() : nullptr);
-	Params.EnemyClasses = CXCombatManager::ResolvePartyClasses(InEnemyClasses, LevelDefinition ? LevelDefinition->TestEnemyParty.Get() : nullptr);
+	//Params.PlayerClasses = CXCombatManager::ResolvePartyClasses(InPlayerClasses, LevelDefinition ? LevelDefinition->TestPlayerParty.Get() : nullptr);
+	//Params.EnemyClasses = CXCombatManager::ResolvePartyClasses(InEnemyClasses, LevelDefinition ? LevelDefinition->TestEnemyParty.Get() : nullptr);
+
+	// 플레이어 생성
+	if (!InPlayerClasses.IsEmpty())
+	{
+		Params.PlayerClasses.Reserve(InPlayerClasses.Num());
+		for (const auto& PlayerClass : InPlayerClasses)
+		{
+			FCXCombatSpawnEntry& Entry = Params.PlayerClasses.AddDefaulted_GetRef();
+			Entry.CharacterClass = PlayerClass;
+		}
+	}
+	else
+	{
+		const UCXUserDataSubsystem* UserData = UCXUserDataSubsystem::TryGet(this);
+		if (!UserData)
+		{
+			UE_LOG(LogCXCombat, Warning, TEXT("유저 데이터를 읽어올수 없습니다"));
+			return false;
+		}
+
+		if (!UCXGameplayDataSubsystem::HasInstance(this))
+		{
+			UE_LOG(LogCXCombat, Warning, TEXT("[아군 스폰] GameplayDataSubsystem 조회 실패"));
+			return false;
+		}
+
+		const UCXGameplayDataSubsystem& GameplayData = UCXGameplayDataSubsystem::Get(this);
+
+		const auto& PartyMembers = UserData->GetPartyMembers();
+		Params.PlayerClasses.Reserve(PartyMembers.Num());
+
+		for (int32 MemberIndex = 0; MemberIndex < PartyMembers.Num(); ++MemberIndex)
+		{
+			const FCXPartyMemberState& Member = PartyMembers[MemberIndex];
+
+			const UCXCharacterDefinition* Definition = UserData->LoadCharacterDefinition(Member.CharacterId);
+
+			UClass* PlayerClass = Definition ? Definition->CombatCharacterClass.LoadSynchronous() : nullptr;
+
+			if (!PlayerClass || !PlayerClass->IsChildOf(ACXCombatCharacterPlayer::StaticClass()) ||
+				PlayerClass->HasAnyClassFlags(CLASS_Abstract))
+			{
+				UE_LOG(LogCXCombat, Warning, TEXT("[아군 스폰] 최대 HP 조회 실패. ID=%s Level=%d"),
+					*Member.CharacterId.ToString(), Member.Level);
+
+				return false;
+			}
+
+			const float MaxHealth = UserData->GetMemberMaxHealth(MemberIndex);
+			if (!FMath::IsFinite(MaxHealth) || MaxHealth <= 0.f)
+			{
+				UE_LOG(LogCXCombat, Warning,
+					TEXT("[아군 스폰] 최대 HP 조회 실패. ID=%s Level=%d"),
+					*Member.CharacterId.ToString(), Member.Level);
+
+				return false;
+			}
+
+			FCXCombatSpawnEntry& Entry = Params.PlayerClasses.AddDefaulted_GetRef();
+			Entry.CharacterClass = PlayerClass;
+			Entry.InitialAttributes.MaxHealth = MaxHealth;
+			Entry.InitialAttributes.CurrentHealth = Member.CurrentHealth;
+			
+			FCXInitialAttributes& Stats = Entry.InitialAttributes;
+
+			Stats.CombatSpeed = GameplayData.EvaluateCharacterStat(Definition->StatRowPrefix, "CombatSpeed", Member.Level);
+			Stats.AttackPower = GameplayData.EvaluateCharacterStat(Definition->StatRowPrefix, "AttackPower", Member.Level);
+			Stats.Defense = GameplayData.EvaluateCharacterStat(Definition->StatRowPrefix, "Defense", Member.Level);
+			Stats.CriticalChance = GameplayData.EvaluateCharacterStat(Definition->StatRowPrefix, "CriticalChance", Member.Level);
+			Stats.CriticalDamageMultiplier = GameplayData.EvaluateCharacterStat(Definition->StatRowPrefix, "CriticalDamageMultiplier", Member.Level);
+			Entry.bHasInitialAttributes = true;
+
+
+			UE_LOG(LogCXCombat, Display,
+				TEXT("[아군 스폰 준비] 슬롯=%d ID=%s Level=%d HP=%.1f/%.1f"),
+				MemberIndex, *Member.CharacterId.ToString(), Member.Level,
+				Member.CurrentHealth, MaxHealth);
+		}
+
+		/*for (const FCXPartyMemberState& Member : PartyMembers)
+		{
+			const UCXCharacterDefinition* Definition = UserData->LoadCharacterDefinition(Member.CharacterId);
+
+			UClass* PlayerClass = Definition ? Definition->CombatCharacterClass.LoadSynchronous() : nullptr;
+
+			if (!PlayerClass || !PlayerClass->IsChildOf(ACXCombatCharacterPlayer::StaticClass()) || PlayerClass->HasAnyClassFlags(CLASS_Abstract))
+			{
+				UE_LOG(LogCXCombat, Warning, TEXT("아군 전투 클래스를 로드할 수 없습니다. ID=%s"), *Member.CharacterId.ToString());
+
+				return false;
+			}
+
+			FCXCombatSpawnEntry& Entry = Params.PlayerClasses.AddDefaulted_GetRef();
+
+			Entry.CharacterClass = PlayerClass;
+
+			UE_LOG(LogCXCombat, Display, TEXT("[아군 스폰 준비] ID=%s / 클래스=%s"), *Member.CharacterId.ToString(), *GetNameSafe(PlayerClass));
+		}*/
+
+	}
+
+	int32 VictoryExp = 0;
+
+	// 적 생성
+	if (!InEnemyClasses.IsEmpty())
+	{
+		for (const auto& EnemyClass : InEnemyClasses)
+		{
+			FCXCombatSpawnEntry& Entry = Params.EnemySpawns.AddDefaulted_GetRef();
+			Entry.CharacterClass = EnemyClass;
+		}
+	}
+	else
+	{
+		if (!UCXGameplayDataSubsystem::HasInstance(this))
+		{
+			return false;
+		}
+		
+		const UCXGameplayDataSubsystem& GameplayData = UCXGameplayDataSubsystem::Get(this);
+
+		const FCXEncounterRow* Encounter = GameplayData.FindEncounterRow(InEncounterId);
+
+		if (!Encounter || Encounter->Enemies.IsEmpty())
+		{
+			UE_LOG(LogCXCombat, Warning, TEXT("인카운터가 없거나 적 파티가 비어있습니다. ID=%s"), *InEncounterId.ToString());
+
+			return false;
+		}
+
+		for (const FPrimaryAssetId& EnemyId : Encounter->Enemies)
+		{
+			UCXEnemyDefinition* Definition = GameplayData.LoadEnemyDefinition(EnemyId);
+			UClass* EnemyClass = Definition
+				? Definition->CombatCharacterClass.LoadSynchronous() : nullptr;
+
+			if (!EnemyClass || !EnemyClass->IsChildOf(ACXCombatCharacterEnemy::StaticClass()) || EnemyClass->HasAnyClassFlags(CLASS_Abstract))
+			{
+				UE_LOG(LogCXCombat, Warning, TEXT("몬스터 정의 또는 전투 클래스 확인 필요, Encounter=%s, Enemy=%s"), *InEncounterId.ToString(), *EnemyId.ToString());
+
+				return false;
+			}
+
+			const FCXMonsterStatRow* Row = GameplayData.FindMonsterStatRow(Definition->StatRowPrefix);
+
+			if (!Row || !FMath::IsFinite(Row->MaxHealth) || Row->MaxHealth <= 0.f)
+			{
+				UE_LOG(LogCXCombat, Warning,
+					TEXT("[적 스폰] 스탯 행 확인 필요. Enemy=%s Row=%s"),
+					*EnemyId.ToString(), *Definition->StatRowPrefix.ToString());
+
+				return false;
+			}
+
+			VictoryExp += Row->Exp;
+
+			FCXCombatSpawnEntry& Entry = Params.EnemySpawns.AddDefaulted_GetRef();
+			Entry.CharacterClass = EnemyClass;
+
+			FCXInitialAttributes& Stats = Entry.InitialAttributes;
+			Stats.MaxHealth = Row->MaxHealth;
+			Stats.CurrentHealth = Row->MaxHealth;
+			Stats.CombatSpeed = Row->CombatSpeed;
+			Stats.AttackPower = Row->AttackPower;
+			Stats.Defense = Row->Defense;
+			Stats.CriticalChance = Row->CriticalChance;
+			Stats.CriticalDamageMultiplier = Row->CriticalDamageMultiplier;
+			Stats.DodgeChance = Row->DodgeChance;
+			Entry.bHasInitialAttributes = true;
+
+			UE_LOG(LogCXCombat, Display,
+				TEXT("[적 스폰 준비] Row=%s HP=%.0f ATK=%.0f SPD=%.0f"),
+				*Definition->StatRowPrefix.ToString(),
+				Stats.MaxHealth, Stats.AttackPower, Stats.CombatSpeed);
+		}
+
+	
+	}
 
 	if (!CanStartBattle(Params))
 	{
@@ -94,11 +278,13 @@ bool UCXCombatManagerSubsystem::RequestStartBattle(FName InEncounterId, const TA
 
 	// 전환 설정에 따라 Push 안에서 OnEnter -> BeginBattle이 바로 호출될 수 있으므로 Push 전에 상태 변경
 	// Push 이후 OnEnter 전까지 들어오는 재요청도 이 상태로 거절
+	PendingVictoryExp = VictoryExp;
 	CombatState = ECXCombatState::Entering;
 
 	// 전환 중이면 PushScene이 거부함
 	if (!UCXSceneSubsystem::Get(this).PushScene(CombatScene, FCXSceneContext::Make(Params)))
 	{
+		PendingVictoryExp = 0;
 		CombatState = ECXCombatState::Idle;
 		return false;
 	}
@@ -167,6 +353,7 @@ void UCXCombatManagerSubsystem::EndBattle()
 	CombatArena.Reset();
 	WeakCommandCharacter.Reset();
 
+	PendingVictoryExp = 0;
 	CombatState = ECXCombatState::Idle;
 }
 
@@ -190,7 +377,7 @@ bool UCXCombatManagerSubsystem::CanStartBattle(const FCXCombatEnterParams& InPar
 		return false;
 	}
 
-	if (InParams.PlayerClasses.IsEmpty() || InParams.EnemyClasses.IsEmpty())
+	if (InParams.PlayerClasses.IsEmpty() || InParams.EnemySpawns.IsEmpty())
 	{
 		UE_LOG(LogCXCombat, Warning, TEXT("전투 요청 거절 : 파티 정보가 비어 있습니다. (요청 파티 또는 레벨 정의의 TestPlayerParty / TestEnemyParty 확인)"));
 		return false;
@@ -225,6 +412,9 @@ void UCXCombatManagerSubsystem::HandleBattleEnded(bool bInVictory, double InElap
 	FCXCombatEndMessage Message;
 	Message.bVictory = bInVictory;
 	Message.ElapsedSeconds = InElapsedSeconds;
+	Message.EarnedExp = bInVictory ? PendingVictoryExp : 0;
+
+	PendingVictoryExp = 0;
 
 	UCXGameplayMessageSubsystem::Get(this).BroadcastMessage(CXVIGameplayTags::Message_Combat_End, Message);
 }

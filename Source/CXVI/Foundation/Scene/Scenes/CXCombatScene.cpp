@@ -166,6 +166,10 @@ void UCXCombatScene::HandleCombatEnded(const FGameplayTag& InChannel, const FCXC
 
 	FCXCombatResult Result;
 	Result.bVictory = InMessage.bVictory;
+	Result.EarnedExp = InMessage.EarnedExp;
+
+	UE_LOG(LogCXScene, Display, TEXT("[전투 결과] 승리=%d 획득 EXP=%d"),
+		Result.bVictory, Result.EarnedExp);
 
 	// TODO : 도망이 구현되면 패배와 구분 (TryRunaway가 비어 있어 현재 bVictory == false는 파티 전멸뿐)
 	const bool bShown = Result.bVictory ? ShowVictoryScreen(Result) : ShowDefeatScreen();

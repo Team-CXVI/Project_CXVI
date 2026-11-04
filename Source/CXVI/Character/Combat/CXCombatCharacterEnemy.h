@@ -4,7 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "CXVI/Character/Combat/CXCombatCharacterBase.h"
+#include "Foundation/Combat/CXCombatTypes.h"
 #include "CXCombatCharacterEnemy.generated.h"
+
+class UCXEnemyDefinition;
 
 /**
  * 
@@ -17,6 +20,8 @@ class CXVI_API ACXCombatCharacterEnemy : public ACXCombatCharacterBase
 public:
 	ACXCombatCharacterEnemy();
 
+	void SetInitialAttributes(const FCXInitialAttributes& InAttributes) { InitialAttributes = InAttributes; }
+
 protected:
 	virtual void PostInitializeComponents() override;
 
@@ -25,4 +30,7 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Attribute")
 	TObjectPtr<class UCXCombatEnemyAttributeSet> AttributeSet;
+
+private:
+	FCXInitialAttributes InitialAttributes;
 };

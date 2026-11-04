@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "CXCombatCharacterBase.h"
+#include "Foundation/Combat/CXCombatTypes.h"
 
 #include "GameplayAbilitySpecHandle.h"
 #include "InputActionValue.h"
@@ -41,6 +42,8 @@ public:
 	void SkipTurn();
 	void TryRunaway();
 
+	void SetInitialAttributes(const FCXInitialAttributes& InAttributes) { InitialAttributes = InAttributes; }
+
 protected:
 	virtual void PostInitializeComponents() override;
 
@@ -73,4 +76,6 @@ protected:
 private:
 
 	bool bIsAimMode = false;
+
+	FCXInitialAttributes InitialAttributes;
 };

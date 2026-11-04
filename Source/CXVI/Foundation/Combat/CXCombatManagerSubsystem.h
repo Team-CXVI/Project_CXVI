@@ -86,4 +86,6 @@ private:
 	ECXCombatState CombatState = ECXCombatState::Idle;
 
 	double LastCombatElapsedSeconds = 0.f;
+	
+	int32 PendingVictoryExp = 0;
 };
