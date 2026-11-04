@@ -8,6 +8,7 @@
 #include "Types/CXItemTypes.h"
 #include "Types/CXEncounterTypes.h"
 #include "Types/CXMonsterStatTypes.h"
+#include "Types/CXSkillTypes.h"
 
 #include "CXGameplayDataSubsystem.generated.h"
 
@@ -62,6 +63,8 @@ public:
 	const FCXMonsterStatRow* FindMonsterStatRow(FName RowName) const;
 	UCXEnemyDefinition* LoadEnemyDefinition(const FPrimaryAssetId& EnemyId) const;
 
+	const FCXSkillRow* FindSkillRow(FName Prefix, FName SkillName) const;
+
 public:
 	UFUNCTION(BlueprintCallable, BlueprintPure = false, Category = "GameplayData|Item", meta = (DisplayName = "Find Item Row", ExpandBoolAsExecs = "ReturnValue"))
 	bool K2_FindItemRow(FName InItemId, FCXItemRow& OutRow) const;
@@ -82,6 +85,9 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UCurveTable> CharacterStatCurve;
+
+	UPROPERTY()
+	TObjectPtr<UDataTable> SkillTable;
 
 	/*UPROPERTY()
 	TObjectPtr<UCurveTable> MonsterStatCurve;*/

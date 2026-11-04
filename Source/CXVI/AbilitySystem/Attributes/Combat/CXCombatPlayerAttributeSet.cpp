@@ -10,7 +10,7 @@
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CXCombatPlayerAttributeSet)
 
 UCXCombatPlayerAttributeSet::UCXCombatPlayerAttributeSet()
-	: AP(0.f), MaxAP(10.f)
+	: AP(3.f), MaxAP(10.f)
 {
 }
 

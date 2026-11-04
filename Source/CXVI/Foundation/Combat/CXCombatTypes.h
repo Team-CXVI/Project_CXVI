@@ -75,6 +75,9 @@ struct CXVI_API FCXCombatSpawnEntry
 
 	UPROPERTY()
 	FCXInitialAttributes InitialAttributes;
+
+	UPROPERTY()
+	FName SkillRowPrefix = NAME_None;
 };
 
 // 필드 -> 전투 (FCXSceneContext Payload)

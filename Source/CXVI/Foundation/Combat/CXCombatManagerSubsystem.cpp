@@ -147,6 +147,7 @@ bool UCXCombatManagerSubsystem::RequestStartBattle(FName InEncounterId, const TA
 			Entry.CharacterClass = PlayerClass;
 			Entry.InitialAttributes.MaxHealth = MaxHealth;
 			Entry.InitialAttributes.CurrentHealth = Member.CurrentHealth;
+			Entry.SkillRowPrefix = Definition->SkillRowPrefix;
 			
 			FCXInitialAttributes& Stats = Entry.InitialAttributes;
 

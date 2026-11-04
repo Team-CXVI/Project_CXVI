@@ -650,7 +650,7 @@ void ACXCommandCharacter::SubmitActionToPlayer(const FCXActionSelection& Selecti
 
 	// 부족하면 캐릭터에 행동 제출하지 않음.
 	// 메뉴와 턴페이즈를 그대로 유지.
-	if (Selection.Type == ECXActionType::Skill && !Player->CanActivateSelectSkill(Selection.SlotIndex))
+	if (Selection.Type == ECXActionType::Skill && (!Player->PrepareSelectedSkill(Selection.SlotIndex) || !Player->CanActivateSelectSkill(Selection.SlotIndex)))
 	{
 		return;
 	}
