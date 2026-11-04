@@ -37,6 +37,10 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Stat", meta = (RequiredAssetDataTags = "RowStructure=/Script/CXVI.CXMonsterStatRow"))
 	TSoftObjectPtr<UDataTable> MonsterStatTable;
 
+	// 스킬데이터
+	UPROPERTY(Config, EditAnywhere, Category = "Skill", meta = (RequiredAssetDataTags = "RowStructure=/Script/CXVI.CXSkillRow"))
+	TSoftObjectPtr<UDataTable> SkillTable;
+
 	// 새 게임 시작 파티 / 아이템
 	UPROPERTY(Config, EditAnywhere, Category = "UserData")
 	TSoftObjectPtr<UCXNewGameData> NewGameData;
