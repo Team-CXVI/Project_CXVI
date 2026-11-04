@@ -29,6 +29,7 @@ enum class ECXWidgetInputMode : uint8
  * - InputMode로 활성화 시 입력 모드를 선언 (맨 위의 ActivatableWidget 기준으로 적용됨)
  * - 게임패드용 첫 포커스: BP의 Get Desired Focus Target 구현 → 없으면 DefaultFocusWidgetName 위젯
  * - Menu 화면은 BP에서 Is Back Handler를 켜면 뒤로가기로 자동 닫힘
+ * - Menu 화면의 방향 이동 포커스는 화면 밖으로 나가지 않음 (안쪽 패널의 Navigation 규칙이 우선)
  * - Message.UI.OpenScreen으로 열릴 때 메시지의 ContextTag를 SetScreenContext로 전달 (활성화 전, 이미 맨 위면 활성화 상태에서 호출)
  */
 UCLASS(Abstract, Blueprintable)
@@ -47,6 +48,9 @@ protected:
 
 	// 활성화 될 때마다 호출되는 함수 - 한번만 초기화되야하는 로직은 NativeOnInitialized로
 	virtual void NativeOnActivated() override;
+
+	// Menu 화면의 포커스가 아래 레이어로 넘어가지 않도록 경계 지정
+	virtual FNavigationReply NativeOnNavigation(const FGeometry& InGeometry, const FNavigationEvent& InNavigationEvent, const FNavigationReply& InDefaultReply) override;
 
 #if WITH_EDITOR
 	virtual void ValidateCompiledWidgetTree(const UWidgetTree& BlueprintWidgetTree, IWidgetCompilerLog& CompileLog) const override;
