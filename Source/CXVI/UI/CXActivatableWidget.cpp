@@ -52,6 +52,20 @@ void UCXActivatableWidget::NativeOnActivated()
 #endif
 }
 
+FNavigationReply UCXActivatableWidget::NativeOnNavigation(const FGeometry& InGeometry, const FNavigationEvent& InNavigationEvent, const FNavigationReply& InDefaultReply)
+{
+	const FNavigationReply Reply = Super::NativeOnNavigation(InGeometry, InNavigationEvent, InDefaultReply);
+
+	// 경계가 없으면 Slate가 화면 전체에서 다음 포커스를 찾으므로 아래 레이어의 버튼까지 후보가 됨
+	// 안쪽 패널에 규칙이 있으면 여기까지 오지 않고, WBP 루트에 지정한 규칙은 그대로 유지
+	if (InputMode == ECXWidgetInputMode::Menu && Reply.GetBoundaryRule() == EUINavigationRule::Escape)
+	{
+		return FNavigationReply::Stop();
+	}
+
+	return Reply;
+}
+
 #if WITH_EDITOR
 void UCXActivatableWidget::ValidateCompiledWidgetTree(const UWidgetTree& BlueprintWidgetTree, IWidgetCompilerLog& CompileLog) const
 {
