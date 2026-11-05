@@ -62,7 +62,7 @@ protected:
 
 	virtual void SelectActionPhase() override;
 	virtual void SelectTargetPhase() override;
-	//virtual void ActionPhase() override;
+	virtual bool ActionPhase() override;
 
 private:
 	const FGameplayAbilitySpec* FindPreparedSkillSpec(int32 SlotIndex) const;
@@ -80,11 +80,28 @@ protected:
 	//UPROPERTY(EditDefaultsOnly, Category = "Combat|Skills")
 	//TArray<TSubclassOf<class UGameplayAbility>> SkillAbilities;
 
+
+
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Attribute")
 	TObjectPtr<class UCXCombatPlayerAttributeSet> AttributeSet;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
 	TObjectPtr<class UCXJustTimingComponent> JustTimingComponent;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
+	TObjectPtr<class USceneComponent> ActionFocusPoint;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
+	TObjectPtr<class USceneComponent> ItemFocusPoint;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
+	TObjectPtr<class USceneComponent> AttackingFocus;
+
+
+
+
+
 private:
 
 	bool bIsAimMode = false;

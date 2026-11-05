@@ -10,6 +10,7 @@
 #include "Character/Combat/Components/CXJustTimingComponent.h"
 #include "Foundation/GameplayData/CXGameplayDataSubsystem.h"
 #include "AbilitySystem/Abilities/Combat/CXGameplayAbilityCombatBase.h"
+#include "Foundation/Combat/CXCombatManagerSubsystem.h"
 
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
@@ -46,6 +47,21 @@ ACXCombatCharacterPlayer::ACXCombatCharacterPlayer()
 	AttributeSet = CreateDefaultSubobject<UCXCombatPlayerAttributeSet>(TEXT("AttributeSet"));
 	ASC->AddAttributeSetSubobject<UCXCombatPlayerAttributeSet>(AttributeSet);
 	
+	// 카메라 표적
+	ActionFocusPoint = CreateDefaultSubobject<USceneComponent>(TEXT("ActionMenuFocus"));
+	ActionFocusPoint->SetupAttachment(RootComponent);
+	ActionFocusPoint->SetRelativeLocation(FVector(0.f, 0.f, 44.f));
+	ActionFocusPoint->ComponentTags.AddUnique(FName(TEXT("ActionMenuFocus")));
+
+	ItemFocusPoint = CreateDefaultSubobject<USceneComponent>(TEXT("ItemMenuFocus"));
+	ItemFocusPoint->SetupAttachment(RootComponent);
+	ItemFocusPoint->SetRelativeLocation(FVector(0.f, 0.f, 44.f));
+	ItemFocusPoint->ComponentTags.AddUnique(FName(TEXT("ItemMenuFocus")));
+
+	AttackingFocus = CreateDefaultSubobject<USceneComponent>(TEXT("AttackingFocus"));
+	AttackingFocus->SetupAttachment(RootComponent);
+	AttackingFocus->SetRelativeLocation(FVector(0.f, 0.f, 44.f));
+	AttackingFocus->ComponentTags.AddUnique(FName(TEXT("AttackingFocus")));
 
 	//static ConstructorHelpers::FClassFinder<UAnimInstance> CharacterAnimRef(
 	//	TEXT("/Game/CXVI/Characters/Combat/Animation/ABP_Combat_Character.ABP_Combat_Character_C")
@@ -409,6 +425,27 @@ void ACXCombatCharacterPlayer::SelectTargetPhase()
 	OnTargetSelectionRequested.Broadcast(this, GetTargetCandidates());
 
 	// 대상 확정 전이므로 응답하지 않음.
+}
+
+bool ACXCombatCharacterPlayer::ActionPhase()
+{
+	if (!Super::ActionPhase())
+	{
+		return false;
+	}
+
+	const ECXActionType ActionType = GetPendingAction().Type;
+	if (ActionType == ECXActionType::BasicAttack ||
+		ActionType == ECXActionType::Skill)
+	{
+		if (const UCXCombatManagerSubsystem* CombatManager =
+			UCXCombatManagerSubsystem::TryGet(this))
+		{
+			CombatManager->RequestCameraPreset(TEXT("Menu.Action"), this);
+		}
+	}
+
+	return true;
 }
 
 const FGameplayAbilitySpec* ACXCombatCharacterPlayer::FindPreparedSkillSpec(int32 SlotIndex) const

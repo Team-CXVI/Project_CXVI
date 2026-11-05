@@ -13,6 +13,7 @@
 class ACXCombatArena;
 class ACXCommandCharacter;
 class ACXCombatCharacterBase;
+class ACXCombatCharacterPlayer;
 class UCXTurnManager;
 class UCXLevelDefinition;
 
@@ -50,8 +51,9 @@ public:
 
 	FORCEINLINE ECXCombatState GetCombatState() const { return CombatState; }
 
-	// 커맨드 Pawn의 카메라 전환에서 사용
-	FORCEINLINE ACXCombatArena* GetCombatArena() const { return CombatArena.Get(); }
+	void RequestMenuCamera(ECommandMenuState MenuState, const ACXCombatCharacterBase* CameraSubject) const;
+	void RequestCameraPreset(FName PresetId, const ACXCombatCharacterBase* CameraSubject) const;
+	void RequestToggleAimCamera(ACXCombatCharacterPlayer* Player) const;
 
 	FORCEINLINE double GetLastCombatElapsedSeconds() const { return LastCombatElapsedSeconds; }
 

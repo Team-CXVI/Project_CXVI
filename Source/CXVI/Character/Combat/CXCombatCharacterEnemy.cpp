@@ -5,6 +5,7 @@
 
 #include "CXVI/AbilitySystem/Attributes/Combat/CXCombatEnemyAttributeSet.h"
 #include "Foundation/Combat/CombatMessage/CXCombatMessageData.h"
+#include "Foundation/Combat/CXCombatManagerSubsystem.h"
 
 #include "Foundation/Combat/CXCollisionChannels.h"
 
@@ -32,6 +33,11 @@ ACXCombatCharacterEnemy::ACXCombatCharacterEnemy()
 
 	AttributeSet = CreateDefaultSubobject<UCXCombatEnemyAttributeSet>(TEXT("AttributeSet"));
 	ASC->AddAttributeSetSubobject<UCXCombatEnemyAttributeSet>(AttributeSet);
+
+	EnemyTargetFocusPoint = CreateDefaultSubobject<USceneComponent>(TEXT("EnemyTargetFocusPoint"));
+	EnemyTargetFocusPoint->SetupAttachment(RootComponent);
+	EnemyTargetFocusPoint->SetRelativeLocation(FVector(0.f, 0.f, 44.f));
+	EnemyTargetFocusPoint->ComponentTags.AddUnique(FName(TEXT("TargetSelectFocus")));
 
 	
 	//CharacterAttributeSet = AttributeSet;
@@ -94,10 +100,16 @@ void ACXCombatCharacterEnemy::SelectTargetPhase()
 			if (Index == RandTargetIndex)
 			{
 				CurrentTargetPawn = Target;
+
+				if (const UCXCombatManagerSubsystem* CombatManager = UCXCombatManagerSubsystem::TryGet(this))
+				{
+					CombatManager->RequestCameraPreset(TEXT("Menu.Action"), Target);
+				}
 			}
+
+			
 		}
 	}
-
 
 	// 선택을 하지않고 취소를 할경우 이전 페이즈로 돌아간다.
 
