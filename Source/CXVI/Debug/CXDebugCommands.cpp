@@ -190,15 +190,15 @@ namespace CXLevelDebug
 
 namespace CXCombatDebug
 {
-	// CXVI.Combat.Start <EncounterId>
+	// CXVI.Combat.Start <EncounterId> [Player]
 	static FAutoConsoleCommandWithWorldAndArgs CombatStartCommand(
 		TEXT("CXVI.Combat.Start"),
-		TEXT("전투 매니저에 전투 진입을 요청합니다. (전투 씬 = 현재 레벨 정의의 CombatScene) 사용법: CXVI.Combat.Start <EncounterId>"),
+		TEXT("전투 매니저에 전투 진입을 요청합니다. (전투 씬 = 현재 레벨 정의의 CombatScene) 사용법: CXVI.Combat.Start <EncounterId> [Player] (Player = 플레이어 선공)"),
 		FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& InArgs, UWorld* InWorld)
 			{
-				if (InArgs.Num() != 1)
+				if (InArgs.Num() < 1 || InArgs.Num() > 2)
 				{
-					UE_LOG(LogCXCombat, Warning, TEXT("사용법: CXVI.Combat.Start <EncounterId>"));
+					UE_LOG(LogCXCombat, Warning, TEXT("사용법: CXVI.Combat.Start <EncounterId> [Player]"));
 					return;
 				}
 
@@ -209,8 +209,12 @@ namespace CXCombatDebug
 					return;
 				}
 
+				FCXCombatEnterParams Params;
+				Params.EncounterId = FName(*InArgs[0]);
+				Params.bIsPlayerAttack = InArgs.IsValidIndex(1) && InArgs[1].Equals(TEXT("Player"), ESearchCase::IgnoreCase);
+				UE_LOG(LogCXCombat, Log, TEXT("플레이어 선공 조건: %s"), Params.bIsPlayerAttack ? TEXT("true") : TEXT("false"));
 				// 거절 사유는 매니저가 로그로 남김
-				CombatManager->RequestStartBattle(FName(*InArgs[0]));
+				CombatManager->RequestStartBattle(Params);
 			}));
 
 	// CXVI.Combat.End [win|lose]

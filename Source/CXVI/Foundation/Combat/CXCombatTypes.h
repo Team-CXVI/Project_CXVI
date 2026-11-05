@@ -116,6 +116,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
 	FName EncounterId;
 
+	UPROPERTY(Transient)
+	bool bIsPlayerAttack = false;
+
 	// TODO : 임시. 파티 정보 출처가 정해지면 EncounterId 조회로 변경
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
 	TArray<FCXCombatSpawnEntry> PlayerClasses;
