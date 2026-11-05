@@ -31,6 +31,11 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Attribute")
 	TObjectPtr<class UCXCombatEnemyAttributeSet> AttributeSet;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Focus")
+	TObjectPtr<class USceneComponent> EnemyTargetFocusPoint;
+
 private:
 	FCXInitialAttributes InitialAttributes;
+
+	
 };

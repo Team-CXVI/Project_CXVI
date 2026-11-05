@@ -88,6 +88,20 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
 	TObjectPtr<class UCXJustTimingComponent> JustTimingComponent;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
+	TObjectPtr<class USceneComponent> ActionFocusPoint;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
+	TObjectPtr<class USceneComponent> ItemFocusPoint;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
+	TObjectPtr<class USceneComponent> AttackingFocus;
+
+
+
+
+
 private:
 
 	bool bIsAimMode = false;

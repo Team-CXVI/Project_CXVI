@@ -47,6 +47,21 @@ ACXCombatCharacterPlayer::ACXCombatCharacterPlayer()
 	AttributeSet = CreateDefaultSubobject<UCXCombatPlayerAttributeSet>(TEXT("AttributeSet"));
 	ASC->AddAttributeSetSubobject<UCXCombatPlayerAttributeSet>(AttributeSet);
 	
+	// 카메라 표적
+	ActionFocusPoint = CreateDefaultSubobject<USceneComponent>(TEXT("ActionMenuFocus"));
+	ActionFocusPoint->SetupAttachment(RootComponent);
+	ActionFocusPoint->SetRelativeLocation(FVector(0.f, 0.f, 44.f));
+	ActionFocusPoint->ComponentTags.AddUnique(FName(TEXT("ActionMenuFocus")));
+
+	ItemFocusPoint = CreateDefaultSubobject<USceneComponent>(TEXT("ItemMenuFocus"));
+	ItemFocusPoint->SetupAttachment(RootComponent);
+	ItemFocusPoint->SetRelativeLocation(FVector(0.f, 0.f, 44.f));
+	ItemFocusPoint->ComponentTags.AddUnique(FName(TEXT("ItemMenuFocus")));
+
+	AttackingFocus = CreateDefaultSubobject<USceneComponent>(TEXT("AttackingFocus"));
+	AttackingFocus->SetupAttachment(RootComponent);
+	AttackingFocus->SetRelativeLocation(FVector(0.f, 0.f, 44.f));
+	AttackingFocus->ComponentTags.AddUnique(FName(TEXT("AttackingFocus")));
 
 	//static ConstructorHelpers::FClassFinder<UAnimInstance> CharacterAnimRef(
 	//	TEXT("/Game/CXVI/Characters/Combat/Animation/ABP_Combat_Character.ABP_Combat_Character_C")
