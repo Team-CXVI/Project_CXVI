@@ -178,7 +178,13 @@ void UCXGA_FieldPlayerAttack::OnAttackHitEvent(FGameplayEventData Payload)
 
 	if (UCXCombatManagerSubsystem* Subsystem = UCXCombatManagerSubsystem::TryGet(GetWorld()))
 	{
-		Subsystem->RequestStartBattle(Enemy->GetEncounterId());
+		FCXCombatEnterParams Params;
+		Params.EncounterId = Enemy->GetEncounterId();
+		Params.bIsPlayerAttack = true;
+
+		UE_LOG(LogTemp, Log, TEXT("플레이어 선공: %s"), Params.bIsPlayerAttack ? TEXT("true") : TEXT("false"));
+
+		Subsystem->RequestStartBattle(Params);
 	}
 
 	UCXFieldEnemySubsystem* EnemySubsystem = World->GetSubsystem<UCXFieldEnemySubsystem>();

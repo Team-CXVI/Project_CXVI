@@ -77,15 +77,14 @@ void UCXCombatManagerSubsystem::PostInitialize()
 	TurnManager->OnUpcomingTurnsChanged.AddUObject(this, &ThisClass::HandleUpcomingTurnsChanged);
 }
 
-bool UCXCombatManagerSubsystem::RequestStartBattle(FName InEncounterId, const TArray<TSubclassOf<ACXCombatCharacterBase>>& InPlayerClasses, const TArray<TSubclassOf<ACXCombatCharacterBase>>& InEnemyClasses)
+bool UCXCombatManagerSubsystem::RequestStartBattle(const FCXCombatEnterParams& InEnterCombatParams, const TArray<TSubclassOf<ACXCombatCharacterBase>>& InPlayerClasses, const TArray<TSubclassOf<ACXCombatCharacterBase>>& InEnemyClasses)
 {
 	const UCXLevelDefinition* LevelDefinition = GetCurrentLevelDefinition();
 
-	FCXCombatEnterParams Params;
-	Params.EncounterId = InEncounterId;
+	FCXCombatEnterParams Params = InEnterCombatParams;
 	//Params.PlayerClasses = CXCombatManager::ResolvePartyClasses(InPlayerClasses, LevelDefinition ? LevelDefinition->TestPlayerParty.Get() : nullptr);
 	//Params.EnemyClasses = CXCombatManager::ResolvePartyClasses(InEnemyClasses, LevelDefinition ? LevelDefinition->TestEnemyParty.Get() : nullptr);
-
+	const FName InEncounterId = InEnterCombatParams.EncounterId;
 	// 플레이어 생성
 	if (!InPlayerClasses.IsEmpty())
 	{
@@ -207,7 +206,9 @@ bool UCXCombatManagerSubsystem::RequestStartBattle(FName InEncounterId, const TA
 		
 		const UCXGameplayDataSubsystem& GameplayData = UCXGameplayDataSubsystem::Get(this);
 
-		const FCXEncounterRow* Encounter = GameplayData.FindEncounterRow(InEncounterId);
+
+
+		const FCXEncounterRow* Encounter = GameplayData.FindEncounterRow(InEnterCombatParams.EncounterId);
 
 		if (!Encounter || Encounter->Enemies.IsEmpty())
 		{
@@ -290,7 +291,7 @@ bool UCXCombatManagerSubsystem::RequestStartBattle(FName InEncounterId, const TA
 		return false;
 	}
 
-	UE_LOG(LogCXCombat, Log, TEXT("전투 진입 요청 : %s"), *InEncounterId.ToString());
+	UE_LOG(LogCXCombat, Log, TEXT("전투 진입 요청 : %s / 플레이어 선공=%s"), *InEncounterId.ToString(), Params.bIsPlayerAttack ? TEXT("true") : TEXT("false"));
 	return true;
 }
 

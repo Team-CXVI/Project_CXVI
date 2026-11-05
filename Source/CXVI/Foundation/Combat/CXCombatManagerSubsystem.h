@@ -38,7 +38,7 @@ public:
 	// 전투 진입 요청. 조건이 맞으면 현재 레벨 정의의 전투 Scene을 Push (거절되면 false)
 	// - 파티를 넘기지 않으면(빈 배열) 현재 레벨 정의의 테스트 파티 사용
 	// TODO : 파티 정보 출처가 정해지면 InEncounterId만 받도록 변경
-	bool RequestStartBattle(FName InEncounterId,
+	bool RequestStartBattle(const FCXCombatEnterParams& InEncounterId,
 		const TArray<TSubclassOf<ACXCombatCharacterBase>>& InPlayerClasses = TArray<TSubclassOf<ACXCombatCharacterBase>>(),
 		const TArray<TSubclassOf<ACXCombatCharacterBase>>& InEnemyClasses = TArray<TSubclassOf<ACXCombatCharacterBase>>());
 

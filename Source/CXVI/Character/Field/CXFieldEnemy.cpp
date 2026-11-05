@@ -257,7 +257,11 @@ void ACXFieldEnemy::NotifyAttackHit()
 	// TODO : 전투에 필요한 캐릭터 정리 (파티 정보 출처가 정해지기 전에는 레벨 정의의 테스트 파티로 진행)
 	if (UCXCombatManagerSubsystem* Subsystem = UCXCombatManagerSubsystem::TryGet(GetWorld()))
 	{
-		Subsystem->RequestStartBattle(GetEncounterId());
+		FCXCombatEnterParams Params;
+		Params.EncounterId = GetEncounterId();
+		Params.bIsPlayerAttack = false;
+		UE_LOG(LogTemp, Log, TEXT("플레이어 선공: %s"), Params.bIsPlayerAttack ? TEXT("true") : TEXT("false"));
+		Subsystem->RequestStartBattle(Params);
 	}
 
 	UCXFieldEnemySubsystem* EnemySubsystem = World->GetSubsystem<UCXFieldEnemySubsystem>();
