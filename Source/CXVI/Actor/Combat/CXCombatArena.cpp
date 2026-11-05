@@ -5,7 +5,9 @@
 #include "CXVI/Character/Combat/CXCombatCharacterBase.h"
 #include "Character/Combat/CXCombatCharacterEnemy.h"
 #include "Character/Combat/CXCombatCharacterPlayer.h"
+#include "Actor/Combat/CXCombatMenuCameraData.h"
 
+#include "Components/SceneComponent.h"
 #include "Components/ArrowComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Engine/World.h"
@@ -17,6 +19,9 @@
 
 ACXCombatArena::ACXCombatArena()
 {
+	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bStartWithTickEnabled = false;
+
 	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("RootComp"));
 
 	BattleCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("BattleCamera"));
@@ -122,6 +127,115 @@ FTransform ACXCombatArena::GetEnemySlotFromIndex(int32 InIndex) const
 	}
 
 	return FTransform();
+}
+
+void ACXCombatArena::ShowMenuCamera(ECommandMenuState MenuState, const ACXCombatCharacterBase* CameraSubject)
+{
+	if (IsValid(MenuCameraData.Get()))
+	{
+		if (const FName* PresetId = MenuCameraData->MenuCameraIds.Find(MenuState))
+		{
+			ShowCameraPreset(*PresetId, CameraSubject);
+		}
+	}
+}
+
+void ACXCombatArena::ShowCameraPreset(FName PresetId, const ACXCombatCharacterBase* CameraSubject)
+{
+	if (PresetId.IsNone() || !IsValid(MenuCameraData.Get()) ||
+		!IsValid(CameraSubject) || !IsValid(BattleCamera.Get()))
+	{
+		return;
+	}
+
+	const FCXMenuCameraPreset* Preset = MenuCameraData->CameraPresets.Find(PresetId);
+
+	if (!Preset)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[전투 카메라] 프리셋 '%s'를 찾지 못했습니다."),
+			*PresetId.ToString());
+		return;
+	}
+
+	const FTransform CurrentTransform = CameraSubject->GetActorTransform();
+	FTransform CameraAnchor = CurrentTransform;
+
+	if (Preset->bUseOriginLocation)
+	{
+		const FTransform& Origin = CameraSubject->GetOriginTransform();
+		FVector HomeLocation = Origin.GetLocation();
+
+		// 현재 아레나의 복귀 보정과 같은 방식으로 XY만 원래 자리 사용.
+		HomeLocation.Z = CurrentTransform.GetLocation().Z;
+
+		CameraAnchor.SetLocation(HomeLocation);
+		CameraAnchor.SetRotation(Origin.GetRotation());
+	}
+
+	const FVector SubjectLocation = CameraAnchor.GetLocation();
+	FVector FocusLocation = SubjectLocation;
+
+	if (!Preset->FocusName.IsNone())
+	{
+		const USceneComponent* FocusComponent =
+			CameraSubject->FindComponentByTag<USceneComponent>(Preset->FocusName);
+		if (!IsValid(FocusComponent))
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[전투 카메라] %s에서 시선점 태그 '%s'를 찾지 못했습니다."),
+				*GetNameSafe(CameraSubject), *Preset->FocusName.ToString());
+			return;
+		}
+		const FVector LocalFocus = CurrentTransform.InverseTransformPosition(
+			FocusComponent->GetComponentLocation());
+
+		FocusLocation = CameraAnchor.TransformPosition(LocalFocus);
+	}
+
+	const FVector WorldOffset =
+		CameraSubject->GetOriginTransform().TransformVectorNoScale(Preset->CameraOffset);
+	const FVector TargetLocation = SubjectLocation + WorldOffset;
+	const FVector LookDirection = FocusLocation - TargetLocation;
+
+	if (LookDirection.IsNearlyZero())
+	{
+		return;
+	}
+
+	// 이동 중 구도가 바뀌면 현재 카메라 위치와 회전에서 이어간다.
+	CameraBlendStartLocation = BattleCamera->GetComponentLocation();
+	CameraBlendStartRotation = BattleCamera->GetComponentQuat();
+	CameraBlendTargetLocation = TargetLocation;
+	CameraBlendTargetRotation = LookDirection.Rotation().Quaternion();
+	CameraBlendElapsed = 0.f;
+	bIsCameraBlending = true;
+	SetActorTickEnabled(true);
+}
+
+void ACXCombatArena::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+	
+	if (!bIsCameraBlending || !IsValid(BattleCamera.Get()))
+	{
+		return;
+	}
+
+	constexpr float BlendDuration = 0.3f;
+	CameraBlendElapsed += DeltaSeconds;
+
+	const float Alpha = FMath::Clamp(CameraBlendElapsed / BlendDuration, 0.f, 1.f);
+	const float Blend = FMath::SmoothStep(0.f, 1.f, Alpha);
+
+
+
+	BattleCamera->SetWorldLocationAndRotation(
+		FMath::Lerp(CameraBlendStartLocation, CameraBlendTargetLocation, Blend),
+		FQuat::Slerp(CameraBlendStartRotation, CameraBlendTargetRotation, Blend));
+
+	if (Alpha >= 1.f)
+	{
+		bIsCameraBlending = false;
+	}
 }
 
 bool ACXCombatArena::SpawnParty(const TArray<FCXCombatSpawnEntry>& InEntries, bool bInPlayerParty)

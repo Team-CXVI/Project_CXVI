@@ -28,6 +28,32 @@ enum class ECXCombatState : uint8
 };
 
 USTRUCT()
+struct FCXMenuCameraPreset
+{
+	GENERATED_BODY()
+
+	// 캐릭터 기준 카메라 위치. X는 앞, Y는 오른쪽, Z는 위.
+	UPROPERTY(EditAnywhere, Category = "Camera")
+	FVector CameraOffset = FVector(-450.f, 200.f, 120.f);
+
+	// 플레이어 BP에 배치한 시선 기준점
+	UPROPERTY(EditAnywhere, Category = "Camera")
+	FName FocusName = NAME_None;
+
+	UPROPERTY(EditAnywhere, Category = "Camera")
+	bool bUseOriginLocation = false;
+};
+
+UENUM()
+enum class ECommandMenuState :uint8
+{
+	ActionMenu,
+	ItemMenu,
+	SkillMenu,
+	TargetSelect
+};
+
+USTRUCT()
 struct FCXInitialAttributes
 {
 	GENERATED_BODY()

@@ -7,6 +7,7 @@
 
 #include "CXVI/AbilitySystem/Attributes/Combat/CXCombatAttributeSetBase.h"
 
+
 #include "AI/Combat/CXCombatAIController.h"
 
 #include "Components/CapsuleComponent.h"
@@ -768,6 +769,8 @@ bool ACXCombatCharacterBase::ActionPhase()
 
 	bWaitingForReturn = true;
 
+
+
 	if (!AIController->RequestCombatAction(Target, AttackLocation, OriginTransform.GetLocation(), ShouldApproachTarget()))
 	{
 
@@ -775,6 +778,7 @@ bool ACXCombatCharacterBase::ActionPhase()
 		bWaitingForReturn = false;
 		return false;
 	}
+
 
 	return true;
 }

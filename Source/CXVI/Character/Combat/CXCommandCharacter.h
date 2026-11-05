@@ -9,20 +9,14 @@
 #include "CXVI/Foundation/Combat/CombatMessage/CXCombatMessageData.h"
 #include "CXVI/Character/Combat/Data/CXCombatInputData.h"
 #include "Subsystems/CXInputControlSubsystem.h"
+#include "CXVI/Foundation/Combat/CXCombatTypes.h"
 #include "Foundation/GameplayMessage/CXGameplayMessageSubsystem.h"
 
 #include <InputActionValue.h>
 
 #include "CXCommandCharacter.generated.h"
 
-UENUM()
-enum class ECommandMenuState :uint8
-{
-	ActionMenu,
-	ItemMenu,
-	SkillMenu,
-	TargetSelect
-};
+
 
 UCLASS()
 class CXVI_API ACXCommandCharacter : public APawn
@@ -38,6 +32,7 @@ public:
 	// Setter
 	void SetCombatInputMode(ECXCombatInputMode NewMode);
 	void SetMenuState(ECommandMenuState NewState);
+	void RefreshMenuCamera() const;
 
 
 
