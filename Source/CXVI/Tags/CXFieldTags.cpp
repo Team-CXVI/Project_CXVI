@@ -1,0 +1,21 @@
+#include "CXFieldTags.h"
+
+namespace CXVIFieldTag
+{
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_MovingBlock, "State.MovingBlock", "플레이어 이동 제한 상태");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Airborne, "State.Airborne", "캐릭터가 지상을 벗어난 상태");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_BlockInteractionUI, "State.BlockInteractionUI", "어빌리티 사용 중 상호작용 안내 차단");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_CanGrapplingHook, "State.CanGrapplingHook","플레이어 그래플링 가능 상태");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_CanUseExpeditionFlag, "State.CanUseExpeditionFlag","플레이어 원정대 깃발 사용 가능 상태");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_CanUseRope, "State.CanUseRope","플레이어 로프 사용 가능 상태");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_InMenu, "State.InMenu","깃발 메뉴가 열린 상태. 상호작용 안내를 숨기고 이동을 막는다 (임시: 점프 키로 해제)");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_CanPickupItem, "State.CanPickupItem","플레이어 필드 아이템 획득 가능 상태");
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Input_Field_Sprint, "Input.Field.Sprint","플레이어 스프린트 입력");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Input_Field_Attack, "Input.Field.Attack","플레이어 공격");
+
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Event_Field_ShowCable, "Event.Field.ShowCable","그래플링 성공 시 케이블이 보이는 이벤트");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Event_Field_StartGrapplingHook, "Event.Field.StartMove","그래플링 성공 시 플레이어 비행 시작을 알리는 이벤트");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Event_Field_AttackHit, "Event.Field.AttackHit","필드 공격의 타격 판정 시점");
+}

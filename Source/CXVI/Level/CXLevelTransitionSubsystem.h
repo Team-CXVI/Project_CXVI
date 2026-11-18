@@ -1,0 +1,177 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "Subsystems/GameInstanceSubsystem.h"
+
+#include "CXLevelTransitionSubsystem.generated.h"
+
+class UCXLevelDefinition;
+class APlayerCameraManager;
+class UPackage;
+
+DECLARE_LOG_CATEGORY_EXTERN(LogCXLevelTransition, Log, All);
+
+DECLARE_MULTICAST_DELEGATE_OneParam(FCXOnLevelTransition, const UCXLevelDefinition* /*TargetLevel*/);
+
+/**
+ * 레벨 간 전환 관리
+ * - 타이틀 이동은 TravelToTitle, 인게임 레벨 이동은 TravelToLevel 호출 (두 함수는 내부에서 같은 이동 경로를 사용)
+ * - 전환 = 이동 요청부터 도착한 레벨의 준비 완료(NotifyLevelReady)까지
+ * - 레벨 열기 = 퍼시스턴트 + 첫 Scene 서브레벨까지 열린 상태 (서브레벨은 플레이어 스폰 전에 동기 로드)
+ * - 전환 구간의 화면 가림 / 공개는 이 Subsystem만 담당 (월드가 바뀌어도 가림 상태 유지)
+ * - 전환 중에는 다른 이동 요청과 게임 종료를 거부
+ * - 진입 태그를 보관해서 도착한 GameMode가 스폰 위치를 고를 수 있게 함
+ * - 세션 데이터는 다루지 않음
+ * - 페이드 아웃이 끝나 화면이 가려지면 레벨을 열기 직전에 OnScreenCovered 방송 (보이면 안 되는 데이터 교체 시점)
+ * - 화면 가림을 바꿀 때 Message.Screen.Fade 방송 (UI가 같은 값으로 따라감)
+ * - 로딩 페이즈 : 페이드 아웃이 끝나면 목적지 레벨 + 첫 Scene 서브레벨 패키지를 비동기로 선로딩한 뒤 레벨을 연다
+ *   선로딩 중에는 이전 월드를 일시정지하고 Message.Level.Loading 방송 (로딩 UI 표시 / 숨김은 UI가 판단)
+ *   선로딩한 월드는 LoadMap의 GC에 지워지지 않도록 새 월드의 첫 Scene 서브레벨 로드가 끝날 때까지 보관
+ *   선로딩 실패 = 그 패키지만 레벨을 열 때 동기로 읽힘 (이동은 계속 진행)
+ * 
+ * *도착한 레벨의 GameMode는 준비가 끝나면 반드시 NotifyLevelReady()를 호출해서 레벨 준비가 끝났다는걸 알려야 함
+ */
+UCLASS()
+class CXVI_API UCXLevelTransitionSubsystem : public UGameInstanceSubsystem
+{
+	GENERATED_BODY()
+	
+public:
+	static UCXLevelTransitionSubsystem& Get(const UObject* WorldContextObject);
+
+	static UCXLevelTransitionSubsystem* TryGet(const UObject* WorldContextObject);
+
+	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
+
+	virtual void Deinitialize() override;
+
+public:
+	// 타이틀 레벨(Settings.TitleLevel에 설정된 레벨 정의)로 이동
+	UFUNCTION(BlueprintCallable, Category = "CXVI|LevelTransition")
+	bool TravelToTitle();
+
+	// 인게임 레벨로 이동. InEntryTag가 None이면 도착 레벨 정의의 DefaultEntryTag 사용
+	// 타이틀 레벨 ID는 거부 (TravelToTitle 사용)
+	UFUNCTION(BlueprintCallable, Category = "CXVI|LevelTransition")
+	bool TravelToLevel(UPARAM(meta = (AllowedTypes = "CXLevelDefinition")) FPrimaryAssetId InLevelId, FName InEntryTag);
+
+	UFUNCTION(BlueprintCallable, Category = "CXVI|LevelTransition")
+	bool QuitGame();
+
+	// 레벨 전이 중인지 체크
+	UFUNCTION(BlueprintPure, Category = "CXVI|LevelTransition")
+	bool IsTransitioning() const { return bIsTransitioning; }
+
+	// 현재 레벨의 레벨 정의 (정의가 없는 레벨이면 nullptr)
+	const UCXLevelDefinition* GetCurrentLevelDefinition() const { return CurrentDefinition; }
+
+	// 레벨 ID로 레벨 정의를 동기 로드. 저장 슬롯 표시 등 이동 없이 정의가 필요할 때 사용
+	UCXLevelDefinition* LoadLevelDefinition(const FPrimaryAssetId& InLevelId) const;
+
+	// 현재 레벨의 GameMode가 스폰할 위치 Tag
+	FName GetPendingEntryTag() const { return PendingEntryTag; }
+
+	// 새 월드의 CameraManager가 생성되면 호출. 전환 중이면 첫 프레임부터 화면을 가린 상태로 시작
+	void ApplyScreenCover(APlayerCameraManager* InCameraManager) const;
+
+	// 도착한 레벨의 GameMode가 레벨 준비 완료 시 호출 -> 화면 공개 후 전환 종료. 레벨 전환 상태에서만 처리
+	void NotifyLevelReady();
+
+private:
+	// TravelToTitle / TravelToLevel 공통 이동 경로
+	bool BeginTransition(UCXLevelDefinition* InDefinition, FName InEntryTag);
+
+	// 요청 없이 시작된 월드(부트 맵, 에디터에서 바로 PIE)의 레벨 정의 검색
+	UCXLevelDefinition* FindLevelDefinitionForWorld(const UWorld* InWorld) const;
+
+	// 액터 초기화 직후(플레이어 스폰 전) : 현재 레벨 정의 결정 + 첫 Scene 서브레벨 동기 로드
+	void HandleWorldActorsInitialized(const UWorld::FActorsInitializedParams& InParams);
+
+	// Return Value
+	// true = 페이드 대기 시작 (완료 시 InOnComplete 호출)
+	// false = 즉시 완료 (InOnComplete는 호출하지 않으므로 호출한 쪽에서 바로 이어서 처리)
+	bool StartCameraFade(bool bInFadeOut, float InDuration, const FLinearColor& InColor, const FTimerDelegate& InOnComplete);
+
+	void BroadcastScreenFade(float InFromAlpha, float InToAlpha, float InDuration) const;
+
+	// 페이드 아웃 완료 후 : 목적지 레벨 + 첫 Scene 서브레벨 비동기 선로딩. 읽을 패키지가 없으면 바로 레벨 열기
+	void BeginPreload();
+
+	// 패키지 하나의 비동기 로드 완료. InPreloadSerial이 현재 요청 번호와 다르면 취소된 요청이므로 무시
+	void HandlePreloadCompleted(const FName& InPackageName, UPackage* InPackage, EAsyncLoadingResult::Type InResult, uint32 InPreloadSerial);
+
+	void BroadcastLevelLoading(bool bInIsLoading) const;
+
+	void OpenPendingLevel();
+
+	// 공개 페이드 인이 끝나면 전환 종료
+	void FinishTransition();
+
+	void HandleTravelFailure(UWorld* InWorld, ETravelFailure::Type InFailureType, const FString& InErrorString);
+
+	void ResetTransition();
+
+#if !UE_BUILD_SHIPPING
+	void ValidateSettings() const;
+#endif // !UE_BUILD_SHIPPING
+
+public:
+	FCXOnLevelTransition OnTransitionStarted;
+
+	// 페이드 시간이 0이면 TravelToLevel / TravelToTitle 안에서 바로 방송되므로 이동 요청 전에 구독
+	FCXOnLevelTransition OnScreenCovered;
+
+	FCXOnLevelTransition OnTransitionFinished;
+
+private:
+	// 이동 중인 목표 레벨 정의 (레벨 이동 중에도 GC되지 않도록 UPROPERTY)
+	UPROPERTY()
+	TObjectPtr<UCXLevelDefinition> PendingDefinition;
+
+	// 현재 레벨 정의
+	UPROPERTY()
+	TObjectPtr<UCXLevelDefinition> CurrentDefinition;
+
+	bool bIsTransitioning = false;
+
+	// 공개(페이드 인) 진행 중 (NotifyLevelReady 중복 호출 방지)
+	bool bIsRevealing = false;
+
+	// 화면이 가려진 상태 (가림 시작 ~ 공개 시작). 새 월드의 CameraManager에 다시 적용하는 기준
+	bool bScreenCovered = false;
+
+	FLinearColor CoverColor = FLinearColor::Black;
+
+	// EntryTag : PlayerStart 지정을 위한 Tag
+	FName PendingEntryTag;
+
+	// 페이드 시간 제어를 위한 타이머 핸들
+	FTimerHandle FadeHandle;
+
+	// 레벨 로드 실패 시 엔진으로부터 호출되는 델리게이트 핸들
+	FDelegateHandle TravelFailureHandle;
+
+	// 새 레벨(월드)의 액터 초기화 직후(BeginPlay 전)에 호출되는 델리게이트 핸들
+	FDelegateHandle WorldActorsInitializedHandle;
+
+	// 선로딩한 월드 (LoadMap의 GC에 지워지지 않도록 보관. 새 월드의 첫 Scene 서브레벨 로드 후 해제)
+	UPROPERTY()
+	TArray<TObjectPtr<UWorld>> PreloadedWorlds;
+
+	// 선로딩 완료 대기 중
+	bool bIsPreloading = false;
+
+	// 로딩 페이즈 진행 중 (이전 월드 일시정지 + Message.Level.Loading true 방송한 상태)
+	bool bIsLoadingPhase = false;
+
+	// 완료를 기다리는 선로딩 요청 수
+	int32 PendingPreloadCount = 0;
+
+	// 선로딩 요청 번호. 전환이 초기화되면 증가시켜 이전 요청의 완료 콜백을 무시
+	uint32 PreloadSerial = 0;
+
+	// 선로딩 시간 측정용 (로그)
+	double PreloadStartSeconds = 0.0;
+};

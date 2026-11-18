@@ -1,0 +1,259 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "CXFieldCharacterBase.h"
+#include "CXVI/Foundation/Scene/CXSceneSuspendable.h"
+#include "CXVI/Actor/Field/Interactions/CXRopeTraversalActor.h"
+#include "CXVI/Foundation/GameplayMessage/CXGameplayMessageSubsystem.h"
+
+#include "CXFieldPlayerCharacter.generated.h"
+
+class UInputMappingContext;
+class UInputAction;
+class UAnimInstance;
+class UAnimMontage;
+class UCableComponent;
+class ACXExpeditionFlag;
+class ACXGrapplingHookTriggerBox;
+class ACXFieldItemPickup;
+class UNiagaraSystem;
+struct FCXPartyHealedMessage;
+struct FInputActionValue;
+
+
+
+UCLASS()
+class CXVI_API ACXFieldPlayerCharacter : public ACXFieldCharacterBase, public ICXSceneSuspendable
+{
+	GENERATED_BODY()
+
+public:
+	ACXFieldPlayerCharacter();
+	
+	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	virtual void OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode = 0) override;
+	
+
+	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
+
+
+public:
+	// Grappling Target 위치 확인.
+	void SetGrapplingTarget(AActor* TargetActor, AActor* LandingActor = nullptr, ACXGrapplingHookTriggerBox* TriggerBox = nullptr);
+
+	AActor* GetGrapplingTargetActor() const { return CurrentGrapplingTarget.Get(); }
+	AActor* GetLandingSurfaceActor() const { return CurrentLandingSurface.Get(); }
+	ACXGrapplingHookTriggerBox* GetGrapplingTriggerBox() const { return CurrentGrapplingTrigger.Get(); }
+
+	void ShowCable(AActor* Target);
+	void HideCable();
+
+	// 내 상태로 휴식을 시작 할 수 있는지 알려주는 함수.
+	bool CanStartFlag() const;
+
+	// 접근한 깃발을 사용 후보에 추가.
+	void RegisterNearByFlag(ACXExpeditionFlag* Flag);
+
+	// 벗어난 깃발을 사용 후보에서 제거.
+	void UnregisterNearByFlag(ACXExpeditionFlag* Flag);
+
+	// 깃발 메뉴 구간. 메뉴 동안은 State.InMenu + State.MovingBlock으로 이동을 막는다.
+	// 메뉴 UI가 들어오면 닫기(ESC·나가기 버튼)에서 ExitFlagMenu를 호출한다.
+	void EnterFlagMenu();
+	void ExitFlagMenu();
+
+	// 아이템 섹션.
+public:
+	// 접근한 필드 아이템을 획득 후보에 추가.
+	void RegisterNearByItem(ACXFieldItemPickup* Pickup);
+
+	// 벗어난(또는 제거된) 필드 아이템을 획득 후보에서 제거.
+	void UnregisterNearByItem(ACXFieldItemPickup* Pickup);
+
+protected:
+	// Message.Field.PartyHealed(포션 사용, 깃발 휴식)를 받으면 회복 연출 재생.
+	void HandlePartyHealed(const FGameplayTag& InChannel, const FCXPartyHealedMessage& InMessage);
+	FCXGameplayMessageListenerHandle PartyHealedListener;
+
+	// HealFX를 메시에 붙여 재생 (비어 있으면 무시).
+	void PlayHealFX();
+
+	// 회복 시 캐릭터에 붙여 재생할 이펙트.
+	UPROPERTY(EditDefaultsOnly, Category = "Heal|FX")
+	TObjectPtr<UNiagaraSystem> HealFX;
+
+	// 이펙트를 붙일 메시 소켓 (None이면 메시 원점 = 발밑).
+	UPROPERTY(EditDefaultsOnly, Category = "Heal|FX")
+	FName HealFXSocket = NAME_None;
+
+	// 로프 섹션.
+public:
+	ACXRopeTraversalActor* GetRopeTraversalTarget() const { return CurrentRopeTraversalTarget.Get(); }
+
+	ECXRopeTraversalDirection GetRopeTraversalDirection() const
+	{
+		return CurrentRopeTraversalTarget.IsValid() ? CurrentRopeTraversalDirection : ECXRopeTraversalDirection::None;
+	}
+
+	void SetRopeTraversalTarget(ACXRopeTraversalActor* Rope, ECXRopeTraversalDirection Direction);
+
+	void ClearRopeTraversalTarget(ACXRopeTraversalActor* Rope, ECXRopeTraversalDirection Direction);
+
+
+	// 필드 씬 인터페이스 섹션.
+public:
+	void OnSceneSuspended_Implementation();
+
+	void OnSceneResumed_Implementation();
+
+	// 공격 연출 등으로 바꾼 카메라 암(길이·랙)을 BP 기본값으로 되돌린다.
+	void ResetCameraArm();
+
+	// 키 바인드할 때 기능을 나눠 줄 함수.
+protected:
+	// 상호 작용 키.
+	void Interactive();
+
+	// 공격 키.
+	void AttackFunc();
+
+protected:
+	void Move(const FInputActionValue& InValue);
+	void Look(const FInputActionValue& InValue);
+
+	// 스프린트 어빌리티.
+	void StartSprint();
+	void StopSprint();
+
+	// 그래플링 어빌리티.
+	void GrapplingHook();
+
+	void StartUseRope();
+
+	// 파쿠르 샘플.
+	void StartJumpOrParkour();
+	void ReleaseJumpOrParkour();
+	void AlignParkourMontageEntry(UAnimInstance* AnimInstance, UAnimMontage* Montage);
+
+	// BP에서 샘플 파쿠르를 호출.
+	// 처리 했으면 true, 못했으면 false 반환.
+	UFUNCTION(BlueprintImplementableEvent, Category = "Traversal")
+	bool TryParkour();
+
+	// 키를 떼도 진행 중인 파쿠르의 입력 잠금은 몽타주 종료까지 유지한다.
+	TWeakObjectPtr<UAnimMontage> ActiveParkourMontage;
+	bool bJumpOrParkourInputHeld = false;
+
+	// 원정대 깃발 사용 시작.
+	void StartUseFlag();
+
+	// 필드 아이템 획득.
+	void PickupItem();
+
+	// 플레이어 공격.
+	void Attack();
+
+	
+
+protected:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input)
+	TObjectPtr<UInputAction> MoveAction;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input)
+	TObjectPtr<UInputAction> LookAction;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input)
+	TObjectPtr<UInputAction> JumpAction;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input)
+	TObjectPtr<UInputAction> SprintAction;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input)
+	TObjectPtr<UInputAction> AttackAction;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input)
+	TObjectPtr<UInputAction> InteractiveAction;
+
+	// 게임플레이 어빌리티 - 스프린트
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = GameplayAbilities)
+	TSubclassOf<UGameplayAbility> SprintAbility;
+
+	// ASC에 등록한 스프린트 Ability를 찾는 번호표.
+	FGameplayAbilitySpecHandle SprintAbilityHandle;
+
+	// 게임플레이 어빌리티 - 그래플링 훅
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = GameplayAbilities)
+	TSubclassOf<UGameplayAbility> GrapplingAbility;
+
+	// 그래플링 타겟 액터.
+	UPROPERTY()
+	TWeakObjectPtr<AActor> CurrentGrapplingTarget;
+
+	// 그래플링 착지 액터.
+	UPROPERTY()
+	TWeakObjectPtr<AActor> CurrentLandingSurface;
+
+	// 그래플링 대상을 지정한 트리거. 어빌리티가 UI와 같은 조건으로 사용 가능 여부를 확인한다.
+	UPROPERTY()
+	TWeakObjectPtr<ACXGrapplingHookTriggerBox> CurrentGrapplingTrigger;
+
+	// 그래플링 훅 스펙을 관리할 핸들.
+	FGameplayAbilitySpecHandle GrapplingHookHandle;
+
+	// 그래플링 훅 케이블.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Grappling")
+	TObjectPtr<UCableComponent> GrapplingCable;
+
+	// 케이블 소켓(손목).
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grappling")
+	FName GrapplingHandSoket = TEXT("CableSocket");
+
+	// 플레이어 공격.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = GameplayAbilities)
+	TSubclassOf<UGameplayAbility> AttackAbility;
+
+	// 공격 스펙을 관리할 핸들.
+	FGameplayAbilitySpecHandle AttackAbilityHandle;
+
+	// 이번 휴식을 시작한 깃발.
+	// 현재 사용 범위 안에 있는 깃발.
+	UPROPERTY(Transient)
+	TWeakObjectPtr<class ACXExpeditionFlag> NearByActiveExpeditionFlag;
+
+	// 이번 휴식을 시작할 깃발.
+	UPROPERTY(Transient)
+	TWeakObjectPtr<class ACXExpeditionFlag> ActiveExpeditionFlag;
+
+	// 현재 획득 범위 안에 있는 필드 아이템.
+	UPROPERTY(Transient)
+	TWeakObjectPtr<ACXFieldItemPickup> NearByItemPickup;
+
+
+	// 플레이어 로프 어빌리티.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = GameplayAbilities)
+	TSubclassOf<UGameplayAbility> RopeTraversalAbility;
+
+	// 로프 어빌리티 스펙을 관리할 핸들.
+	FGameplayAbilitySpecHandle RopeTraversalAbilityHandle;
+
+	// 지금 타겟한 로프.
+	UPROPERTY(Transient)
+	TWeakObjectPtr<ACXRopeTraversalActor> CurrentRopeTraversalTarget;
+
+	// 현재 로프 관련 상태.
+	UPROPERTY(Transient)
+	ECXRopeTraversalDirection CurrentRopeTraversalDirection = ECXRopeTraversalDirection::None;
+
+private:
+	void RefreshAirborneTag();
+	void HandleInteractionUIAbilityActivated(UGameplayAbility* Ability);
+	void HandleInteractionUIAbilityEnded(UGameplayAbility* Ability);
+
+	int32 ActiveInteractionUIAbilityCount = 0;
+	FDelegateHandle InteractionUIAbilityActivatedHandle;
+	FDelegateHandle InteractionUIAbilityEndedHandle;
+};
+

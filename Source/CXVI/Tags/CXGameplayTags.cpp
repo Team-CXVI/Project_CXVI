@@ -1,0 +1,83 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+
+#include "CXGameplayTags.h"
+
+namespace CXVIGameplayTags
+{
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Input_Combat_Confirm, "Input.Combat.Confirm", "전투 선택 확정 입력");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Input_Combat_Parry, "Input.Combat.Parry", "적 공격 패링 입력");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Input_Combat_Dodge, "Input.Combat.Dodge", "적 공격 회피 입력");
+
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(InputMode_Combat_Command, "InputMode.Combat.Command", "플레이어 차례 메뉴 입력모드 (행동 / 스킬 / 아이템)");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(InputMode_Combat_Reaction, "InputMode.Combat.Reaction", "적 차례 입력모드");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(InputMode_Combat_TargetSelect, "InputMode.Combat.TargetSelect", "플레이어 차례 타겟 선택 입력모드");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(InputMode_Combat_JustTiming, "InputMode.Combat.JustTiming", "플레이어 공격 중 저스트 타이밍 입력모드");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(InputMode_Block_All, "InputMode.Block.All", "플레이어 게임 입력 전체 차단 (프로젝트 기본 Input Mode Query를 쓰는 IMC 제외)");
+
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Combat_Dodging, "State.Combat.Dodging", "회피 상태");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Combat_Parrying, "State.Combat.Parrying", "패리 상태");
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Event_Combat_ParrySucceeded, "Event.Combat.ParrySucceeded", "패링 성공 시 GAS 이벤트");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Event_Combat_AttackHit, "Event.Combat.AttackHit", "공격 타격시 GAS 이벤트");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Event_Combat_ComboBranch, "Event.Combat.ComboBranch", "저스트 타이밍 결과로 다음 공격 동작 연결");
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Message_Screen_Fade, "Message.Screen.Fade", "화면 페이드 시작 (UI 불투명도 동기화 용)");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Message_Combat_End, "Message.Combat.End", "전투 종료 알림 채널");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Message_Combat_TurnOrderChanged, "Message.Combat.TurnOrderChanged", "전투 턴 순서 변경 (UI 갱신용)");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Message_Combat_CommandRequest, "Message.Combat.CommandRequest", "전투 HUD의 커맨드 실행 요청 (UI -> 커맨드 캐릭터)");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Message_Combat_CommandAvailabilityChanged, "Message.Combat.CommandAvailabilityChanged", "커맨드 입력 가능 여부 변경 (UI 갱신용)");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Message_Combat_CommandMenuChanged, "Message.Combat.CommandMenuChanged", "전투 Command Menu 표시 상태 변경 (UI 갱신용)");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Message_Combat_DamageResult, "Message.Combat.DamageResult", "전투 피해 결과(피격 / 치명타 / 회피 / 패링) 알림 (전투 캐릭터 -> UI 등)");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Message_Combat_JustTiming, "Message.Combat.JustTiming", "저스트 타이밍 판정 구간 시작 / 성공 / 실패 / 취소 알림 (판정 컴포넌트 -> UI 등)");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Message_Combat_ReactionAvailabilityChanged, "Message.Combat.ReactionAvailabilityChanged", "몬스터 행동 중 회피 / 패링 가능 여부 변경 (전투 매니저 -> UI)");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Message_Combat_ActionStarted, "Message.Combat.ActionStarted", "전투 캐릭터의 행동(공격 / 스킬 / 반격) 시작 알림 (전투 캐릭터 -> UI 등)");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Message_Field_ItemAcquired, "Message.Field.ItemAcquired", "필드 아이템 습득 알림 (필드 아이템 -> UI)");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Message_Field_PartyHealed, "Message.Field.PartyHealed", "필드 파티 회복 알림 (포션 / 깃발 휴식 -> 플레이어 연출)");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Message_UserData_PartyChanged,"Message.UserData.PartyChanged", "파티 데이터 변경 (UI 갱신용)");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Message_UserData_InventoryChanged, "Message.UserData.InventoryChanged", "인벤토리 변경 (UI 갱신용)");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Message_UserData_RequestAutoSave, "Message.UserData.RequestAutoSave", "자동 저장 요청 (데이터 반영이 끝난 뒤 방송)");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Message_UserData_SaveFinished, "Message.UserData.SaveFinished", "저장 파일 쓰기 완료 (UI 갱신용)");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Message_UI_OpenScreen, "Message.UI.OpenScreen", "화면 열기 요청 (UI 매니저가 수신)");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Message_Level_Loading, "Message.Level.Loading", "레벨 이동 로딩 페이즈 시작 / 종료 (로딩 UI 표시용)");
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Data_Damage, "Data.Damage", "GE에 전달하는 데미지 값(SetByCaller)");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Data_AP, "Data.AP", "GE에 전달하는 AP 값(SetByCaller)");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Data_ItemRecovery, "Data.ItemRecovery", "GE에 전달하는 회복량 값(SetByCaller)");
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(UI_Layer_Game, "UI.Layer.Game", "HUD 레이어 (필드/전투 HUD)");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(UI_Layer_GameMenu, "UI.Layer.GameMenu", "게임 내 메뉴 레이어 (인벤토리, 장비, 스킬)");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(UI_Layer_Menu, "UI.Layer.Menu", "시스템 메뉴 레이어 (일시정지, 옵션)");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(UI_Layer_Modal, "UI.Layer.Modal", "모달 레이어 (확인 팝업, 게임오버)");
+	
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(UI_Screen_SaveSlot, "UI.Screen.SaveSlot", "저장 슬롯 목록 화면");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(UI_Screen_FlagMenu, "UI.Screen.FlagMenu", "깃발 메뉴 화면");
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(UI_ScreenContext_SaveSlot_Load, "UI.ScreenContext.SaveSlot.Load", "저장 슬롯 목록 : 불러오기");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(UI_ScreenContext_SaveSlot_Save, "UI.ScreenContext.SaveSlot.Save", "저장 슬롯 목록 : 저장하기");
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Basic_Attack, "Character.Ability.BasicAttack", "캐릭터 기본 공격");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Fire, "Character.Ability.Fire", "캐릭터 레이 발사");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Death, "Character.Ability.Death", "죽음 어빌리티");
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Character_Type_Boss, "Character.Type.Boss", "보스 몬스터 (전투 HUD 보스 HP UI 표시 대상)");
+	
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Dodge, "Character.Ability.Dodge", "캐릭터 회피 스킬");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Parry, "Character.Ability.Parry", "캐릭터 패리 스킬");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Counter_Attack, "Character.Ability.CounterAttack", "캐릭터 반격 스킬");
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Damage_CannotBeDodged, "Damage.CannotBeDodged", "회피할 수 없는 피해");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Damage_CannotBeParried, "Damage.CannotBeParried", "패링할 수 없는 피해");
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Item_Type_Potion, "Item.Type.Potion", "포션 아이템 타입");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Item_Type_HealingTint, "Item.Type.HealingTint", "체력회복 아이템 타입");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Item_Type_EnergyTint, "Item.Type.EnergyTint", "AP회복 아이템 타입");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Item_Type_ReviveTint, "Item.Type.ReviveTint", "소생 아이템 타입");
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(GameplayCue_Combat_Hit, "GameplayCue.Combat.Hit", "실제 피해를 받았을 때 피격 이펙트");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(GameplayCue_HealingTint, "GameplayCue.Item.HealingTint", "전투 회복아이템 먹었을때 나오는 이펙트");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(GameplayCue_EnergyTint, "GameplayCue.Item.EnergyTint", "에너지 회복 아이템을 먹었을때 나오는 이펙트");
+}

@@ -1,0 +1,554 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+
+#include "UI/CXUIManagerSubsystem.h"
+
+#include "CXUISettings.h"
+#include "CXNavigationConfig.h"
+#include "UI/ViewModel/CXPartyViewModel.h"
+#include "UI/ViewModel/CXPotionViewModel.h"
+#include "Foundation/Scene/CXSceneTypes.h"
+#include "Tags/CXGameplayTags.h"
+#include "UI/CXActivatableWidget.h"
+#include "UI/CXUITypes.h"
+#include "UI/CXPopupWidget.h"
+#include "UI/CXLoadingScreenWidget.h"
+
+#include <CommonActivatableWidget.h>
+#include <Widgets/CommonActivatableWidgetContainer.h>
+#include <Engine/LocalPlayer.h>
+#include <GameFramework/PlayerController.h>
+#include <EnhancedInputSubsystems.h>
+#include <InputMappingContext.h>
+#include <Input/CommonUIActionRouterBase.h>
+#include <GameFramework/InputSettings.h>
+#include <MVVMGameSubsystem.h>
+#include <Engine/GameInstance.h>
+
+#if WITH_EDITOR
+#include <Engine/GameViewportClient.h>
+#endif
+
+#include UE_INLINE_GENERATED_CPP_BY_NAME(CXUIManagerSubsystem)
+
+DEFINE_LOG_CATEGORY(LogCXUI);
+
+UCXUIManagerSubsystem& UCXUIManagerSubsystem::Get(const UObject* WorldContextObject)
+{
+	UCXUIManagerSubsystem* Subsystem = TryGet(WorldContextObject);
+	check(Subsystem);
+	return *Subsystem;
+}
+
+UCXUIManagerSubsystem* UCXUIManagerSubsystem::TryGet(const UObject* WorldContextObject)
+{
+	const UWorld* World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::ReturnNull);
+	const ULocalPlayer* LocalPlayer = World ? World->GetFirstLocalPlayerFromController() : nullptr;
+	return LocalPlayer ? LocalPlayer->GetSubsystem<UCXUIManagerSubsystem>() : nullptr;
+}
+
+void UCXUIManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
+{
+	Super::Initialize(Collection);
+	
+	// 새 내비게이션 설정
+	ApplyNavigationConfig(true);
+
+	// 위젯이 생성되기 전에 전역 Viewmodel Collection에 등록
+	CreateGlobalViewModel();
+
+	// 레이아웃이 없는 구간(맵 이동)에도 페이드 값을 유지하도록 Subsystem에서 구독
+	if (UCXGameplayMessageSubsystem* Messages = GetLocalPlayer()->GetGameInstance()->GetSubsystem<UCXGameplayMessageSubsystem>())
+	{
+		ScreenFadeListener = Messages->RegisterListener(CXVIGameplayTags::Message_Screen_Fade, this, &ThisClass::HandleScreenFade);
+		OpenScreenListener = Messages->RegisterListener(CXVIGameplayTags::Message_UI_OpenScreen, this, &ThisClass::HandleOpenScreen);
+		LevelLoadingListener = Messages->RegisterListener(CXVIGameplayTags::Message_Level_Loading, this, &ThisClass::HandleLevelLoading);
+	}
+
+#if WITH_EDITOR
+	if (FSlateApplication::IsInitialized())
+	{
+		// 에디터 실행 후 포커싱이 들어왔을 때 실행할 델리게이트 바운딩
+		FocusChangingHandle = FSlateApplication::Get().OnFocusChanging().AddUObject(this, &ThisClass::HandleSlateFocusChanging);
+	}
+#endif
+}
+
+void UCXUIManagerSubsystem::Deinitialize()
+{
+	DestroyPrimaryLayout();
+	ScreenFadeListener.Unregister();
+	OpenScreenListener.Unregister();
+	LevelLoadingListener.Unregister();
+	HideLoadingScreen();
+
+	StopScreenFadeTicker();
+
+	DestroyGlobalViewModel();
+
+	ApplyNavigationConfig(false);
+
+#if WITH_EDITOR
+	if (FSlateApplication::IsInitialized())
+	{
+		FSlateApplication::Get().OnFocusChanging().Remove(FocusChangingHandle);
+	}
+#endif
+
+	Super::Deinitialize();
+}
+
+void UCXUIManagerSubsystem::CreatePrimaryLayout(APlayerController* InPlayerController)
+{
+	if (nullptr == InPlayerController || !InPlayerController->IsLocalController())
+	{
+		return;
+	}
+
+	// 월드 이동으로 이전 레이아웃이 남아 있을 수 있으므로 먼저 정리
+	DestroyPrimaryLayout();
+
+	// 이전 레벨 화면의 입력 설정이 남지 않도록 초기화 (이 레벨의 화면이 활성화되면 그 설정으로 덮어씀)
+	ResetInputConfigToGameDefault();
+
+	// DefaultGame.ini에서 Layout UI 경로를 획득
+	const UCXUISettings* Settings = GetDefault<UCXUISettings>();
+	const TSubclassOf<UCXPrimaryGameLayout> LayoutClass = Settings->PrimaryLayoutClass.LoadSynchronous();
+	// CLASS_Abstract -> 추상 클래스인 경우. UCXPrimaryGameLayout를 있는 그대로 사용한 경우
+	if (nullptr == LayoutClass || LayoutClass->HasAnyClassFlags(CLASS_Abstract))
+	{
+		UE_LOG(LogCXUI, Error, TEXT("Primary Layout Class가 없거나 Abstract입니다. (Project Settings > Game > CXVI UI)"));
+		return;
+	}
+
+	// CommonUI 입력 처리에 LocalPlayer가 필요하므로 Owner를 PlayerController로 지정
+	PrimaryLayout = CreateWidget<UCXPrimaryGameLayout>(InPlayerController, LayoutClass);
+	if (nullptr == PrimaryLayout)
+	{
+		return;
+	}
+
+	// 이건 필요 없는 것 같긴한데 그래도 한번 더
+	PrimaryLayout->SetPlayerContext(FLocalPlayerContext(GetLocalPlayer<ULocalPlayer>()));
+	ApplyScreenFadeToLayout();
+	PrimaryLayout->AddToPlayerScreen(Settings->LayoutZOrder);
+
+	// IMC 바인딩
+	ApplyUIInputMapping(true);
+
+	UE_LOG(LogCXUI, Log, TEXT("Primary layout created: %s"), *GetNameSafe(PrimaryLayout));
+}
+
+void UCXUIManagerSubsystem::DestroyPrimaryLayout()
+{
+	if (nullptr == PrimaryLayout)
+	{
+		return;
+	}
+
+	// IMC 바인딩 해제
+	ApplyUIInputMapping(false);
+
+	PrimaryLayout->RemoveFromParent();
+	PrimaryLayout = nullptr;
+}
+
+UCommonActivatableWidget* UCXUIManagerSubsystem::K2_PushWidgetToLayer(FGameplayTag InLayerTag, TSubclassOf<UCommonActivatableWidget> InWidgetClass)
+{
+	return PushWidgetToLayer<UCommonActivatableWidget>(InLayerTag, InWidgetClass);
+}
+
+void UCXUIManagerSubsystem::RemoveWidget(UCommonActivatableWidget* InWidget)
+{
+	if (PrimaryLayout)
+	{
+		PrimaryLayout->FindAndRemoveWidgetFromLayer(InWidget);
+	}
+}
+
+void UCXUIManagerSubsystem::ShowConfirmPopup(FName InBodyTextId, FSimpleDelegate InOnConfirm)
+{
+	PushPopup([&](UCXPopupWidget& InPopup)
+		{
+			InPopup.SetupConfirm(InBodyTextId, MoveTemp(InOnConfirm));
+		});
+}
+
+void UCXUIManagerSubsystem::ShowConfirmCancelPopup(FName InBodyTextId, FSimpleDelegate InOnConfirm, FSimpleDelegate InOnCancel)
+{
+	PushPopup([&](UCXPopupWidget& InPopup)
+		{
+			InPopup.SetupConfirmCancel(InBodyTextId, MoveTemp(InOnConfirm), MoveTemp(InOnCancel));
+		});
+}
+
+void UCXUIManagerSubsystem::ApplyUIInputMapping(bool bInApply) const
+{
+	const ULocalPlayer* LocalPlayer = GetLocalPlayer<ULocalPlayer>();
+	UEnhancedInputLocalPlayerSubsystem* InputSubsystem = LocalPlayer ? LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>() : nullptr;
+	if (nullptr == InputSubsystem)
+	{
+		return;
+	}
+
+	const UCXUISettings* Settings = GetDefault<UCXUISettings>();
+	UInputMappingContext* MappingContext = Settings->UIMappingContext.LoadSynchronous();
+	if (nullptr == MappingContext)
+	{
+		UE_LOG(LogCXUI, Warning, TEXT("UI Mapping Context가 지정되지 않았습니다. (Project Settings > Game > CXVI UI)"));
+		return;
+	}
+
+	// 키 리바인딩(EnhancedInputUserSettings)에 IMC 등록
+	FModifyContextOptions Options;
+	Options.bNotifyUserSettings = true;
+
+	if (bInApply)
+	{
+		InputSubsystem->AddMappingContext(MappingContext, Settings->UIMappingPriority, Options);
+	}
+	else
+	{
+		InputSubsystem->RemoveMappingContext(MappingContext, Options);
+	}
+}
+
+void UCXUIManagerSubsystem::ApplyNavigationConfig(bool bInApply)
+{
+	if (!FSlateApplication::IsInitialized())
+	{
+		return;
+	}
+
+	FSlateApplication& SlateApplication = FSlateApplication::Get();
+
+	if (bInApply)
+	{
+		// 싱글 플레이 기준: 이미 등록했으면 다시 등록하지 않음 (복구할 원래 설정 보존)
+		if (!PreviousNavigationConfig.IsValid())
+		{
+			PreviousNavigationConfig = SlateApplication.GetNavigationConfig();
+			SlateApplication.SetNavigationConfig(MakeShared<FCXNavigationConfig>());
+		}
+	}
+	else if (PreviousNavigationConfig.IsValid())
+	{
+		SlateApplication.SetNavigationConfig(PreviousNavigationConfig.ToSharedRef());
+		PreviousNavigationConfig.Reset();
+	}
+}
+
+void UCXUIManagerSubsystem::ResetInputConfigToGameDefault() const
+{
+	UCommonUIActionRouterBase* ActionRouter = GetLocalPlayer() ? GetLocalPlayer()->GetSubsystem<UCommonUIActionRouterBase>() : nullptr;
+	if (nullptr == ActionRouter)
+	{
+		return;
+	}
+
+	// 마우스 캡처 / 잠금은 프로젝트 기본값(Project Settings > Input > Default Viewport Mouse Capture Mode / Lock Mode)을 따름
+	// (2인자 생성자는 잠금 모드를 캡처 모드에서 자동으로 정하므로 Lock Mode 설정이 무시됨)
+	const UInputSettings* InputSettings = GetDefault<UInputSettings>();
+	ActionRouter->SetActiveUIInputConfig(FUIInputConfig(ECommonInputMode::Game, InputSettings->DefaultViewportMouseCaptureMode, InputSettings->DefaultViewportMouseLockMode));
+}
+
+void UCXUIManagerSubsystem::CreateGlobalViewModel()
+{
+	UGameInstance* GameInstance = GetLocalPlayer() ? GetLocalPlayer()->GetGameInstance() : nullptr;
+	const UMVVMGameSubsystem* MVVMSubsystem = GameInstance ? GameInstance->GetSubsystem<UMVVMGameSubsystem>() : nullptr;
+	UMVVMViewModelCollectionObject* Collection = MVVMSubsystem ? MVVMSubsystem->GetViewModelCollection() : nullptr;
+	if (nullptr == Collection)
+	{
+		return;
+	}
+
+	UCXPartyViewModel* PartyViewModel = NewObject<UCXPartyViewModel>(GameInstance);
+	PartyViewModel->Initialize(*GameInstance);
+
+	if (false == Collection->AddViewModelInstance(UCXPartyViewModel::MakeGlobalContext(), PartyViewModel))
+	{
+		UE_LOG(LogCXUI, Error, TEXT("PartyViewModel을 전역 Viewmodel Collection에 등록하지 못했습니다."));
+		PartyViewModel->Reset();
+	}
+
+	UCXPotionViewModel* PotionViewModel = NewObject<UCXPotionViewModel>(GameInstance);
+	PotionViewModel->Initialize(*GameInstance);
+
+	if (false == Collection->AddViewModelInstance(UCXPotionViewModel::MakeGlobalContext(), PotionViewModel))
+	{
+		UE_LOG(LogCXUI, Error, TEXT("PotionViewModel을 전역 Viewmodel Collection에 등록하지 못했습니다."));
+		PotionViewModel->Reset();
+	}
+}
+
+void UCXUIManagerSubsystem::DestroyGlobalViewModel()
+{
+	const UGameInstance* GameInstance = GetLocalPlayer() ? GetLocalPlayer()->GetGameInstance() : nullptr;
+	const UMVVMGameSubsystem* MVVMSubsystem = GameInstance ? GameInstance->GetSubsystem<UMVVMGameSubsystem>() : nullptr;
+	UMVVMViewModelCollectionObject* Collection = MVVMSubsystem ? MVVMSubsystem->GetViewModelCollection() : nullptr;
+	if (nullptr == Collection)
+	{
+		return;
+	}
+
+	UCXPartyViewModel* PartyViewModel = Cast<UCXPartyViewModel>(Collection->FindFirstViewModelInstanceOfType(UCXPartyViewModel::StaticClass()));
+	if (nullptr == PartyViewModel)
+	{
+		return;
+	}
+
+	// 구독 해제 후 Collection에서 제거 (Collection의 참조가 사라지면 GC 대상)
+	PartyViewModel->Reset();
+	Collection->RemoveAllViewModelInstance(PartyViewModel);
+
+	UCXPotionViewModel* PotionViewModel = Cast<UCXPotionViewModel>(Collection->FindFirstViewModelInstanceOfType(UCXPotionViewModel::StaticClass()));
+	if (nullptr == PotionViewModel)
+	{
+		return;
+	}
+
+	// 구독 해제 후 Collection에서 제거 (Collection의 참조가 사라지면 GC 대상)
+	PotionViewModel->Reset();
+	Collection->RemoveAllViewModelInstance(PotionViewModel);
+}
+
+void UCXUIManagerSubsystem::HandleOpenScreen(const FGameplayTag& InChannel, const FCXOpenScreenMessage& InMessage)
+{
+	const FCXScreenEntry* Entry = GetDefault<UCXUISettings>()->Screens.Find(InMessage.ScreenTag);
+	if (nullptr == Entry)
+	{
+		UE_LOG(LogCXUI, Warning, TEXT("화면 열기 실패: [%s]가 Screens에 지정되지 않았습니다."), *InMessage.ScreenTag.ToString());
+		return;
+	}
+
+	// 맵 이동 중에는 레이아웃이 없으므로 대기하지 않고 요청을 버림
+	UCommonActivatableWidgetContainerBase* Layer = PrimaryLayout ? PrimaryLayout->GetLayerWidget(Entry->LayerTag) : nullptr;
+	if (nullptr == Layer)
+	{
+		UE_LOG(LogCXUI, Warning, TEXT("화면 열기 실패: [%s]의 레이어 [%s]를 찾을 수 없습니다."), *InMessage.ScreenTag.ToString(), *Entry->LayerTag.ToString());
+		return;
+	}
+
+	const TSubclassOf<UCXActivatableWidget> WidgetClass = Entry->WidgetClass.LoadSynchronous();
+	if (nullptr == WidgetClass)
+	{
+		UE_LOG(LogCXUI, Warning, TEXT("화면 열기 실패: [%s]의 WidgetClass를 불러올 수 없습니다."), *InMessage.ScreenTag.ToString());
+		return;
+	}
+
+	// 이미 맨 위면 다시 열지 않고 구분 값만 전달
+	// (활성 위젯을 제거하면 전환이 끝난 뒤 지워지므로 제거 후 다시 추가할 수 없음)
+	UCommonActivatableWidget* ActiveWidget = Layer->GetActiveWidget();
+	if (ActiveWidget && ActiveWidget->GetClass() == WidgetClass.Get())
+	{
+		CastChecked<UCXActivatableWidget>(ActiveWidget)->SetScreenContext(InMessage.ContextTag);
+		return;
+	}
+
+	// 스택 중간에 있으면 제거 후 다시 추가해서 위로 올림 (순서를 바꾸는 함수가 없음)
+	for (UCommonActivatableWidget* Widget : Layer->GetWidgetList())
+	{
+		if (Widget->GetClass() == WidgetClass.Get())
+		{
+			Layer->RemoveWidget(*Widget);
+			break;
+		}
+	}
+
+	PushWidgetToLayer<UCXActivatableWidget>(Entry->LayerTag, WidgetClass, [&InMessage](UCXActivatableWidget& InWidget)
+		{
+			InWidget.SetScreenContext(InMessage.ContextTag);
+		});
+}
+
+void UCXUIManagerSubsystem::PushPopup(TFunctionRef<void(UCXPopupWidget&)> InSetupFunc)
+{
+	const TSubclassOf<UCXPopupWidget> PopupClass = GetDefault<UCXUISettings>()->PopupClass.LoadSynchronous();
+	if (nullptr == PopupClass)
+	{
+		UE_LOG(LogCXUI, Warning, TEXT("Popup Class가 지정되지 않았습니다. (Project Settings > Game > CXVI UI)"));
+		return;
+	}
+
+	// 맵 이동 중에는 레이아웃이 없으므로 대기하지 않고 요청을 버림
+	if (nullptr == PrimaryLayout)
+	{
+		UE_LOG(LogCXUI, Warning, TEXT("팝업 열기 실패: 레이아웃이 없습니다."));
+		return;
+	}
+
+	PushWidgetToLayer<UCXPopupWidget>(CXVIGameplayTags::UI_Layer_Modal, PopupClass, InSetupFunc);
+}
+
+void UCXUIManagerSubsystem::HandleLevelLoading(const FGameplayTag& InChannel, const FCXLevelLoadingMessage& InMessage)
+{
+	if (InMessage.bIsLoading)
+	{
+		ShowLoadingScreen();
+	}
+	else
+	{
+		HideLoadingScreen();
+	}
+}
+
+void UCXUIManagerSubsystem::ShowLoadingScreen()
+{
+	// 맵 이동으로 뷰포트에서 빠진 이전 위젯이 남아 있을 수 있으므로 먼저 정리
+	HideLoadingScreen();
+
+	const UCXUISettings* Settings = GetDefault<UCXUISettings>();
+
+	// 지정하지 않았으면 로딩 UI 없이 가려진 화면만 유지
+	if (Settings->LoadingScreenClass.IsNull())
+	{
+		return;
+	}
+
+	const TSubclassOf<UCXLoadingScreenWidget> WidgetClass = Settings->LoadingScreenClass.LoadSynchronous();
+	if (nullptr == WidgetClass || WidgetClass->HasAnyClassFlags(CLASS_Abstract))
+	{
+		UE_LOG(LogCXUI, Warning, TEXT("Loading Screen Class를 불러올 수 없거나 Abstract입니다. (Project Settings > Game > CXVI UI)"));
+		return;
+	}
+
+	APlayerController* PlayerController = GetLocalPlayer<ULocalPlayer>()->PlayerController;
+	if (nullptr == PlayerController)
+	{
+		return;
+	}
+
+	LoadingScreen = CreateWidget<UCXLoadingScreenWidget>(PlayerController, WidgetClass);
+	if (LoadingScreen)
+	{
+		// 레이아웃보다 위
+		LoadingScreen->AddToPlayerScreen(Settings->LayoutZOrder + 1);
+	}
+}
+
+void UCXUIManagerSubsystem::HideLoadingScreen()
+{
+	if (LoadingScreen)
+	{
+		LoadingScreen->RemoveFromParent();
+		LoadingScreen = nullptr;
+	}
+}
+
+void UCXUIManagerSubsystem::HandleScreenFade(const FGameplayTag& InChannel, const FCXScreenFadeMessage& InMessage)
+{
+	StopScreenFadeTicker();
+
+	if (InMessage.Duration <= 0.f)
+	{
+		ScreenFadeAlpha = InMessage.ToAlpha;
+		ApplyScreenFadeToLayout();
+		return;
+	}
+
+	ScreenFadeFromAlpha = InMessage.FromAlpha;
+	ScreenFadeToAlpha = InMessage.ToAlpha;
+	ScreenFadeDuration = InMessage.Duration;
+	ScreenFadeElapsed = 0.f;
+
+	ScreenFadeAlpha = ScreenFadeFromAlpha;
+	ApplyScreenFadeToLayout();
+
+	ScreenFadeTickerHandle = FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateUObject(this, &ThisClass::TickScreenFade));
+}
+
+bool UCXUIManagerSubsystem::TickScreenFade(float InDeltaTime)
+{
+	ScreenFadeElapsed += InDeltaTime;
+
+	const float Ratio = FMath::Clamp(ScreenFadeElapsed / ScreenFadeDuration, 0.f, 1.f);
+	ScreenFadeAlpha = FMath::Lerp(ScreenFadeFromAlpha, ScreenFadeToAlpha, Ratio);
+	ApplyScreenFadeToLayout();
+
+	if (Ratio >= 1.f)
+	{
+		ScreenFadeTickerHandle.Reset();
+		return false;
+	}
+
+	return true;
+}
+
+void UCXUIManagerSubsystem::StopScreenFadeTicker()
+{
+	if (ScreenFadeTickerHandle.IsValid())
+	{
+		FTSTicker::RemoveTicker(ScreenFadeTickerHandle);
+		ScreenFadeTickerHandle.Reset();
+	}
+}
+
+void UCXUIManagerSubsystem::ApplyScreenFadeToLayout() const
+{
+	if (PrimaryLayout)
+	{
+		PrimaryLayout->SetRenderOpacity(1.f - ScreenFadeAlpha);
+	}
+}
+
+#if WITH_EDITOR
+
+void UCXUIManagerSubsystem::HandleSlateFocusChanging(const FFocusEvent& InFocusEvent, const FWeakWidgetPath& InOldFocusedPath, const TSharedPtr<SWidget>& InOldFocusedWidget, const FWidgetPath& InNewFocusedPath, const TSharedPtr<SWidget>& InNewFocusedWidget)
+{
+	const ULocalPlayer* LocalPlayer = GetLocalPlayer();
+	if (nullptr == PrimaryLayout || nullptr == LocalPlayer || nullptr == LocalPlayer->ViewportClient)
+	{
+		return;
+	}
+
+	const TSharedPtr<SViewport> ViewportWidget = LocalPlayer->ViewportClient->GetGameViewportWidget();
+	if (!ViewportWidget.IsValid())
+	{
+		return;
+	}
+
+	// 뷰포트 밖이 포커스인 경우 처리하지 않음
+	const bool bWasInViewport = InOldFocusedPath.IsValid() && InOldFocusedPath.ContainsWidget(ViewportWidget.Get());
+	const bool bIsInViewport = InNewFocusedPath.ContainsWidget(ViewportWidget.Get());
+	if (bWasInViewport || !bIsInViewport)
+	{
+		return;
+	}
+
+	// 포커스 변경 처리 도중에 다시 포커스를 바꾸지 않도록 다음 틱에 적용
+	if (UWorld* World = PrimaryLayout->GetWorld())
+	{
+		World->GetTimerManager().SetTimerForNextTick(this, &ThisClass::ReapplyTopWidgetInputConfig);
+	}
+}
+
+void UCXUIManagerSubsystem::ReapplyTopWidgetInputConfig()
+{
+	UCommonActivatableWidget* TopWidget = PrimaryLayout ? PrimaryLayout->GetTopActiveWidget() : nullptr;
+	UCommonUIActionRouterBase* ActionRouter = TopWidget ? UCommonUIActionRouterBase::Get(*TopWidget) : nullptr;
+	if (nullptr == ActionRouter)
+	{
+		return;
+	}
+
+	// 입력 설정을 선언하지 않는 화면은 건드리지 않음
+	const TOptional<FUIInputConfig> DesiredConfig = TopWidget->GetDesiredInputConfig();
+	if (!DesiredConfig.IsSet())
+	{
+		return;
+	}
+
+	// 엔진이 이미 적용한 경우는 처리하지 않음 (활성화 시점에 건너뛴 경우만 보완)
+	const bool bAlreadyApplied = ActionRouter->GetActiveInputMode() == DesiredConfig->GetInputMode()
+		&& ActionRouter->GetActiveMouseCaptureMode() == DesiredConfig->GetMouseCaptureMode();
+	if (bAlreadyApplied)
+	{
+		return;
+	}
+
+	ActionRouter->SetActiveUIInputConfig(DesiredConfig.GetValue(), TopWidget);
+	ActionRouter->RefreshActiveRootFocus();
+}
+
+#endif // WITH_EDITOR
+
